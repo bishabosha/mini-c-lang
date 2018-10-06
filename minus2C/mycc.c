@@ -3,6 +3,8 @@
 #include "nodes.h"
 #include "C.tab.h"
 #include <string.h>
+#include <stdbool.h>
+#include <polyglot.h>
 
 char *named(int t)
 {
@@ -94,15 +96,12 @@ extern NODE* yyparse(void);
 extern NODE* ans;
 extern void init_symbtable(void);
 
-int main(int argc, char** argv)
-{
-    NODE* tree;
-    if (argc>1 && strcmp(argv[1],"-d")==0) yydebug = 1;
-    init_symbtable();
-    printf("--C COMPILER\n");
-    yyparse();
-    tree = ans;
-    printf("parse finished with %p\n", tree);
-    print_tree(tree);
-    return 0;
+POLYGLOT_DECLARE_STRUCT(node);
+
+void set_debug(bool debug) {
+    yydebug = debug ? 1 : 0;
+}
+
+void* get_ans() {
+    return polyglot_from_node(ans);
 }

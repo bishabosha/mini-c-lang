@@ -1,7 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "nodes.h"
 #include "C.tab.h"
+#include "token.h"
+#include <polyglot.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+POLYGLOT_DECLARE_STRUCT(TOKEN)
 
 NODE* make_node(int t, NODE* left, NODE* right)
 {
