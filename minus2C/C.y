@@ -3,7 +3,7 @@
 #define YYSTYPE NODE*
 #define YYDEBUG 1
 extern TOKEN *int_token, *void_token, *function_token, *lasttok;
-NODE *ans;
+void *ans;
 %}
 
 %token IDENTIFIER CONSTANT STRING_LITERAL

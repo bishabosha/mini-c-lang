@@ -10,9 +10,8 @@ typedef struct TOKEN
   int           type;
   char          *lexeme;
   int           value;
-  struct TOKEN  *next;
 } TOKEN;
 
-extern TOKEN* new_token(int);
+extern void* new_token(int);
 
 #endif

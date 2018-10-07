@@ -11,10 +11,11 @@ IS			(u|U|l|L)*
 #include <string.h>
 #include <stdlib.h>
 #include "token.h"
-TOKEN* make_string(char*);
-extern TOKEN* lookup_token(const char*);
-TOKEN* make_int(char*);
-TOKEN* lasttok;
+#include <polyglot.h>
+void* make_string(char*);
+extern void* lookup_token(const char*);
+void* make_int(char*);
+void* lasttok;
 
 void count(void);
 void comment(void);
@@ -112,27 +113,28 @@ void count()
 	ECHO;
 }
 
+POLYGLOT_DECLARE_STRUCT(TOKEN);
 
-TOKEN *new_token(int type)
+void *new_token(int type)
 {
     TOKEN *ans = (TOKEN*)malloc(sizeof(TOKEN));
     ans->type = type;
-    return ans;
+    return polyglot_from_TOKEN(ans);
 }
 
-TOKEN *make_string(char *s)
+void *make_string(char *s)
 {
     TOKEN *ans = new_token(STRING_LITERAL);
     int len = strlen(s);
     ans->lexeme = (char*)calloc(1, len-1);
     strncpy(ans->lexeme, s+1, len-2);
-    return ans;
+    return polyglot_from_TOKEN(ans);
 }
 
-TOKEN *make_int(char *s)
+void *make_int(char *s)
 {
     int n = *s!='\'' ? atoi(s) : *(s+1);
     TOKEN *ans = new_token(CONSTANT);
     ans->value = n;
-    return ans;
+    return polyglot_from_TOKEN(ans);
 }

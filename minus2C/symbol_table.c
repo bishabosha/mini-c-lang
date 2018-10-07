@@ -52,31 +52,17 @@ void init_symbtable(void)
 
 POLYGLOT_DECLARE_STRUCT(TOKEN);
 
-TOKEN* lookup_token(const char *s)
+void* lookup_token(const char *s)
 {
-
-    printf("first\n");
     current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
-    current_tok = polyglot_as_TOKEN(current);
-    printf("second\n");
-    // Console_println(current);
-    // Console_println(current_tok);
 
-    if (polyglot_is_null(current) == true) {
-      printf("third\n");
+    if (polyglot_is_null(current)) {
       TOKEN* new = new_token(IDENTIFIER);
-      printf("fourth\n");
       new->lexeme = (char *)malloc(1 + strlen(s));
-
-      printf("fifth\n");
       strcpy(new->lexeme, s);
-
-      printf("sixth\n");
       SymbTable_put(polyglot_from_string(s, "UTF-8"), polyglot_from_TOKEN(new));
-
-      printf("seventh\n");
   } else {
     printf("ELSE EXEC\n");
-    return polyglot_as_TOKEN(current);
+    return current;
   }
 }

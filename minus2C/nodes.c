@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-POLYGLOT_DECLARE_STRUCT(TOKEN)
+POLYGLOT_DECLARE_STRUCT(node)
 
-NODE* make_node(int t, NODE* left, NODE* right)
+void* make_node(int t, void* left, void* right)
 {
     NODE *a = (NODE*)malloc(sizeof(NODE));
     if (a==NULL) {
@@ -20,7 +20,7 @@ NODE* make_node(int t, NODE* left, NODE* right)
     return a;
 }
 
-NODE* make_leaf(TOKEN* l)
+void* make_leaf(void* l)
 {
     NODE *a = (NODE*)malloc(sizeof(NODE));
 /*     printf("make_leaf: %p -> %p\n", l, a); */
@@ -29,7 +29,7 @@ NODE* make_leaf(TOKEN* l)
       exit(1);
     }
     a->type = LEAF;
-    a->left = (NODE*)l;
+    a->left = l;
     a->right = NULL;
     return a;
 }

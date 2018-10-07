@@ -5,11 +5,11 @@
 
 typedef struct node {
   int          type;
-  struct node *left;
-  struct node *right;
+  void *left;
+  void *right;
 } NODE;
 
-NODE* make_leaf(TOKEN*);
-NODE* make_node(int, NODE*, NODE*);
+void* make_leaf(void*);
+void* make_node(int, void*, void*);
 
 #endif
