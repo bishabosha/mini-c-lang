@@ -14,7 +14,7 @@ object MyCCLib {
   private val yyparse = mycclib.getMember("yyparse")
   private val set_debug = mycclib.getMember("set_debug")
   private val get_ans = mycclib.getMember("get_ans")
-  private val print_tree = mycclib.getMember("print_tree")
+  private val print_ast = mycclib.getMember("print_ast")
 
   def main(aStrings: Array[String]): Unit = {
     val debug: java.lang.Boolean = aStrings.nonEmpty && "-d" == aStrings(0)
@@ -27,6 +27,6 @@ object MyCCLib {
     val treePointer = tree.map(_.asNativePointer).getOrElse(0L)
     printf("parse finished with 0x%08X\n", treePointer)
     println(s"tree is ${tree.filter(!_.isNull).orNull}")
-    print_tree.executeVoid(tree.filter(!_.isNull).orNull)
+    print_ast.executeVoid(tree.filter(!_.isNull).orNull)
   }
 }

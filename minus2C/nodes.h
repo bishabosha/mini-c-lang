@@ -2,14 +2,14 @@
 #define __NODES_H
 
 #include "token.h"
+#include "ast.h"
 
 typedef struct node {
-  int          type;
-  void *left;
-  void *right;
+  AST ast;
+  AST *left;
+  AST *right;
 } NODE;
 
-NODE* make_leaf(void*);
-NODE* make_node(int, void*, void*);
+AST* make_node(int, AST*, AST*);
 
 #endif

@@ -1,8 +1,8 @@
 %{
 #include "nodes.h"
-#define YYSTYPE NODE*
+#define YYSTYPE AST*
 #define YYDEBUG 1
-extern TOKEN *int_token, *void_token, *function_token, *lasttok;
+extern AST *int_token, *void_token, *function_token, *lasttok;
 void *ans;
 %}
 
@@ -22,9 +22,9 @@ goal    :  translation_unit { ans = $$ = $1;}
         ;
 
 primary_expression
-	: IDENTIFIER 			{ $$ = make_leaf(lasttok); }
-	| CONSTANT 			{ $$ = make_leaf(lasttok); }
-	| STRING_LITERAL 		{ $$ = make_leaf(lasttok); }
+	: IDENTIFIER 			{ $$ = lasttok; }
+	| CONSTANT 			{ $$ = lasttok; }
+	| STRING_LITERAL 		{ $$ = lasttok; }
 	| '(' expression ')' 		{ $$ = $2; }
 	;
 
@@ -134,9 +134,9 @@ storage_class_specifier
 	;
 
 type_specifier
-	: VOID		{ $$ = make_leaf(void_token); }
-	| INT		{ $$ = make_leaf(int_token); }
-	| FUNCTION	{ $$ = make_leaf(function_token); }
+	: VOID		{ $$ = void_token; }
+	| INT		{ $$ = int_token; }
+	| FUNCTION	{ $$ = function_token; }
 	;
 
 declarator
@@ -145,7 +145,7 @@ declarator
 	;
 
 direct_declarator
-	: IDENTIFIER		{ $$ = make_leaf(lasttok); }
+	: IDENTIFIER		{ $$ = lasttok; }
 	| '(' declarator ')'	{ $$ = $2; }
         | direct_declarator '(' parameter_list ')' { $$ = make_node('F', $1, $3); }
 	| direct_declarator '(' identifier_list ')'{ $$ = make_node('F', $1, $3); }
@@ -153,8 +153,8 @@ direct_declarator
 	;
 
 pointer
-	: '*'                   { $$ = (NODE*)1; }
-	| '*' pointer           { $$ = (NODE*)((int)$2+1); }
+	: '*'                   { $$ = (AST*)1; }
+	| '*' pointer           { $$ = (AST*)((int)$2+1); }
 	;
 
 parameter_list
@@ -169,10 +169,10 @@ parameter_declaration
 	;
 
 identifier_list
-	: IDENTIFIER                    { $$ = make_leaf(lasttok); }
+	: IDENTIFIER                    { $$ = lasttok; }
 	| identifier_list ',' IDENTIFIER {
                                           $$ = make_node(',', $1,
-                                                              make_leaf(lasttok)); }
+                                                              lasttok); }
 	;
 
 abstract_declarator

@@ -9,9 +9,12 @@ IS			(u|U|l|L)*
 #include <stdio.h>
 #include "C.tab.h"
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include "token.h"
 #include <polyglot.h>
+#include "ast.h"
+
 TOKEN* make_string(char*);
 extern TOKEN* lookup_token(const char*);
 TOKEN* make_int(char*);
@@ -116,7 +119,8 @@ void count()
 TOKEN *new_token(int type)
 {
     TOKEN *ans = (TOKEN*)malloc(sizeof(TOKEN));
-    ans->type = type;
+    ans->ast.type = type;
+	ans->ast.is_token = true;
     return ans;
 }
 

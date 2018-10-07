@@ -18,13 +18,11 @@
 #include "nodes.h"
 
 static void *SymbTable_inst;
-static TOKEN *(*SymbTable_get)(const void *);
-static void (*SymbTable_put)(const void *, TOKEN*);
+static AST *(*SymbTable_get)(const void *);
+static void (*SymbTable_put)(const void *, AST*);
 
 static void *current;
 
-// static TOKEN **symbtable;
-// #define HASH_SIZE (1000)
 TOKEN *int_token, *void_token, *function_token;
 
 void init_symbtable(void)

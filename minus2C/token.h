@@ -1,15 +1,13 @@
 #ifndef __TOKEN_H
 #define __TOKEN_H
 
-#define TRUE 1
-#define FALSE 0
-#define TEST_MODE 0
+#include "ast.h"
 
 typedef struct TOKEN
 {
-  int           type;
-  char          *lexeme;
-  int           value;
+  AST  ast;
+  char *lexeme;
+  int  value;
 } TOKEN;
 
 extern TOKEN* new_token(int);
