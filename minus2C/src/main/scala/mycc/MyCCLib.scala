@@ -26,7 +26,6 @@ object MyCCLib {
     val tree: Option[Value] = Option(get_ans.execute())
     val treePointer = tree.map(_.asNativePointer).getOrElse(0L)
     printf("parse finished with 0x%08X\n", treePointer)
-    println(s"Symbols: $SymbTable")
     print_tree.executeVoid(tree.orNull)
   }
 }

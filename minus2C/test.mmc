@@ -1,0 +1,4 @@
+function main(void) { int doubleit(int a) { return a + a; } return doubleit; }
+int main(void) { return 1 + 1; }
+int main(int a) { return a + 1; }
+int main(int a) { return a + a; }

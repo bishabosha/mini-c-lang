@@ -23,7 +23,6 @@ static void *(*SymbTable_get)(const char *);
 static void (*SymbTable_put)(const char *, void*);
 
 static void *current;
-static TOKEN *current_tok;
 
 // static TOKEN **symbtable;
 // #define HASH_SIZE (1000)
@@ -37,8 +36,6 @@ void init_symbtable(void)
 
   Console = polyglot_java_type("scala.Console");
   Console_println = polyglot_get_member(Console, "println");
-
-  Console_println(polyglot_from_string("hello world", "UTF-8"));
 
   int_token = new_token(INT);
   int_token->lexeme = "int";
@@ -60,9 +57,9 @@ void* lookup_token(const char *s)
       TOKEN* new = new_token(IDENTIFIER);
       new->lexeme = (char *)malloc(1 + strlen(s));
       strcpy(new->lexeme, s);
-      SymbTable_put(polyglot_from_string(s, "UTF-8"), polyglot_from_TOKEN(new));
-  } else {
-    printf("ELSE EXEC\n");
-    return current;
+      current = polyglot_from_TOKEN(new);
+      SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
   }
+
+  return current;
 }
