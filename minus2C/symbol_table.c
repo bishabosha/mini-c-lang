@@ -15,12 +15,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "nodes.h"
 
-static void *SymbTable;
-static void *Console;
-static void *(*Console_println)(const char *);
-static void *(*SymbTable_get)(const char *);
-static void (*SymbTable_put)(const char *, void*);
+static void *SymbTable_inst;
+static TOKEN *(*SymbTable_get)(const void *);
+static void (*SymbTable_put)(const void *, TOKEN*);
 
 static void *current;
 
@@ -30,12 +29,9 @@ TOKEN *int_token, *void_token, *function_token;
 
 void init_symbtable(void)
 {
-  SymbTable = polyglot_java_type("mycc.SymbTable");
-  SymbTable_get = polyglot_get_member(SymbTable, "get");
-  SymbTable_put = polyglot_get_member(SymbTable, "put");
-
-  Console = polyglot_java_type("scala.Console");
-  Console_println = polyglot_get_member(Console, "println");
+  SymbTable_inst = polyglot_new_instance(polyglot_java_type("mycc.SymbTable"));
+  SymbTable_get = polyglot_get_member(SymbTable_inst, "get");
+  SymbTable_put = polyglot_get_member(SymbTable_inst, "put");
 
   int_token = new_token(INT);
   int_token->lexeme = "int";
@@ -47,19 +43,17 @@ void init_symbtable(void)
   void_token->lexeme = "void";
 }
 
-POLYGLOT_DECLARE_STRUCT(TOKEN);
-
-void* lookup_token(const char *s)
+TOKEN* lookup_token(const char *s)
 {
-    current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
+  current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
 
-    if (polyglot_is_null(current)) {
-      TOKEN* new = new_token(IDENTIFIER);
-      // test polyglot_from_string can exist without s
-      new->lexeme = (char *)malloc(1 + strlen(s));
-      strcpy(new->lexeme, s);
-      current = polyglot_from_TOKEN(new);
-      SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
+  if (polyglot_is_null(current)) {
+    TOKEN* new = new_token(IDENTIFIER);
+    // test polyglot_from_string can exist without s
+    new->lexeme = (char *)malloc(1 + strlen(s));
+    strcpy(new->lexeme, s);
+    current = new;
+    SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
   }
 
   return current;

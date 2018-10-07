@@ -60,8 +60,6 @@ char *named(int t)
 
 POLYGLOT_DECLARE_STRUCT(node);
 
-POLYGLOT_DECLARE_STRUCT(TOKEN);
-
 void print_leaf(void *token, int level)
 {
   TOKEN *t = token;
@@ -87,11 +85,6 @@ void print_tree0(NODE *tree, int level)
   } else {
     for(i=0; i<level; i++) putchar(' ');
     printf("%s\n", named(tree->type));
-    /*       if (tree->type=='~') { */
-    /*         for(i=0; i<level+2; i++) putchar(' '); */
-    /*         printf("%p\n", tree->left); */
-    /*       } */
-    /*       else */
     NODE* left = tree->left;
     if (left != NULL && !polyglot_is_null(left)) {
       int left_type = ((NODE*)left)->type;

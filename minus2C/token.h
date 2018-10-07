@@ -12,6 +12,6 @@ typedef struct TOKEN
   int           value;
 } TOKEN;
 
-extern void* new_token(int);
+extern TOKEN* new_token(int);
 
 #endif

@@ -9,7 +9,7 @@ typedef struct node {
   void *right;
 } NODE;
 
-void* make_leaf(void*);
-void* make_node(int, void*, void*);
+NODE* make_leaf(void*);
+NODE* make_node(int, void*, void*);
 
 #endif
