@@ -61,6 +61,7 @@ char *named(AST* ast)
 
 POLYGLOT_DECLARE_STRUCT(ast);
 
+extern void *get_SymbTable_inst();
 void print_tree(AST *, int);
 void print_leaf(AST *, int);
 void print_ast0(AST *, int);
