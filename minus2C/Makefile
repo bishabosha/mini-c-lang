@@ -10,8 +10,13 @@ clean:
 	rm ${OBJS}
 	rm ${GUFF}
 
-rm_target:
+rm:
 	rm ${TARGET}
+
+rm_logs:
+	rm *.log
+
+boot: clean rm
 
 mycc: C.tab.c ${OBJS}
 	${CC} -g -o mycc ${OBJS} 
