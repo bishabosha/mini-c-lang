@@ -3,17 +3,12 @@ SRCS = lex.yy.c C.tab.c symbol_table.c nodes.c mycc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
 LINK = ${LLVM_LINK}
-DIS = ${LLVM_DIS}
 # GRAAL_CC = clang -O3 -emit-llvm
 GRAAL_CC = /usr/local/opt/llvm@6/bin/clang -I/usr/local/include -I/Library/Java/JavaVirtualMachines/graalvm-ce-1.0.0-rc7/Contents/Home/jre/languages/llvm -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk -O0 -emit-llvm
 LLVM_LINK = /usr/local/opt/llvm@6/bin/llvm-link
-LLVM_DIS = /usr/local/opt/llvm@6/bin/llvm-dis
 TARGET = mycclib
 
 all:  ${TARGET}
-
-dis: ${TARGET}
-	${DIS} ${TARGET}
 
 boot: clean rm
 
@@ -22,7 +17,10 @@ clean:
 	rm ${GUFF}
 
 rm:
-	rm ${TARGET} ${TARGET}.ll
+	rm ${TARGET}
+
+rm_logs:
+	rm *.log
 
 %.bc:
 	${CC} -g -c $*.c

@@ -55,6 +55,7 @@ void* lookup_token(const char *s)
 
     if (polyglot_is_null(current)) {
       TOKEN* new = new_token(IDENTIFIER);
+      // test polyglot_from_string can exist without s
       new->lexeme = (char *)malloc(1 + strlen(s));
       strcpy(new->lexeme, s);
       current = polyglot_from_TOKEN(new);

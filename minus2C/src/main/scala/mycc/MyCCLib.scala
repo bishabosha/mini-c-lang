@@ -26,6 +26,7 @@ object MyCCLib {
     val tree: Option[Value] = Option(get_ans.execute())
     val treePointer = tree.map(_.asNativePointer).getOrElse(0L)
     printf("parse finished with 0x%08X\n", treePointer)
-    print_tree.executeVoid(tree.orNull)
+    println(s"tree is ${tree.filter(!_.isNull).orNull}")
+    print_tree.executeVoid(tree.filter(!_.isNull).orNull)
   }
 }
