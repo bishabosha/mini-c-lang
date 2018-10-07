@@ -8,51 +8,75 @@
  * symbol_table.c
  */
 
+#include "C.tab.h"
+#include "token.h"
+#include <polyglot.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "token.h"
-#include "C.tab.h"
 
-static TOKEN** symbtable;
-#define HASH_SIZE (1000)
+static void *SymbTable;
+static void *Console;
+static void *(*Console_println)(const char *);
+static void *(*SymbTable_get)(const char *);
+static void (*SymbTable_put)(const char *, void*);
+
+static void *current;
+static TOKEN *current_tok;
+
+// static TOKEN **symbtable;
+// #define HASH_SIZE (1000)
 TOKEN *int_token, *void_token, *function_token;
 
 void init_symbtable(void)
 {
-    symbtable = (TOKEN**)calloc(HASH_SIZE, sizeof(TOKEN*));
-    int_token = new_token(INT);
-    int_token->lexeme = "int";
-    function_token = new_token(FUNCTION);
-    function_token->lexeme = "function";
-    void_token = new_token(VOID);
-    void_token->lexeme = "void";
+  SymbTable = polyglot_java_type("mycc.SymbTable");
+  SymbTable_get = polyglot_get_member(SymbTable, "get");
+  SymbTable_put = polyglot_get_member(SymbTable, "put");
+
+  Console = polyglot_java_type("scala.Console");
+  Console_println = polyglot_get_member(Console, "println");
+
+  Console_println(polyglot_from_string("hello world", "UTF-8"));
+
+  int_token = new_token(INT);
+  int_token->lexeme = "int";
+
+  function_token = new_token(FUNCTION);
+  function_token->lexeme = "function";
+  
+  void_token = new_token(VOID);
+  void_token->lexeme = "void";
 }
 
-int hash(char *s)
-{
-    int h = 0;
-    while (*s != '\0') {
-      h = (h<<4) ^ *s++;
-    }
-    return (0x7fffffff&h) % HASH_SIZE;
-}
+POLYGLOT_DECLARE_STRUCT(TOKEN);
 
-TOKEN* lookup_token(char *s)
+TOKEN* lookup_token(const char *s)
 {
-    int	h = hash(s);
-    TOKEN *a = symbtable[h];
-    TOKEN *ans;
-/*     printf("\nLookup: %s\n", s); */
-    while (a!=NULL) {
-      if (strcmp(a->lexeme, s)==0) return a;
-      a = a->next;
-    }
-    ans = new_token(IDENTIFIER);
-    ans->lexeme = (char*)malloc(1+strlen(s));
-    strcpy(ans->lexeme, s);
-    ans->next = symbtable[h];
-    symbtable[h] = ans;
-/*     printf(" stored at %p\n", ans); */
-    return ans;
+
+    printf("first\n");
+    current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
+    current_tok = polyglot_as_TOKEN(current);
+    printf("second\n");
+    // Console_println(current);
+    // Console_println(current_tok);
+
+    if (polyglot_is_null(current) == true) {
+      printf("third\n");
+      TOKEN* new = new_token(IDENTIFIER);
+      printf("fourth\n");
+      new->lexeme = (char *)malloc(1 + strlen(s));
+
+      printf("fifth\n");
+      strcpy(new->lexeme, s);
+
+      printf("sixth\n");
+      SymbTable_put(polyglot_from_string(s, "UTF-8"), polyglot_from_TOKEN(new));
+
+      printf("seventh\n");
+  } else {
+    printf("ELSE EXEC\n");
+    return polyglot_as_TOKEN(current);
+  }
 }

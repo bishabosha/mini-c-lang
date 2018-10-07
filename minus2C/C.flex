@@ -12,7 +12,7 @@ IS			(u|U|l|L)*
 #include <stdlib.h>
 #include "token.h"
 TOKEN* make_string(char*);
-extern TOKEN* lookup_token(char*);
+extern TOKEN* lookup_token(const char*);
 TOKEN* make_int(char*);
 TOKEN* lasttok;
 
