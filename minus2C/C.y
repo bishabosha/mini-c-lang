@@ -3,7 +3,7 @@
 #define YYSTYPE Ast*
 #define YYDEBUG 1
 extern Ast *int_token, *void_token, *function_token, *lasttok;
-void *ans;
+Ast *ans;
 %}
 
 %token IDENTIFIER CONSTANT STRING_LITERAL
@@ -30,18 +30,18 @@ primary_expression
 
 postfix_expression
 	: primary_expression									{ $$ = $1; }
-	| postfix_expression '(' ')'    						{ $$ = make_node(APPLY, $1, NULL); }
-	| postfix_expression '(' argument_expression_list ')' 	{ $$ = make_node(APPLY, $1, $3); }
+	| postfix_expression '(' ')'    						{ $$ = Node_new(APPLY, $1, NULL); }
+	| postfix_expression '(' argument_expression_list ')' 	{ $$ = Node_new(APPLY, $1, $3); }
 	;
 
 argument_expression_list
 	: assignment_expression									{ $$ = $1; }
-	| argument_expression_list ',' assignment_expression 	{ $$ = make_node(',', $1, $3); }
+	| argument_expression_list ',' assignment_expression 	{ $$ = Node_new(',', $1, $3); }
 	;
 
 unary_expression
 	: postfix_expression				{ $$ = $1; }
-	| unary_operator unary_expression	{ $$ = make_node((int)$1, $2, NULL); }
+	| unary_operator unary_expression	{ $$ = Node_new((int)$1, $2, NULL); }
 	;
 
 unary_operator
@@ -54,62 +54,62 @@ unary_operator
 
 multiplicative_expression
 	: unary_expression									{ $$ = $1; }
-	| multiplicative_expression '*' unary_expression 	{ $$ = make_node('*', $1, $3); }
-	| multiplicative_expression '/' unary_expression 	{ $$ = make_node('/', $1, $3); }
-	| multiplicative_expression '%' unary_expression 	{ $$ = make_node('%', $1, $3); }
+	| multiplicative_expression '*' unary_expression 	{ $$ = Node_new('*', $1, $3); }
+	| multiplicative_expression '/' unary_expression 	{ $$ = Node_new('/', $1, $3); }
+	| multiplicative_expression '%' unary_expression 	{ $$ = Node_new('%', $1, $3); }
 	;
 
 additive_expression
 	: multiplicative_expression							{ $$ = $1; }
-	| additive_expression '+' multiplicative_expression { $$ = make_node('+', $1, $3); }
-	| additive_expression '-' multiplicative_expression { $$ = make_node('-', $1, $3); }
+	| additive_expression '+' multiplicative_expression { $$ = Node_new('+', $1, $3); }
+	| additive_expression '-' multiplicative_expression { $$ = Node_new('-', $1, $3); }
 	;
 
 relational_expression
 	: additive_expression								{ $$ = $1; }
-	| relational_expression '<' additive_expression		{ $$ = make_node('<', $1, $3); }
-	| relational_expression '>' additive_expression 	{ $$ = make_node('>', $1, $3); }
-	| relational_expression LE_OP additive_expression 	{ $$ = make_node(LE_OP, $1, $3); }
-	| relational_expression GE_OP additive_expression 	{ $$ = make_node(GE_OP, $1, $3); }
+	| relational_expression '<' additive_expression		{ $$ = Node_new('<', $1, $3); }
+	| relational_expression '>' additive_expression 	{ $$ = Node_new('>', $1, $3); }
+	| relational_expression LE_OP additive_expression 	{ $$ = Node_new(LE_OP, $1, $3); }
+	| relational_expression GE_OP additive_expression 	{ $$ = Node_new(GE_OP, $1, $3); }
 	;
 
 equality_expression
 	: relational_expression								{ $$ = $1; }
-	| equality_expression EQ_OP relational_expression 	{ $$ = make_node(EQ_OP, $1, $3); }
-	| equality_expression NE_OP relational_expression 	{ $$ = make_node(NE_OP, $1, $3); }
+	| equality_expression EQ_OP relational_expression 	{ $$ = Node_new(EQ_OP, $1, $3); }
+	| equality_expression NE_OP relational_expression 	{ $$ = Node_new(NE_OP, $1, $3); }
 	;
 
 assignment_expression
 	: equality_expression							{ $$ = $1; }
-	| unary_expression '=' assignment_expression 	{ $$ = make_node('=', $1, $3); }
+	| unary_expression '=' assignment_expression 	{ $$ = Node_new('=', $1, $3); }
 	;
 
 expression
 	: assignment_expression					{ $$ = $1; }
-	| expression ',' assignment_expression 	{ $$ = make_node(',', $1, $3); }
+	| expression ',' assignment_expression 	{ $$ = Node_new(',', $1, $3); }
 	;
 
 declaration
 	: declaration_specifiers ';'						{ $$ = $1; }
 | function_definition									{ $$ = $1; }
-	| declaration_specifiers init_declarator_list ';' 	{ $$ = make_node('~', $1, $2); }
+	| declaration_specifiers init_declarator_list ';' 	{ $$ = Node_new('~', $1, $2); }
 	;
 
 declaration_specifiers
 	: storage_class_specifier							{ $$ = $1; }
-	| storage_class_specifier declaration_specifiers 	{ $$ = make_node('~', $1, $2); }
+	| storage_class_specifier declaration_specifiers 	{ $$ = Node_new('~', $1, $2); }
 	| type_specifier	        						{ $$ = $1; }
-	| type_specifier declaration_specifiers 			{ $$ = make_node('~', $1, $2); }
+	| type_specifier declaration_specifiers 			{ $$ = Node_new('~', $1, $2); }
 	;
 
 init_declarator_list
 	: init_declarator							{ $$ = $1; }
-	| init_declarator_list ',' init_declarator 	{ $$ = make_node(',', $1, $3); }
+	| init_declarator_list ',' init_declarator 	{ $$ = Node_new(',', $1, $3); }
 	;
 
 init_declarator
 	: declarator							{ $$ = $1; }
-	| declarator '=' assignment_expression 	{ $$ = make_node('=', $1, $3); }
+	| declarator '=' assignment_expression 	{ $$ = Node_new('=', $1, $3); }
 	;
 
 storage_class_specifier
@@ -124,16 +124,16 @@ type_specifier
 	;
 
 declarator
-	: pointer direct_declarator	{ $$ = make_node('~', $1, $2); }
+	: pointer direct_declarator	{ $$ = Node_new('~', $1, $2); }
 	| direct_declarator			{ $$ = $1; }
 	;
 
 direct_declarator
 	: IDENTIFIER									{ $$ = lasttok; }
 	| '(' declarator ')'							{ $$ = $2; }
-        | direct_declarator '(' parameter_list ')' 	{ $$ = make_node('F', $1, $3); }
-	| direct_declarator '(' identifier_list ')'		{ $$ = make_node('F', $1, $3); }
-	| direct_declarator '(' ')'                		{ $$ = make_node('F', $1, NULL); }
+        | direct_declarator '(' parameter_list ')' 	{ $$ = Node_new('F', $1, $3); }
+	| direct_declarator '(' identifier_list ')'		{ $$ = Node_new('F', $1, $3); }
+	| direct_declarator '(' ')'                		{ $$ = Node_new('F', $1, NULL); }
 	;
 
 pointer
@@ -143,32 +143,32 @@ pointer
 
 parameter_list
 	: parameter_declaration						{ $$ = $1; }
-	| parameter_list ',' parameter_declaration 	{ $$ = make_node(',', $1, $3); }
+	| parameter_list ',' parameter_declaration 	{ $$ = Node_new(',', $1, $3); }
 	;
 
 parameter_declaration
-	: declaration_specifiers declarator 		 { $$ = make_node('~', $1, $2); }
-	| declaration_specifiers abstract_declarator { $$ = make_node('~', $1, $2); }
+	: declaration_specifiers declarator 		 { $$ = Node_new('~', $1, $2); }
+	| declaration_specifiers abstract_declarator { $$ = Node_new('~', $1, $2); }
 	| declaration_specifiers					 { $$ = $1; }
 	;
 
 identifier_list
 	: IDENTIFIER                    	{ $$ = lasttok; }
-	| identifier_list ',' IDENTIFIER 	{ $$ = make_node(',', $1, lasttok); }
+	| identifier_list ',' IDENTIFIER 	{ $$ = Node_new(',', $1, lasttok); }
 	;
 
 abstract_declarator
 	: pointer		        				{ $$ = $1; }
 	| direct_abstract_declarator    		{ $$ = $1; }
-	| pointer direct_abstract_declarator 	{ $$ = make_node('G', $1, $2); }
+	| pointer direct_abstract_declarator 	{ $$ = Node_new('G', $1, $2); }
 	;
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')'    					{ $$ = $2; }
 	| '(' ')'    					 					{ $$ = NULL; }
 	| '(' parameter_list ')'    	 					{ $$ = $2; }
-	| direct_abstract_declarator '(' ')'    			{ $$ = make_node(APPLY, $1, NULL); }
-	| direct_abstract_declarator '(' parameter_list ')'	{ $$ = make_node(APPLY, $1, $3); }
+	| direct_abstract_declarator '(' ')'    			{ $$ = Node_new(APPLY, $1, NULL); }
+	| direct_abstract_declarator '(' parameter_list ')'	{ $$ = Node_new(APPLY, $1, $3); }
 	;
 
 statement
@@ -183,17 +183,17 @@ compound_statement
 	: '{' '}'                       			{ $$ = NULL; }
 	| '{' statement_list '}'					{ $$ = $2; }
 	| '{' declaration_list '}'					{ $$ = $2; }
-	| '{' declaration_list statement_list '}' 	{ $$ = make_node(';', $2, $3); }
+	| '{' declaration_list statement_list '}' 	{ $$ = Node_new(';', $2, $3); }
 	;
 
 declaration_list
 	: declaration					{ $$ = $1; }
-	| declaration_list declaration 	{ $$ = make_node(';', $1, $2); }
+	| declaration_list declaration 	{ $$ = Node_new(';', $1, $2); }
 	;
 
 statement_list
 	: statement					{ $$ = $1; }
-	| statement_list statement 	{ $$ = make_node(';', $1, $2); }
+	| statement_list statement 	{ $$ = Node_new(';', $1, $2); }
 	;
 
 expression_statement
@@ -202,24 +202,24 @@ expression_statement
 	;
 
 selection_statement
-	: IF '(' expression ')' statement 					{ $$ = make_node(IF, $3, $5); }
-	| IF '(' expression ')' statement ELSE statement 	{ $$ = make_node(IF, $3, make_node(ELSE, $5, $7)); }
+	: IF '(' expression ')' statement 					{ $$ = Node_new(IF, $3, $5); }
+	| IF '(' expression ')' statement ELSE statement 	{ $$ = Node_new(IF, $3, Node_new(ELSE, $5, $7)); }
 	;
 
 iteration_statement
-	: WHILE '(' expression ')' statement { $$ = make_node(WHILE, $3, $5); }
+	: WHILE '(' expression ')' statement { $$ = Node_new(WHILE, $3, $5); }
 	;
 
 jump_statement
-	: CONTINUE ';'          { $$ = make_node(CONTINUE, NULL, NULL); }
-	| BREAK ';'             { $$ = make_node(BREAK, NULL, NULL); }
-	| RETURN ';'	        { $$ = make_node(RETURN, NULL, NULL); }
-	| RETURN expression ';'	{ $$ = make_node(RETURN, $2, NULL); }
+	: CONTINUE ';'          { $$ = Node_new(CONTINUE, NULL, NULL); }
+	| BREAK ';'             { $$ = Node_new(BREAK, NULL, NULL); }
+	| RETURN ';'	        { $$ = Node_new(RETURN, NULL, NULL); }
+	| RETURN expression ';'	{ $$ = Node_new(RETURN, $2, NULL); }
 	;
 
 translation_unit
 	: external_declaration					{ $$ = $1; }
-	| translation_unit external_declaration { $$ = make_node('~', $1, $2);}
+	| translation_unit external_declaration { $$ = Node_new('~', $1, $2);}
 	;
 
 external_declaration
@@ -229,13 +229,13 @@ external_declaration
 
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
-		{ $$ = make_node('D', make_node('d', $1, make_node('e', $2, $3)), $4); }
+		{ $$ = Node_new('D', Node_new('d', $1, Node_new('e', $2, $3)), $4); }
 	| declaration_specifiers declarator compound_statement
-		{ $$ = make_node('D', make_node('d', $1, $2), $3); }
+		{ $$ = Node_new('D', Node_new('d', $1, $2), $3); }
 	| declarator declaration_list compound_statement
-		{ $$ = make_node('D', make_node('d', $1, $2), $3); }
+		{ $$ = Node_new('D', Node_new('d', $1, $2), $3); }
 	| declarator compound_statement
-		{ $$ = make_node('D', $1, $2); }
+		{ $$ = Node_new('D', $1, $2); }
 	;
 %%
 #include <stdio.h>

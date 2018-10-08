@@ -20,9 +20,9 @@ static void *SymbTable_inst;
 static Ast *(*SymbTable_get)(const void *);
 static void (*SymbTable_put)(const void *, Ast*);
 
-static void *current;
+static Ast *current;
 
-Token *int_token, *void_token, *function_token;
+Ast *int_token, *void_token, *function_token;
 
 void init_symbtable(void)
 {
@@ -35,18 +35,18 @@ void init_symbtable(void)
   void_token = Token_new(VOID, "void");
 }
 
-Token *Token_symbol_get(const char *s) {
+Ast *Token_symbol_get(const char *s) {
   current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
 
   if (polyglot_is_null(current)) {
     char *lexeme = (char *)malloc(1 + strlen(s));
     strcpy(lexeme, s);
-    Token *new = Token_new(IDENTIFIER, lexeme);
+    Ast *new = Token_new(IDENTIFIER, lexeme);
     current = new;
     SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
   }
 
-  return current;
+  return (Ast*)current;
 }
 
 void * get_SymbTable_inst() {

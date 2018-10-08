@@ -14,9 +14,9 @@ IS			(u|U|l|L)*
 #include <polyglot.h>
 #include "ast.h"
 
-StringConstant* StringConstant_new(char*);
-extern Token* Token_symbol_get(const char*);
-IntConstant* IntConstant_new(char*);
+Ast* StringConstant_new(char*);
+extern Ast* Token_symbol_get(const char*);
+Ast* IntConstant_new(char*);
 Ast* lasttok;
 
 void count(void);
@@ -24,7 +24,9 @@ void comment(void);
 %}
 
 %%
+
 "/*"			{ comment(); }
+
 "auto"			{ count(); return(AUTO); }
 "break"			{ count(); return(BREAK); }
 "continue"		{ count(); return(CONTINUE); }
@@ -37,10 +39,10 @@ void comment(void);
 "void"			{ count(); return(VOID); }
 "while"			{ count(); return(WHILE); }
 
-{L}({L}|{D})*		{ count(); lasttok = (Ast *)Token_symbol_get(yytext);	return(IDENTIFIER); }
-{D}+{IS}?			{ count(); lasttok = (Ast *)IntConstant_new(yytext);	return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count(); lasttok = (Ast *)IntConstant_new(yytext);	return(CONSTANT); }
-L?\"(\\.|[^\\"])*\"	{ count(); lasttok = (Ast *)StringConstant_new(yytext); return(STRING_LITERAL); }
+{L}({L}|{D})*		{ count(); lasttok = Token_symbol_get(yytext);	 return(IDENTIFIER); }
+{D}+{IS}?			{ count(); lasttok = IntConstant_new(yytext);	 return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ count(); lasttok = IntConstant_new(yytext);	 return(CONSTANT); }
+L?\"(\\.|[^\\"])*\"	{ count(); lasttok = StringConstant_new(yytext); return(STRING_LITERAL); }
 
 "<="		{ count(); return(LE_OP); }
 ">="		{ count(); return(GE_OP); }
@@ -107,26 +109,26 @@ void count() {
 	ECHO;
 }
 
-Token *Token_new(int type, const char * lexeme) {
+Ast *Token_new(int type, const char * lexeme) {
     Token *ans = (Token*)malloc(sizeof(Token));
     ans->ast.tag = TOKEN;
 	ans->lexeme = lexeme;
-    return ans;
+    return (Ast *)ans;
 }
 
-StringConstant *StringConstant_new(char *s) {
+Ast *StringConstant_new(char *s) {
     int len = strlen(s);
     StringConstant *ans = (StringConstant*)malloc(sizeof(StringConstant));
 	ans->token.ast.tag = STRING_CONSTANT;
 	ans->token.lexeme = (char *)malloc(strlen(s)-1);
     strncpy(ans->token.lexeme, s+1, len-2);
-    return ans;
+    return (Ast *)ans;
 }
 
-IntConstant *IntConstant_new(char *s) {
+Ast *IntConstant_new(char *s) {
     int n = *s!='\'' ? atoi(s) : *(s+1);
     IntConstant *ans = (IntConstant*)malloc(sizeof(IntConstant));
 	ans->ast.tag = INT_CONSTANT;
     ans->value = n;
-    return ans;
+    return (Ast *)ans;
 }

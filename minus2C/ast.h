@@ -28,7 +28,7 @@ typedef struct int_constant {
   int value;
 } IntConstant;
 
-extern Token *Token_new(int, const char*);
-Ast *make_node(int, Ast *, Ast *);
+extern Ast *Token_new(int, const char*);
+Ast *Node_new(int, Ast *, Ast *);
 
 #endif
