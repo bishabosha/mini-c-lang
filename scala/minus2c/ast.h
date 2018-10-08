@@ -1,7 +1,7 @@
 #ifndef _Ast_H_
 #define _Ast_H_
 
-typedef enum { NODE, TOKEN } AstTag;
+typedef enum { NODE, BINARY_NODE, TOKEN } AstTag;
 
 typedef struct ast {
   AstTag tag;
@@ -11,8 +11,13 @@ typedef struct ast {
 typedef struct node {
   Ast ast;
   Ast *left;
-  Ast *right;
 } Node;
+
+typedef struct binary_node {
+  Ast ast;
+  Ast *left;
+  Ast *right;
+} BinaryNode;
 
 typedef union {
   char *lexeme;
@@ -25,6 +30,7 @@ typedef struct token {
 } Token;
 
 extern Ast *lexeme_Token_new(int, char*);
-Ast *Node_new(int, Ast *, Ast *);
+Ast *BinaryNode_new(int, Ast *, Ast *);
+Ast *Node_new(int, Ast *);
 
 #endif
