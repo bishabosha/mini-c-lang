@@ -1,12 +1,12 @@
-#include <stdio.h>
-#include <ctype.h>
-#include "nodes.h"
 #include "C.tab.h"
-#include <string.h>
-#include <stdbool.h>
+#include "ast.h"
+#include <ctype.h>
 #include <polyglot.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
-char *named(AST* ast)
+char *named(Node* ast)
 {
     int token = ast->type;
     static char b[100];   
@@ -62,9 +62,11 @@ char *named(AST* ast)
 POLYGLOT_DECLARE_STRUCT(ast);
 
 extern void *get_SymbTable_inst();
-void print_tree(AST *, int);
-void print_leaf(AST *, int);
-void print_ast0(AST *, int);
+void print_tree(Node *, int);
+void print_ast0(Ast *, int);
+void print_int_constant(IntConstant *);
+void print_string_constant(Token *);
+void print_token(Token *);
 
 void print_level(int level) {
   int i;
@@ -73,47 +75,52 @@ void print_level(int level) {
   }
 }
 
-void print_ast(AST *ast) { print_ast0(ast, 0); }
+void print_ast(Ast *ast) { print_ast0(ast, 0); }
 
-void print_ast0(AST *ast, int level) {
+void print_ast0(Ast *ast, int level) {
   if (NULL == ast || polyglot_is_null(ast)) {
     return;
   }
   print_level(level);
-  if (ast->is_token) {
-    print_leaf(ast, level);
-  } else {
-    print_tree(ast, level);
+  switch(ast->tag) {
+  case NODE:
+    print_tree((Node *)ast, level);
+    break;
+  case TOKEN:
+    print_token((Token *)ast);
+    break;
+  case STRING_CONSTANT:
+    print_string_constant((Token *)ast);
+    break;
+  case INT_CONSTANT:
+    print_int_constant((IntConstant *)ast);
+    break;
   }
 }
 
-void print_leaf(AST *ast, int level) {
-  TOKEN *token = (TOKEN *)ast;
-  if (ast->type == CONSTANT) {
-    printf("%d\n", token->value);
-  } else if (ast->type == STRING_LITERAL) {
-    printf("\"%s\"\n", token->lexeme);
-  } else if (token) {
-    printf("%s\n", token->lexeme);
-  }
+void print_int_constant(IntConstant *constant) {
+  printf("%d\n", constant->value);
 }
 
-void print_tree(AST *ast, int level) {
-  NODE *node = (NODE *)ast;
-  printf("%s\n", named(ast));
+void print_string_constant(Token *token) { printf("\"%s\"\n", token->lexeme); }
+
+void print_token(Token *token) { printf("%s\n", token->lexeme); }
+
+void print_tree(Node *node, int level) {
+  printf("%s\n", named(node));
   print_ast0(node->left, level + 2);
   print_ast0(node->right, level + 2);
 }
 
 extern int yydebug;
-extern AST* yyparse(void);
-extern AST* ans;
+extern Ast* yyparse(void);
+extern Ast* ans;
 extern void init_symbtable(void);
 
 void set_debug(bool debug) {
     yydebug = debug ? 1 : 0;
 }
 
-AST* get_ans() {
+Ast* get_ans() {
     return polyglot_from_ast(ans);
 }

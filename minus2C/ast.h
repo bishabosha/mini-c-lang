@@ -1,11 +1,34 @@
-#ifndef _AST_H_
-#define _AST_H_
+#ifndef _Ast_H_
+#define _Ast_H_
 
-#include <stdbool.h>
+typedef enum { NODE, TOKEN, STRING_CONSTANT, INT_CONSTANT } Tag;
 
 typedef struct ast {
-  bool is_token;
+  Tag tag;
+} Ast;
+
+typedef struct node {
+  Ast ast;
   int type;
-} AST;
+  Ast *left;
+  Ast *right;
+} Node;
+
+typedef struct token {
+  Ast ast;
+  char *lexeme;
+} Token;
+
+typedef struct string_constant {
+  Token token;
+} StringConstant;
+
+typedef struct int_constant {
+  Ast ast;
+  int value;
+} IntConstant;
+
+extern Token *Token_new(int, const char*);
+Ast *make_node(int, Ast *, Ast *);
 
 #endif

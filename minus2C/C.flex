@@ -11,14 +11,13 @@ IS			(u|U|l|L)*
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "token.h"
 #include <polyglot.h>
 #include "ast.h"
 
-TOKEN* make_string(char*);
-extern TOKEN* lookup_token(const char*);
-TOKEN* make_int(char*);
-TOKEN* lasttok;
+StringConstant* StringConstant_new(char*);
+extern Token* Token_symbol_get(const char*);
+IntConstant* IntConstant_new(char*);
+Ast* lasttok;
 
 void count(void);
 void comment(void);
@@ -26,7 +25,6 @@ void comment(void);
 
 %%
 "/*"			{ comment(); }
-
 "auto"			{ count(); return(AUTO); }
 "break"			{ count(); return(BREAK); }
 "continue"		{ count(); return(CONTINUE); }
@@ -39,22 +37,18 @@ void comment(void);
 "void"			{ count(); return(VOID); }
 "while"			{ count(); return(WHILE); }
 
-{L}({L}|{D})*		{ count(); lasttok = lookup_token(yytext);
-                          return(IDENTIFIER); }
+{L}({L}|{D})*		{ count(); lasttok = (Ast *)Token_symbol_get(yytext);	return(IDENTIFIER); }
+{D}+{IS}?			{ count(); lasttok = (Ast *)IntConstant_new(yytext);	return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ count(); lasttok = (Ast *)IntConstant_new(yytext);	return(CONSTANT); }
+L?\"(\\.|[^\\"])*\"	{ count(); lasttok = (Ast *)StringConstant_new(yytext); return(STRING_LITERAL); }
 
-{D}+{IS}?		{ count(); lasttok = make_int(yytext);return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count(); lasttok = make_int(yytext);return(CONSTANT); }
-
-L?\"(\\.|[^\\"])*\"	{ count(); lasttok = make_string(yytext);
-                          return(STRING_LITERAL); }
-
-"<="			{ count(); return(LE_OP); }
-">="			{ count(); return(GE_OP); }
-"=="			{ count(); return(EQ_OP); }
-"!="			{ count(); return(NE_OP); }
+"<="		{ count(); return(LE_OP); }
+">="		{ count(); return(GE_OP); }
+"=="		{ count(); return(EQ_OP); }
+"!="		{ count(); return(NE_OP); }
 ";"			{ count(); return(';'); }
-"{"     		{ count(); return('{'); }
-"}"     		{ count(); return('}'); }
+"{"     	{ count(); return('{'); }
+"}"     	{ count(); return('}'); }
 ","			{ count(); return(','); }
 ":"			{ count(); return(':'); }
 "="			{ count(); return('='); }
@@ -69,19 +63,17 @@ L?\"(\\.|[^\\"])*\"	{ count(); lasttok = make_string(yytext);
 "<"			{ count(); return('<'); }
 ">"			{ count(); return('>'); }
 
-[ \t\v\n\f]		{ count(); }
+[\t\v\n\f]	{ count(); }
 .			{ /* ignore bad characters */ }
 
 %%
 
-int yywrap(void)
-{
+int yywrap(void) {
 	return(1);
 }
 
 
-void comment(void)
-{
+void comment(void) {
 	char c, c1;
 
 loop:
@@ -101,8 +93,7 @@ loop:
 
 int column = 0;
 
-void count()
-{
+void count() {
 	int i;
 
 	for (i = 0; yytext[i] != '\0'; i++)
@@ -116,27 +107,26 @@ void count()
 	ECHO;
 }
 
-TOKEN *new_token(int type)
-{
-    TOKEN *ans = (TOKEN*)malloc(sizeof(TOKEN));
-    ans->ast.type = type;
-	ans->ast.is_token = true;
+Token *Token_new(int type, const char * lexeme) {
+    Token *ans = (Token*)malloc(sizeof(Token));
+    ans->ast.tag = TOKEN;
+	ans->lexeme = lexeme;
     return ans;
 }
 
-TOKEN *make_string(char *s)
-{
-    TOKEN *ans = new_token(STRING_LITERAL);
+StringConstant *StringConstant_new(char *s) {
     int len = strlen(s);
-    ans->lexeme = (char*)calloc(1, len-1);
-    strncpy(ans->lexeme, s+1, len-2);
+    StringConstant *ans = (StringConstant*)malloc(sizeof(StringConstant));
+	ans->token.ast.tag = STRING_CONSTANT;
+	ans->token.lexeme = (char *)malloc(strlen(s)-1);
+    strncpy(ans->token.lexeme, s+1, len-2);
     return ans;
 }
 
-TOKEN *make_int(char *s)
-{
+IntConstant *IntConstant_new(char *s) {
     int n = *s!='\'' ? atoi(s) : *(s+1);
-    TOKEN *ans = new_token(CONSTANT);
+    IntConstant *ans = (IntConstant*)malloc(sizeof(IntConstant));
+	ans->ast.tag = INT_CONSTANT;
     ans->value = n;
     return ans;
 }

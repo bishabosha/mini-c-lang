@@ -9,21 +9,20 @@
  */
 
 #include "C.tab.h"
-#include "token.h"
 #include <polyglot.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "nodes.h"
+#include "ast.h"
 
 static void *SymbTable_inst;
-static AST *(*SymbTable_get)(const void *);
-static void (*SymbTable_put)(const void *, AST*);
+static Ast *(*SymbTable_get)(const void *);
+static void (*SymbTable_put)(const void *, Ast*);
 
 static void *current;
 
-TOKEN *int_token, *void_token, *function_token;
+Token *int_token, *void_token, *function_token;
 
 void init_symbtable(void)
 {
@@ -31,24 +30,18 @@ void init_symbtable(void)
   SymbTable_get = polyglot_get_member(SymbTable_inst, "get");
   SymbTable_put = polyglot_get_member(SymbTable_inst, "put");
 
-  int_token = new_token(INT);
-  int_token->lexeme = "int";
-
-  function_token = new_token(FUNCTION);
-  function_token->lexeme = "function";
-  
-  void_token = new_token(VOID);
-  void_token->lexeme = "void";
+  int_token = Token_new(INT, "int");
+  function_token = Token_new(FUNCTION, "function");
+  void_token = Token_new(VOID, "void");
 }
 
-TOKEN* lookup_token(const char *s)
-{
+Token *Token_symbol_get(const char *s) {
   current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
 
   if (polyglot_is_null(current)) {
-    TOKEN* new = new_token(IDENTIFIER);
-    new->lexeme = (char *)malloc(1 + strlen(s));
-    strcpy(new->lexeme, s);
+    char *lexeme = (char *)malloc(1 + strlen(s));
+    strcpy(lexeme, s);
+    Token *new = Token_new(IDENTIFIER, lexeme);
     current = new;
     SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
   }
