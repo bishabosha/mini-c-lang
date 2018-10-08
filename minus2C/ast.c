@@ -13,7 +13,7 @@ Ast *Node_new(int t, Ast *left, Ast *right) {
     exit(1);
   }
   a->ast.tag = NODE;
-  a->type = t;
+  a->ast.type = t;
   a->left = left;
   a->right = right;
   return (Ast*)a;

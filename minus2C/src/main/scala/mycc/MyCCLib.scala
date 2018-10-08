@@ -8,23 +8,14 @@ object MyCCLib {
   private val polyglot = Context.newBuilder().allowAllAccess(true).build
   private val file = new File("mycclib")
   private val source = Source.newBuilder("llvm", file).build
-  private val mycclib = polyglot.eval(source)
+  private val myCCLib = polyglot.eval(source)
 
-  private val init_symbtable = mycclib.getMember("init_symbtable")
-  private val yyparse = mycclib.getMember("yyparse")
-  private val set_debug = mycclib.getMember("set_debug")
-  private val get_ans = mycclib.getMember("get_ans")
-  private val print_ast = mycclib.getMember("print_ast")
+  def init_symbtable(): Unit = myCCLib.getMember("init_symbtable").executeVoid()
+  def yyparse(): Unit = myCCLib.getMember("yyparse").executeVoid()
+  def set_debug(value: java.lang.Boolean): Unit = myCCLib.getMember("set_debug").executeVoid(value)
+  def get_ans: Value = myCCLib.getMember("get_ans").execute()
+  def print_ast(ast: Value): Unit = myCCLib.getMember("print_ast").executeVoid(ast)
+  def get_SymbTable_inst: SymbTable = myCCLib.getMember("get_SymbTable_inst").execute().as(classOf[SymbTable])
 
-  def main(aStrings: Array[String]): Unit = {
-    val debug: java.lang.Boolean = aStrings.nonEmpty && "-d" == aStrings(0)
-    set_debug.executeVoid(debug)
-    init_symbtable.executeVoid()
-    println("--C COMPILER")
-    yyparse.executeVoid()
-    val tree: Option[Value] = Option(get_ans.execute())
-    val treePointer = tree.map(_.asNativePointer).getOrElse(0L)
-    printf("parse finished with 0x%08X\n", treePointer)
-    print_ast.executeVoid(tree.filter(!_.isNull).orNull)
-  }
+  def close(): Unit = polyglot.close()
 }

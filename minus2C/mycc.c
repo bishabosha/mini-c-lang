@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 
-char *named(Node* ast)
+char *named(Ast* ast)
 {
     int token = ast->type;
     static char b[100];   
@@ -64,8 +64,9 @@ POLYGLOT_DECLARE_STRUCT(ast);
 extern void *get_SymbTable_inst();
 void print_tree(Node *, int);
 void print_ast0(Ast *, int);
-void print_int_constant(IntConstant *);
+void print_int_constant(Token *);
 void print_string_constant(Token *);
+void print_token_default(Token *token);
 void print_token(Token *);
 
 void print_level(int level) {
@@ -89,38 +90,42 @@ void print_ast0(Ast *ast, int level) {
   case TOKEN:
     print_token((Token *)ast);
     break;
-  case STRING_CONSTANT:
-    print_string_constant((Token *)ast);
-    break;
-  case INT_CONSTANT:
-    print_int_constant((IntConstant *)ast);
-    break;
   }
 }
 
-void print_int_constant(IntConstant *constant) {
-  printf("%d\n", constant->value);
-}
-
-void print_string_constant(Token *token) { printf("\"%s\"\n", token->lexeme); }
-
-void print_token(Token *token) { printf("%s\n", token->lexeme); }
-
 void print_tree(Node *node, int level) {
-  printf("%s\n", named(node));
+  printf("%s\n", named(&node->ast));
   print_ast0(node->left, level + 2);
   print_ast0(node->right, level + 2);
 }
 
+void print_token(Token *token) {
+  switch (token->ast.type) {
+  case STRING_LITERAL:
+    print_string_constant(token);
+    break;
+  case CONSTANT:
+    print_int_constant(token);
+    break;
+  default:
+    print_token_default(token);
+    break;
+  }
+}
+
+void print_int_constant(Token *constant) {
+  printf("%d\n", constant->data.value);
+}
+
+void print_string_constant(Token *token) { printf("\"%s\"\n", token->data.lexeme); }
+
+void print_token_default(Token *token) { printf("%s\n", token->data.lexeme); }
+
 extern int yydebug;
-extern Ast* yyparse(void);
-extern Ast* ans;
+extern Ast *yyparse(void);
+extern Ast *ans;
 extern void init_symbtable(void);
 
-void set_debug(bool debug) {
-    yydebug = debug ? 1 : 0;
-}
+void set_debug(bool debug) { yydebug = debug ? 1 : 0; }
 
-Ast* get_ans() {
-    return polyglot_from_ast(ans);
-}
+Ast *get_ans() { return polyglot_from_ast(ans); }

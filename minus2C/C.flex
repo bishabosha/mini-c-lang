@@ -14,9 +14,9 @@ IS			(u|U|l|L)*
 #include <polyglot.h>
 #include "ast.h"
 
-Ast* StringConstant_new(char*);
-extern Ast* Token_symbol_get(const char*);
-Ast* IntConstant_new(char*);
+Ast* string_constant_Token_new(char*);
+extern Ast* symbol_Token_get(const char*);
+Ast* int_constant_Token_new(char*);
 Ast* lasttok;
 
 void count(void);
@@ -39,10 +39,10 @@ void comment(void);
 "void"			{ count(); return(VOID); }
 "while"			{ count(); return(WHILE); }
 
-{L}({L}|{D})*		{ count(); lasttok = Token_symbol_get(yytext);	 return(IDENTIFIER); }
-{D}+{IS}?			{ count(); lasttok = IntConstant_new(yytext);	 return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count(); lasttok = IntConstant_new(yytext);	 return(CONSTANT); }
-L?\"(\\.|[^\\"])*\"	{ count(); lasttok = StringConstant_new(yytext); return(STRING_LITERAL); }
+{L}({L}|{D})*		{ count(); lasttok = symbol_Token_get(yytext);	 return(IDENTIFIER); }
+{D}+{IS}?			{ count(); lasttok = int_constant_Token_new(yytext);	 return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ count(); lasttok = int_constant_Token_new(yytext);	 return(CONSTANT); }
+L?\"(\\.|[^\\"])*\"	{ count(); lasttok = string_constant_Token_new(yytext); return(STRING_LITERAL); }
 
 "<="		{ count(); return(LE_OP); }
 ">="		{ count(); return(GE_OP); }
@@ -109,26 +109,36 @@ void count() {
 	ECHO;
 }
 
-Ast *Token_new(int type, const char * lexeme) {
+Token *Token_new_no_data(int);
+
+Ast *lexeme_Token_new(int type, char * lexeme) {
+    Token *ans = Token_new_no_data(type);
+	ans->data.lexeme = lexeme;
+    return (Ast *)ans;
+}
+
+Ast *int_Token_new(int type, int value) {
+    Token *ans = Token_new_no_data(type);
+	ans->data.value = value;
+    return (Ast *)ans;
+}
+
+Token *Token_new_no_data(int type) {
     Token *ans = (Token*)malloc(sizeof(Token));
     ans->ast.tag = TOKEN;
-	ans->lexeme = lexeme;
-    return (Ast *)ans;
+	ans->ast.type = type;
+    return ans;
 }
 
-Ast *StringConstant_new(char *s) {
+Ast *string_constant_Token_new(char *s) {
     int len = strlen(s);
-    StringConstant *ans = (StringConstant*)malloc(sizeof(StringConstant));
-	ans->token.ast.tag = STRING_CONSTANT;
-	ans->token.lexeme = (char *)malloc(strlen(s)-1);
-    strncpy(ans->token.lexeme, s+1, len-2);
-    return (Ast *)ans;
+	char * lexeme = (char *)malloc(strlen(s)-1);
+	strncpy(lexeme, s+1, len-2);
+    return (Ast *)lexeme_Token_new(STRING_LITERAL, lexeme);
 }
 
-Ast *IntConstant_new(char *s) {
+Ast *int_constant_Token__new(char *s) {
     int n = *s!='\'' ? atoi(s) : *(s+1);
-    IntConstant *ans = (IntConstant*)malloc(sizeof(IntConstant));
-	ans->ast.tag = INT_CONSTANT;
-    ans->value = n;
-    return (Ast *)ans;
+	Token *ans = (Token*)malloc(sizeof(Token));
+    return (Ast *)int_Token_new(CONSTANT, n);
 }
