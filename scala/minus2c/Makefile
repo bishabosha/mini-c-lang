@@ -12,6 +12,8 @@ all:  ${TARGET}
 
 boot: clean rm
 
+reboot: boot all
+
 clean:
 	rm ${OBJS}
 	rm ${GUFF}

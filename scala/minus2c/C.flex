@@ -137,7 +137,7 @@ Ast *string_constant_Token_new(char *s) {
     return (Ast *)lexeme_Token_new(STRING_LITERAL, lexeme);
 }
 
-Ast *int_constant_Token__new(char *s) {
+Ast *int_constant_Token_new(char *s) {
     int n = *s!='\'' ? atoi(s) : *(s+1);
 	Token *ans = (Token*)malloc(sizeof(Token));
     return (Ast *)int_Token_new(CONSTANT, n);
