@@ -62,6 +62,7 @@ char *named(Ast* ast)
 }
 
 POLYGLOT_DECLARE_STRUCT(ast);
+POLYGLOT_DECLARE_TYPE(Data);
 
 extern void *get_SymbTable_inst();
 void print_tree(Node *, int);
@@ -119,9 +120,13 @@ void print_int_constant(Token *constant) {
   printf("%d\n", constant->data.value);
 }
 
-void print_string_constant(Token *token) { printf("\"%s\"\n", token->data.lexeme); }
+void print_string_constant(Token *token) {
+  printf("\"%s\"\n", token->data.lexeme);
+}
 
-void print_token_default(Token *token) { printf("%s\n", token->data.lexeme); }
+void print_token_default(Token *token) {
+  printf("%s\n", token->data.lexeme);
+}
 
 extern int yydebug;
 extern Ast *yyparse(void);
@@ -131,3 +136,91 @@ extern void init_symbtable(void);
 void set_debug(bool debug) { yydebug = debug ? 1 : 0; }
 
 Ast *get_ans() { return polyglot_from_ast(ans); }
+
+static void *java_util_ArrayDeque;
+static void *scala_Console;
+static void *mycc_Ast;
+static void *mycc_Ast_Token;
+static void *mycc_Ast_Constant;
+static void *mycc_Ast_Node;
+
+static void *(*mycc_Ast_Token_new)(void *, void *);
+static void *(*mycc_Ast_Constant_new)(int);
+static void *(*mycc_Ast_Node_new)(void *, void *, void *);
+
+static void *(*java_util_ArrayDeque_push)(void *);
+static void *(*java_util_ArrayDeque_pop)();
+static void (*scala_Console_println)(void *);
+
+static void *java_util_ArrayDeque_inst;
+static void *currentAst;
+
+void init_mycc_Ast() {
+  scala_Console = polyglot_java_type("scala.Console");
+  java_util_ArrayDeque = polyglot_java_type("java.util.ArrayDeque");
+  mycc_Ast = polyglot_java_type("mycc.Ast");
+  mycc_Ast_Constant = polyglot_java_type("mycc.Ast$Constant");
+  mycc_Ast_Token = polyglot_java_type("mycc.Ast$Token");
+  mycc_Ast_Node = polyglot_java_type("mycc.Ast$Node");
+
+  mycc_Ast_Token_new = polyglot_get_member(mycc_Ast_Token, "apply");
+  mycc_Ast_Constant_new = polyglot_get_member(mycc_Ast_Constant, "apply");
+  mycc_Ast_Node_new = polyglot_get_member(mycc_Ast_Node, "apply");
+
+  java_util_ArrayDeque_inst = polyglot_new_instance(java_util_ArrayDeque);
+  java_util_ArrayDeque_pop =
+      polyglot_get_member(java_util_ArrayDeque_inst, "pop");
+  java_util_ArrayDeque_push =
+      polyglot_get_member(java_util_ArrayDeque_inst, "push");
+  scala_Console_println = polyglot_get_member(scala_Console, "println");
+}
+
+void Ast_to_Scala(Ast *);
+void Node_to_Scala(Node *);
+void Token_to_Scala(Token *);
+
+void* get_deque() {
+  return java_util_ArrayDeque_inst;
+}
+
+void Ast_to_Scala(Ast *ast) {
+  if (NULL == ast || polyglot_is_null(ast)) {
+    return;
+  }
+  if (NULL == mycc_Ast) {
+    init_mycc_Ast();
+  }
+  switch (ast->tag) {
+  case NODE:
+    Node_to_Scala((Node*)ast);
+    return;
+  case TOKEN:
+    Token_to_Scala((Token *)ast);
+    return;
+  }
+}
+
+void Node_to_Scala(Node *node) {
+  Ast_to_Scala(node->right);
+  Ast_to_Scala(node->left);
+  java_util_ArrayDeque_push(polyglot_from_string(named(&node->ast), "UTF-8"));
+  java_util_ArrayDeque_push(mycc_Ast_Node_new(java_util_ArrayDeque_pop(),
+                                              java_util_ArrayDeque_pop(),
+                                              java_util_ArrayDeque_pop()));
+}
+
+void Token_to_Scala(Token *token) {
+  switch (token->ast.type) {
+  case CONSTANT:
+    java_util_ArrayDeque_push(mycc_Ast_Constant_new(token->data.value));
+    return;
+  default:
+    java_util_ArrayDeque_push(
+        polyglot_from_string(token->data.lexeme, "UTF-8"));
+    java_util_ArrayDeque_push(
+        polyglot_from_string(named(&token->ast), "UTF-8"));
+    java_util_ArrayDeque_push(mycc_Ast_Token_new(java_util_ArrayDeque_pop(),
+                                                 java_util_ArrayDeque_pop()));
+    return;
+  }
+}

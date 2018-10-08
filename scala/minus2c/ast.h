@@ -14,12 +14,14 @@ typedef struct node {
   Ast *right;
 } Node;
 
+typedef union {
+  char *lexeme;
+  int value;
+} Data;
+
 typedef struct token {
   Ast ast;
-  union {
-    char *lexeme;
-    int value;
-  } data;
+  Data data;
 } Token;
 
 extern Ast *lexeme_Token_new(int, char*);

@@ -16,6 +16,17 @@ object MyCCLib {
   def get_ans: Value = myCCLib.getMember("get_ans").execute()
   def print_ast(ast: Value): Unit = myCCLib.getMember("print_ast").executeVoid(ast)
   def get_SymbTable_inst: SymbTable = myCCLib.getMember("get_SymbTable_inst").execute().as(classOf[SymbTable])
+  def accept_ast_visitor: Value = myCCLib.getMember("accept_ast_visitor")
+  def accept_ast: Value = myCCLib.getMember("accept_ast")
+  def sendValue(value: Any): Value = polyglot.asValue(value)
+
+  def astToScala(ast: Value): Ast = {
+    myCCLib.getMember("Ast_to_Scala").executeVoid(ast)
+    myCCLib.getMember("get_deque")
+           .execute()
+           .as(classOf[java.util.ArrayDeque[Ast]])
+           .pop
+  }
 
   def close(): Unit = polyglot.close()
 }

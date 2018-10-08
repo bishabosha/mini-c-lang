@@ -4,3 +4,4 @@ int main(int a) { return a + 1; }
 int main(int a) { return a + a; }
 int main(int* a) { return *a + *a; }
 return 1 + 1;
+int o = 101;

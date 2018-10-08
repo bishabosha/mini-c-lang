@@ -25,48 +25,48 @@ void comment(void);
 
 %%
 
-"/*"			{ comment(); }
+"/*"				{ comment(); }
 
-"auto"			{ count(); return(AUTO); }
-"break"			{ count(); return(BREAK); }
-"continue"		{ count(); return(CONTINUE); }
-"else"			{ count(); return(ELSE); }
-"extern"		{ count(); return(EXTERN); }
-"if"			{ count(); return(IF); }
-"int"			{ count(); return(INT); }
-"function"		{ count(); return(FUNCTION); }
-"return"		{ count(); return(RETURN); }
-"void"			{ count(); return(VOID); }
-"while"			{ count(); return(WHILE); }
+"auto"				{ count(); return(AUTO); }
+"break"				{ count(); return(BREAK); }
+"continue"			{ count(); return(CONTINUE); }
+"else"				{ count(); return(ELSE); }
+"extern"			{ count(); return(EXTERN); }
+"if"				{ count(); return(IF); }
+"int"				{ count(); return(INT); }
+"function"			{ count(); return(FUNCTION); }
+"return"			{ count(); return(RETURN); }
+"void"				{ count(); return(VOID); }
+"while"				{ count(); return(WHILE); }
 
-{L}({L}|{D})*		{ count(); lasttok = symbol_Token_get(yytext);	 return(IDENTIFIER); }
-{D}+{IS}?			{ count(); lasttok = int_constant_Token_new(yytext);	 return(CONSTANT); }
-L?'(\\.|[^\\'])+'	{ count(); lasttok = int_constant_Token_new(yytext);	 return(CONSTANT); }
+{L}({L}|{D})*		{ count(); lasttok = symbol_Token_get(yytext);	 		return(IDENTIFIER); }
+{D}+{IS}?			{ count(); lasttok = int_constant_Token_new(yytext);	return(CONSTANT); }
+L?'(\\.|[^\\'])+'	{ count(); lasttok = int_constant_Token_new(yytext);	return(CONSTANT); }
 L?\"(\\.|[^\\"])*\"	{ count(); lasttok = string_constant_Token_new(yytext); return(STRING_LITERAL); }
 
-"<="		{ count(); return(LE_OP); }
-">="		{ count(); return(GE_OP); }
-"=="		{ count(); return(EQ_OP); }
-"!="		{ count(); return(NE_OP); }
-";"			{ count(); return(';'); }
-"{"     	{ count(); return('{'); }
-"}"     	{ count(); return('}'); }
-","			{ count(); return(','); }
-":"			{ count(); return(':'); }
-"="			{ count(); return('='); }
-"("			{ count(); return('('); }
-")"			{ count(); return(')'); }
-"!"			{ count(); return('!'); }
-"-"			{ count(); return('-'); }
-"+"			{ count(); return('+'); }
-"*"			{ count(); return('*'); }
-"/"			{ count(); return('/'); }
-"%"			{ count(); return('%'); }
-"<"			{ count(); return('<'); }
-">"			{ count(); return('>'); }
+"<="				{ count(); return(LE_OP); }
+">="				{ count(); return(GE_OP); }
+"=="				{ count(); return(EQ_OP); }
+"!="				{ count(); return(NE_OP); }
+";"					{ count(); return(';'); }
+"{"     			{ count(); return('{'); }
+"}"     			{ count(); return('}'); }
+","					{ count(); return(','); }
+":"					{ count(); return(':'); }
+"="					{ count(); return('='); }
+"("					{ count(); return('('); }
+")"					{ count(); return(')'); }
+"!"					{ count(); return('!'); }
+"-"					{ count(); return('-'); }
+"+"					{ count(); return('+'); }
+"*"					{ count(); return('*'); }
+"/"					{ count(); return('/'); }
+"%"					{ count(); return('%'); }
+"<"					{ count(); return('<'); }
+">"					{ count(); return('>'); }
 
-[ \t\v\n\f]	{ count(); }
-.			{ /* ignore bad characters */ }
+[ \t\v\n\f]			{ count(); }
+.					{ /* ignore bad characters */ }
 
 %%
 

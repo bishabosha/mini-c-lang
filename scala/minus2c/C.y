@@ -91,7 +91,7 @@ expression
 
 declaration
 	: declaration_specifiers ';'						{ $$ = $1; }
-| function_definition									{ $$ = $1; }
+	| function_definition								{ $$ = $1; }
 	| declaration_specifiers init_declarator_list ';' 	{ $$ = Node_new('~', $1, $2); }
 	;
 
@@ -131,7 +131,7 @@ declarator
 direct_declarator
 	: IDENTIFIER									{ $$ = lasttok; }
 	| '(' declarator ')'							{ $$ = $2; }
-        | direct_declarator '(' parameter_list ')' 	{ $$ = Node_new('F', $1, $3); }
+    | direct_declarator '(' parameter_list ')' 		{ $$ = Node_new('F', $1, $3); }
 	| direct_declarator '(' identifier_list ')'		{ $$ = Node_new('F', $1, $3); }
 	| direct_declarator '(' ')'                		{ $$ = Node_new('F', $1, NULL); }
 	;
