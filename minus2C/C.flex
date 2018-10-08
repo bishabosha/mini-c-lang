@@ -65,7 +65,7 @@ L?\"(\\.|[^\\"])*\"	{ count(); lasttok = StringConstant_new(yytext); return(STRI
 "<"			{ count(); return('<'); }
 ">"			{ count(); return('>'); }
 
-[\t\v\n\f]	{ count(); }
+[ \t\v\n\f]	{ count(); }
 .			{ /* ignore bad characters */ }
 
 %%
