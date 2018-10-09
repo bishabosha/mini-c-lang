@@ -2,7 +2,7 @@
 #include "ast.h"
 #define YYSTYPE Ast*
 #define YYDEBUG 1
-extern Ast *int_token, *void_token, *function_token, *lasttok;
+extern Ast *int_token, *void_token, *function_token, *return_token, *break_token, *continue_token, *empty_token, *lasttok;
 Ast *ans;
 %}
 
@@ -14,6 +14,8 @@ Ast *ans;
 %token APPLY LEAF
 
 %token  IF ELSE WHILE CONTINUE BREAK RETURN
+
+%token EMPTY
 
 %start goal
 %%
@@ -165,7 +167,7 @@ abstract_declarator
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')'    					{ $$ = $2; }
-	| '(' ')'    					 					{ $$ = NULL; }
+	| '(' ')'    					 					{ $$ = empty_token; }
 	| '(' parameter_list ')'    	 					{ $$ = $2; }
 	| direct_abstract_declarator '(' ')'    			{ $$ = Node_new(APPLY, $1); }
 	| direct_abstract_declarator '(' parameter_list ')'	{ $$ = BinaryNode_new(APPLY, $1, $3); }
@@ -180,7 +182,7 @@ statement
 	;
 
 compound_statement
-	: '{' '}'                       			{ $$ = NULL; }
+	: '{' '}'                       			{ $$ = empty_token; }
 	| '{' statement_list '}'					{ $$ = $2; }
 	| '{' declaration_list '}'					{ $$ = $2; }
 	| '{' declaration_list statement_list '}' 	{ $$ = BinaryNode_new(';', $2, $3); }
@@ -197,7 +199,7 @@ statement_list
 	;
 
 expression_statement
-	: ';'					{ $$ = NULL; }
+	: ';'					{ $$ = empty_token; }
 	| expression ';'		{ $$ = $1; }
 	;
 
@@ -211,15 +213,15 @@ iteration_statement
 	;
 
 jump_statement
-	: CONTINUE ';'          { $$ = BinaryNode_new(CONTINUE, NULL, NULL); }
-	| BREAK ';'             { $$ = BinaryNode_new(BREAK, NULL, NULL); }
-	| RETURN ';'	        { $$ = BinaryNode_new(RETURN, NULL, NULL); }
+	: CONTINUE ';'          { $$ = continue_token; }
+	| BREAK ';'             { $$ = break_token; }
+	| RETURN ';'	        { $$ = return_token; }
 	| RETURN expression ';'	{ $$ = Node_new(RETURN, $2); }
 	;
 
 translation_unit
 	: external_declaration					{ $$ = $1; }
-	| translation_unit external_declaration { $$ = BinaryNode_new('~', $1, $2);}
+	| translation_unit external_declaration { $$ = BinaryNode_new('~', $1, $2); }
 	;
 
 external_declaration

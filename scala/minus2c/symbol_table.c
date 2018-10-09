@@ -22,7 +22,8 @@ static void (*SymbTable_put)(const void *, Ast*);
 
 static Ast *current;
 
-Ast *int_token, *void_token, *function_token;
+Ast *int_token, *void_token, *function_token, *return_token, *break_token,
+    *continue_token, *empty_token;
 
 void init_symbtable(void)
 {
@@ -30,9 +31,14 @@ void init_symbtable(void)
   SymbTable_get = polyglot_get_member(SymbTable_inst, "get");
   SymbTable_put = polyglot_get_member(SymbTable_inst, "put");
 
+// type token?
   int_token = lexeme_Token_new(INT, "int");
   function_token = lexeme_Token_new(FUNCTION, "function");
   void_token = lexeme_Token_new(VOID, "void");
+  return_token = lexeme_Token_new(RETURN, "return");
+  break_token = lexeme_Token_new(BREAK, "break");
+  continue_token = lexeme_Token_new(CONTINUE, "continue");
+  empty_token = lexeme_Token_new(EMPTY, "ø");
 }
 
 Ast *symbol_Token_get(const char *s) {
@@ -41,6 +47,7 @@ Ast *symbol_Token_get(const char *s) {
   if (polyglot_is_null(current)) {
     char *lexeme = (char *)malloc(1 + strlen(s));
     strcpy(lexeme, s);
+
     Ast *new = lexeme_Token_new(IDENTIFIER, lexeme);
     current = new;
     SymbTable_put(polyglot_from_string(s, "UTF-8"), current);

@@ -20,11 +20,11 @@ object MyCCLib {
   def accept_ast: Value = myCCLib.getMember("accept_ast")
   def sendValue(value: Any): Value = polyglot.asValue(value)
 
-  def astToScala(ast: Value): Ast = {
+  def astToScala(ast: Value): CAst = {
     myCCLib.getMember("Ast_to_Scala").executeVoid(ast)
     myCCLib.getMember("get_deque")
            .execute()
-           .as(classOf[java.util.ArrayDeque[Ast]])
+           .as(classOf[java.util.ArrayDeque[CAst]])
            .pop
   }
 

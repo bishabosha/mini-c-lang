@@ -50,6 +50,8 @@ char *named(Ast *ast) {
     return "break";
   case RETURN:
     return "return";
+  case EMPTY:
+    return "ø";
   default:
     if (isgraph(token) || token == ' ') {
       sprintf(b, "%c", token);
@@ -100,12 +102,12 @@ void print_ast0(Ast *ast, int level) {
 }
 
 void print_tree(Node *node, int level) {
-  printf("node: %s\n", named(&node->ast));
+  printf("%s\n", named(&node->ast));
   print_ast0(node->left, level + 2);
 }
 
 void print_binary_tree(BinaryNode *node, int level) {
-  printf("node: %s\n", named(&node->ast));
+  printf("%s\n", named(&node->ast));
   print_ast0(node->left, level + 2);
   print_ast0(node->right, level + 2);
 }
@@ -125,15 +127,15 @@ void print_token(Token *token) {
 }
 
 void print_int_constant(Token *constant) {
-  printf("constant: %d\n", constant->data.value);
+  printf("%d\n", constant->data.value);
 }
 
 void print_string_constant(Token *token) {
-  printf("string_lit: \"%s\"\n", token->data.lexeme);
+  printf("\"%s\"\n", token->data.lexeme);
 }
 
 void print_token_default(Token *token) {
-  printf("lexeme: %s\n", token->data.lexeme);
+  printf("%s\n", token->data.lexeme);
 }
 
 extern int yydebug;
@@ -146,45 +148,51 @@ void set_debug(bool debug) { yydebug = debug ? 1 : 0; }
 Ast *get_ans() { return polyglot_from_ast(ans); }
 
 static void *java_util_ArrayDeque;
-static void *scala_Console;
-static void *mycc_Ast;
-static void *mycc_Ast$Token;
-static void *mycc_Ast$Constant;
-static void *mycc_Ast$Node;
-static void *mycc_Ast$BinaryNode;
+static void *scala_util_Left_String;
+static void *scala_util_Right_Int;
 
-static void *(*mycc_Ast$Token_new)(void *, void *);
-static void *(*mycc_Ast$Constant_new)(int);
-static void *(*mycc_Ast$Node_new)(void *, void *);
-static void *(*mycc_Ast$BinaryNode_new)(void *, void *, void *);
+static void *mycc_CAst;
+static void *mycc_CAst$Token;
+static void *mycc_CAst$Node;
+static void *mycc_CAst$BinaryNode;
+
+static void *(*mycc_CAst$Token_new)(void *, void *);
+static void *(*mycc_CAst$Node_new)(void *, void *);
+static void *(*mycc_CAst$BinaryNode_new)(void *, void *, void *);
 
 static void *(*java_util_ArrayDeque_push)(void *);
 static void *(*java_util_ArrayDeque_pop)();
-static void (*scala_Console_println)(void *);
+
+static void *(*scala_util_Left_String_new)(void *);
+static void *(*scala_util_Right_Int_new)(int);
 
 static void *java_util_ArrayDeque_inst;
-static void *currentAst;
 
-void init_mycc_Ast() {
-  scala_Console = polyglot_java_type("scala.Console");
+void init_mycc_CAst() {
   java_util_ArrayDeque = polyglot_java_type("java.util.ArrayDeque");
-  mycc_Ast = polyglot_java_type("mycc.Ast");
-  mycc_Ast$Constant = polyglot_java_type("mycc.Ast$Constant");
-  mycc_Ast$Token = polyglot_java_type("mycc.Ast$Token");
-  mycc_Ast$BinaryNode = polyglot_java_type("mycc.Ast$BinaryNode");
-  mycc_Ast$Node = polyglot_java_type("mycc.Ast$Node");
 
-  mycc_Ast$Token_new = polyglot_get_member(mycc_Ast$Token, "apply");
-  mycc_Ast$Constant_new = polyglot_get_member(mycc_Ast$Constant, "apply");
-  mycc_Ast$Node_new = polyglot_get_member(mycc_Ast$Node, "apply");
-  mycc_Ast$BinaryNode_new = polyglot_get_member(mycc_Ast$BinaryNode, "apply");
+  scala_util_Left_String = polyglot_java_type("scala.util.Left");
+  scala_util_Right_Int = polyglot_java_type("scala.util.Right");
+
+  mycc_CAst = polyglot_java_type("mycc.CAst");
+  mycc_CAst$Token = polyglot_java_type("mycc.CAst$Token");
+  mycc_CAst$BinaryNode = polyglot_java_type("mycc.CAst$BinaryNode");
+  mycc_CAst$Node = polyglot_java_type("mycc.CAst$Node");
+
+  mycc_CAst$Token_new = polyglot_get_member(mycc_CAst$Token, "apply");
+  mycc_CAst$Node_new = polyglot_get_member(mycc_CAst$Node, "apply");
+  mycc_CAst$BinaryNode_new = polyglot_get_member(mycc_CAst$BinaryNode, "apply");
 
   java_util_ArrayDeque_inst = polyglot_new_instance(java_util_ArrayDeque);
   java_util_ArrayDeque_pop =
       polyglot_get_member(java_util_ArrayDeque_inst, "pop");
   java_util_ArrayDeque_push =
       polyglot_get_member(java_util_ArrayDeque_inst, "push");
-  scala_Console_println = polyglot_get_member(scala_Console, "println");
+
+  scala_util_Left_String_new =
+      polyglot_get_member(scala_util_Left_String, "apply");
+  scala_util_Right_Int_new =
+      polyglot_get_member(scala_util_Right_Int, "apply");
 }
 
 void Ast_to_Scala(Ast *);
@@ -198,8 +206,8 @@ void Ast_to_Scala(Ast *ast) {
   if (NULL == ast || polyglot_is_null(ast)) {
     return;
   }
-  if (NULL == mycc_Ast) {
-    init_mycc_Ast();
+  if (NULL == mycc_CAst) {
+    init_mycc_CAst();
   }
   switch (ast->tag) {
   case NODE:
@@ -218,38 +226,36 @@ void BinaryNode_to_Scala(BinaryNode *node) {
   Ast_to_Scala(node->right);
   Ast_to_Scala(node->left);
   java_util_ArrayDeque_push(polyglot_from_string(named(&node->ast), "UTF-8"));
-  scala_Console_println(java_util_ArrayDeque_inst);
-  java_util_ArrayDeque_push(mycc_Ast$BinaryNode_new(
+  java_util_ArrayDeque_push(mycc_CAst$BinaryNode_new(
       java_util_ArrayDeque_pop(), java_util_ArrayDeque_pop(),
       java_util_ArrayDeque_pop()));
-  scala_Console_println(java_util_ArrayDeque_inst);
 }
 
 void Node_to_Scala(Node *node) {
   Ast_to_Scala(node->left);
   java_util_ArrayDeque_push(polyglot_from_string(named(&node->ast), "UTF-8"));
-  scala_Console_println(java_util_ArrayDeque_inst);
-  java_util_ArrayDeque_push(mycc_Ast$Node_new(java_util_ArrayDeque_pop(),
-                                              java_util_ArrayDeque_pop()));
-  scala_Console_println(java_util_ArrayDeque_inst);
+  java_util_ArrayDeque_push(mycc_CAst$Node_new(java_util_ArrayDeque_pop(),
+                                               java_util_ArrayDeque_pop()));
 }
 
 void Token_to_Scala(Token *token) {
   switch (token->ast.type) {
   case CONSTANT:
-    java_util_ArrayDeque_push(mycc_Ast$Constant_new(token->data.value));
-    scala_Console_println(java_util_ArrayDeque_inst);
+    java_util_ArrayDeque_push(scala_util_Right_Int_new(token->data.value));
+    java_util_ArrayDeque_push(
+        polyglot_from_string(named(&token->ast), "UTF-8"));
+    java_util_ArrayDeque_push(mycc_CAst$Token_new(java_util_ArrayDeque_pop(),
+                                                  java_util_ArrayDeque_pop()));
     return;
   default:
     java_util_ArrayDeque_push(
         polyglot_from_string(token->data.lexeme, "UTF-8"));
-    scala_Console_println(java_util_ArrayDeque_inst);
+    java_util_ArrayDeque_push(
+        scala_util_Left_String_new(java_util_ArrayDeque_pop()));
     java_util_ArrayDeque_push(
         polyglot_from_string(named(&token->ast), "UTF-8"));
-    scala_Console_println(java_util_ArrayDeque_inst);
-    java_util_ArrayDeque_push(mycc_Ast$Token_new(java_util_ArrayDeque_pop(),
-                                                 java_util_ArrayDeque_pop()));
-    scala_Console_println(java_util_ArrayDeque_inst);
+    java_util_ArrayDeque_push(mycc_CAst$Token_new(java_util_ArrayDeque_pop(),
+                                                  java_util_ArrayDeque_pop()));
     return;
   }
 }

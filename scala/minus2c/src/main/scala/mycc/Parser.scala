@@ -1,7 +1,7 @@
 package mycc
 
 import org.graalvm.polyglot._
-import mycc.Ast._
+import mycc.CAst._
 
 object Parser {
   def main(aStrings: Array[String]): Unit = {
@@ -14,10 +14,12 @@ object Parser {
     val tree: Option[Value] = Option(MyCCLib.get_ans)
     val treePointer = tree.map(_.asNativePointer).getOrElse(0L)
     printf("parse finished with 0x%08X\n", treePointer)
+    
     MyCCLib.print_ast(tree.filter(!_.isNull).orNull)
 
-    val ast = tree.filter(!_.isNull).map(MyCCLib.astToScala)
-  
+    val ast: Option[CAst] = tree.filter(!_.isNull).map(MyCCLib.astToScala)
+
     ast.foreach(println(_))
+    ast.foreach(PrintCAst(_))
   }
 }

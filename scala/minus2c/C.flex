@@ -66,7 +66,7 @@ L?\"(\\.|[^\\"])*\"	{ count(); lasttok = string_constant_Token_new(yytext); retu
 ">"					{ count(); return('>'); }
 
 [ \t\v\n\f]			{ count(); }
-.					{ /* ignore bad characters */ }
+.					{ return(EMPTY); }
 
 %%
 
