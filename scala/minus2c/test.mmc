@@ -1,5 +1,7 @@
 function main(void) { int doubleit(int a) { return a + a; } return doubleit; }
 function main(int a, int b) { int sum(int x, int y) { return x + y; } return sum(a, b); }
+void main(void) { if(1) {} }
+void main(void) { if(1) {} else {} }
 int main(void) { return 1 + 2; }
 void main(void) { return; }
 void loop(void) { while(1) { break; } }
