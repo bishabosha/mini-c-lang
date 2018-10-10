@@ -41,14 +41,14 @@ void init_symbtable(void)
   empty_token = Singleton_new(EMPTY);
 }
 
-Ast *symbol_Token_get(const char *s) {
+Ast *identifier_get(const char *s) {
   current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
 
   if (polyglot_is_null(current)) {
     char *lexeme = (char *)malloc(1 + strlen(s));
     strcpy(lexeme, s);
 
-    Ast *new = lexeme_Token_new(IDENTIFIER, lexeme);
+    Ast *new = Token_string_new(IDENTIFIER, lexeme);
     current = new;
     SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
   }

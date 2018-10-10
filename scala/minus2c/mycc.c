@@ -109,13 +109,13 @@ void print_ast0(Ast *ast, int level) {
 
 void print_tree(UnaryNode *node, int level) {
   printf("%s\n", named(&node->ast));
-  print_ast0(node->left, level + 2);
+  print_ast0(node->a1, level + 2);
 }
 
 void print_binary_tree(BinaryNode *node, int level) {
   printf("%s\n", named(&node->ast));
-  print_ast0(node->left, level + 2);
-  print_ast0(node->right, level + 2);
+  print_ast0(node->a1, level + 2);
+  print_ast0(node->a2, level + 2);
 }
 
 void print_token_string(Token *token) {
@@ -225,14 +225,14 @@ void Ast_to_Scala(Ast *ast) {
 #define JAVA_STRING(expr) polyglot_from_string(expr, "UTF-8")
 
 void BinaryNode_to_Scala(BinaryNode *node) {
-  Ast_to_Scala(node->right);
-  Ast_to_Scala(node->left);
+  Ast_to_Scala(node->a2);
+  Ast_to_Scala(node->a1);
   ArrayDeque_push(mycc_CAst$BinaryNode_new(JAVA_STRING(named(&node->ast)),
                                            ArrayDeque_pop(), ArrayDeque_pop()));
 }
 
 void UnaryNode_to_Scala(UnaryNode *node) {
-  Ast_to_Scala(node->left);
+  Ast_to_Scala(node->a1);
   ArrayDeque_push(mycc_CAst$UnaryNode_new(JAVA_STRING(named(&node->ast)),
                                           ArrayDeque_pop()));
 }

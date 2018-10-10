@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-Ast *BinaryNode_new(int t, Ast *left, Ast *right) {
+Ast *BinaryNode_new(int t, Ast *a1, Ast *a2) {
   BinaryNode *a = (BinaryNode *)malloc(sizeof(BinaryNode));
   if (a == NULL) {
     perror("Cannot make node");
@@ -12,12 +12,12 @@ Ast *BinaryNode_new(int t, Ast *left, Ast *right) {
   }
   a->ast.tag = BINARY_NODE;
   a->ast.type = t;
-  a->left = left;
-  a->right = right;
+  a->a1 = a1;
+  a->a2 = a2;
   return (Ast*)a;
 }
 
-Ast *UnaryNode_new(int t, Ast *left) {
+Ast *UnaryNode_new(int t, Ast *a1) {
   UnaryNode *a = (UnaryNode *)malloc(sizeof(UnaryNode));
   if (a == NULL) {
     perror("Cannot make node");
@@ -25,6 +25,6 @@ Ast *UnaryNode_new(int t, Ast *left) {
   }
   a->ast.tag = UNARY_NODE;
   a->ast.type = t;
-  a->left = left;
+  a->a1 = a1;
   return (Ast *)a;
 }

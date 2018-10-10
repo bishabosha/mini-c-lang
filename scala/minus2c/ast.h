@@ -10,13 +10,13 @@ typedef struct ast {
 
 typedef struct unary_node {
   Ast ast;
-  Ast *left;
+  Ast *a1;
 } UnaryNode;
 
 typedef struct binary_node {
   Ast ast;
-  Ast *left;
-  Ast *right;
+  Ast *a1;
+  Ast *a2;
 } BinaryNode;
 
 typedef struct token {
@@ -27,7 +27,7 @@ typedef struct token {
   } data;
 } Token;
 
-extern Ast *lexeme_Token_new(int, char*);
+extern Ast *Token_string_new(int, char*);
 extern Ast *Singleton_new(int);
 Ast *BinaryNode_new(int, Ast *, Ast *);
 Ast *UnaryNode_new(int, Ast *);

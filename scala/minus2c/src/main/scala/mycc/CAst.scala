@@ -3,8 +3,8 @@ package mycc
 enum CAst {
   case Singleton(kind: String)
   case Token(kind: String, data: Either[String, Int])
-  case UnaryNode(kind: String, left: CAst)
-  case BinaryNode(kind: String, left: CAst, right: CAst)
+  case UnaryNode(kind: String, a1: CAst)
+  case BinaryNode(kind: String, a1: CAst, a2: CAst)
 }
 
 object PrintCAst {
