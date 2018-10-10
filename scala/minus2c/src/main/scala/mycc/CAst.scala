@@ -2,7 +2,8 @@ package mycc
 
 enum CAst {
   case Singleton(kind: String)
-  case Token(kind: String, data: Either[String, Int])
+  case TokenInt(kind: String, data: Int)
+  case TokenString(kind: String, data: String)
   case UnaryNode(kind: String, a1: CAst)
   case BinaryNode(kind: String, a1: CAst, a2: CAst)
 }
@@ -18,7 +19,8 @@ object PrintCAst {
     ast match {
       case UnaryNode(kind, left) => printNode(level, kind, left)
       case BinaryNode(kind, left, right) => printBinaryNode(level, kind, left, right)
-      case Token(kind, data) => printToken(kind, data)
+      case TokenInt(_, value) => println(value)
+      case TokenString(kind, lexeme) => printTokenString(kind, lexeme)
       case Singleton(kind) => println(kind)
     }
   }
@@ -33,14 +35,10 @@ object PrintCAst {
     printAst(right, level + 2)
   }
 
-  private def printToken(kind: String, data: Either[String, Int]): Unit = data match {
-    case Left(intval) =>
-      println(intval)
-    case Right(lexeme) =>
-      if (kind == "string") {
-        println(s""""$lexeme"""")
-      } else {
-        println(lexeme)
-      }
-  }
+  private def printTokenString(kind: String, lexeme: String): Unit =
+    if (kind == "string") {
+      println(s""""$lexeme"""")
+    } else {
+      println(lexeme)
+    }
 }

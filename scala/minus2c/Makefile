@@ -1,5 +1,5 @@
-OBJS = lex.yy.bc C.tab.bc symbol_table.bc ast.bc mycc.bc
-SRCS = lex.yy.c C.tab.c symbol_table.c ast.c mycc.c
+OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc mycc.bc
+SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mycc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
 LINK = ${LLVM_LINK}
@@ -39,6 +39,6 @@ depend:
 	${CC} -M $(SRCS) > .deps
 	cat Makefile .deps > makefile
 
-dist:	symbol_table.c ast.c mycc.c Makefile C.flex C.y  ast.h
-	tar cvfz mycc.tgz symbol_table.c ast.c mycc.c Makefile C.flex C.y \
+dist:	SymbTable.c ast.c mycc.c Makefile C.flex C.y  ast.h
+	tar cvfz mycc.tgz SymbTable.c ast.c mycc.c Makefile C.flex C.y \
 		ast.h

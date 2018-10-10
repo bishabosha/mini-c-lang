@@ -10,7 +10,7 @@ object MyCCLib {
   private val source = Source.newBuilder("llvm", file).build
   private val myCCLib = polyglot.eval(source)
 
-  def init_symbtable(): Unit = myCCLib.getMember("init_symbtable").executeVoid()
+  def init_SymbTable(): Unit = myCCLib.getMember("init_SymbTable").executeVoid()
   def yyparse(): Unit = myCCLib.getMember("yyparse").executeVoid()
   def set_debug(value: java.lang.Boolean): Unit = myCCLib.getMember("set_debug").executeVoid(value)
   def get_ans: Value = myCCLib.getMember("get_ans").execute()

@@ -15,7 +15,7 @@ IS			(u|U|l|L)*
 #include "ast.h"
 
 Ast* string_literal_new(char*);
-extern Ast* identifier_get(const char*);
+extern Ast* get_identifier(const char*);
 Ast* constant_new(char*);
 Ast* lasttok;
 
@@ -39,7 +39,7 @@ void comment(void);
 "void"				{ count(); return(VOID); }
 "while"				{ count(); return(WHILE); }
 
-{L}({L}|{D})*		{ count(); lasttok = identifier_get(yytext);	 	return(IDENTIFIER); }
+{L}({L}|{D})*		{ count(); lasttok = get_identifier(yytext);	 	return(IDENTIFIER); }
 {D}+{IS}?			{ count(); lasttok = constant_new(yytext);			return(CONSTANT); }
 L?'(\\.|[^\\'])+'	{ count(); lasttok = constant_new(yytext);			return(CONSTANT); }
 L?\"(\\.|[^\\"])*\"	{ count(); lasttok = string_literal_new(yytext); 	return(STRING_LITERAL); }
@@ -109,8 +109,6 @@ void count() {
 	ECHO;
 }
 
-Token *Token_new_no_data(int, int);
-
 Ast *Singleton_new(int type) {
     Ast *ans = (Ast *)malloc(sizeof(Ast));
     ans->tag = SINGLETON;
@@ -118,34 +116,30 @@ Ast *Singleton_new(int type) {
     return ans;
 }
 
-Ast *Token_string_new(int type, char * lexeme) {
-    Token *ans = Token_new_no_data(type, TOKEN_STRING);
-	ans->data.lexeme = lexeme;
-    return (Ast *)ans;
-}
-
-Ast *Token_int_new(int type, int value) {
-    Token *ans = Token_new_no_data(type, TOKEN_INT);
-	ans->data.value = value;
-    return (Ast *)ans;
-}
-
-Token *Token_new_no_data(int type, int tag) {
-    Token *ans = (Token*)malloc(sizeof(Token));
-    ans->ast.tag = tag;
+Ast *TokenString_new(int type, char * lexeme) {
+	TokenString *ans = (TokenString *)malloc(sizeof(TokenString));
+	ans->ast.tag = TOKEN_STRING;
 	ans->ast.type = type;
-    return ans;
+	ans->lexeme = lexeme;
+    return (Ast *)ans;
+}
+
+Ast *TokenInt_new(int type, int value) {
+    TokenInt *ans = (TokenInt*)malloc(sizeof(TokenInt));
+	ans->ast.tag = TOKEN_INT;
+	ans->ast.type = type;
+	ans->value = value;
+    return (Ast *)ans;
 }
 
 Ast *string_literal_new(char *s) {
     int len = strlen(s);
 	char * lexeme = (char *)malloc(strlen(s)-1);
 	strncpy(lexeme, s+1, len-2);
-    return (Ast *)Token_string_new(STRING_LITERAL, lexeme);
+    return (Ast *)TokenString_new(STRING_LITERAL, lexeme);
 }
 
 Ast *constant_new(char *s) {
     int n = *s!='\'' ? atoi(s) : *(s+1);
-	Token *ans = (Token*)malloc(sizeof(Token));
-    return (Ast *)Token_int_new(CONSTANT, n);
+    return (Ast *)TokenInt_new(CONSTANT, n);
 }

@@ -7,7 +7,7 @@ object Parser {
   def main(aStrings: Array[String]): Unit = {
     val debug: java.lang.Boolean = aStrings.length != 0 && "-d" == aStrings(0)
     MyCCLib.set_debug(debug)
-    MyCCLib.init_symbtable()
+    MyCCLib.init_SymbTable()
     println("--C COMPILER")
     MyCCLib.yyparse()
     println(s"symbols: ${MyCCLib.get_SymbTable_inst}")

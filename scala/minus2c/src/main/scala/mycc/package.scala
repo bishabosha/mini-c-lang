@@ -22,17 +22,20 @@ package object mycc {
     case Singleton(kind) =>
       Node0(kind)
 
-    case Token("string", Left(value)) =>
+    case TokenString("string", value) =>
       StringLiteral(value)
 
-    case Token("constant", Right(value)) =>
-      Constant(value)
-
-    case Token("id", Left(identifier)) =>
+    case TokenString("id", identifier) =>
       Identifier(identifier)
 
-    case Token(kind, data) =>
-      Leaf(kind, data)
+    case TokenString(kind, data) =>
+      Leaf(kind, Left(data))
+
+    case TokenInt("constant", value) =>
+      Constant(value)
+
+    case TokenInt(kind, data) =>
+      Leaf(kind, Right(data))
 
     case UnaryNode("return", value) =>
       Return(Some(specialize(value)))
