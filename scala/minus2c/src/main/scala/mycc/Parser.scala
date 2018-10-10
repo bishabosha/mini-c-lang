@@ -21,6 +21,6 @@ object Parser {
 
     ast.foreach(println(_))
     ast.foreach(PrintCAst(_))
-    ast.map(SpecialiseCAst(_)).foreach(println(_))
+    ast.map(specialize(_)).foreach(println(_))
   }
 }

@@ -111,6 +111,13 @@ void count() {
 
 Token *Token_new_no_data(int);
 
+Ast *Singleton_new(int type) {
+    Ast *ans = (Ast *)malloc(sizeof(Ast));
+    ans->tag = SINGLETON;
+	ans->type = type;
+    return ans;
+}
+
 Ast *lexeme_Token_new(int type, char * lexeme) {
     Token *ans = Token_new_no_data(type);
 	ans->data.lexeme = lexeme;

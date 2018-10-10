@@ -32,13 +32,13 @@ void init_symbtable(void)
   SymbTable_put = polyglot_get_member(SymbTable_inst, "put");
 
 // type token?
-  int_token = lexeme_Token_new(INT, "int");
-  function_token = lexeme_Token_new(FUNCTION, "function");
-  void_token = lexeme_Token_new(VOID, "void");
-  return_token = lexeme_Token_new(RETURN, "return");
-  break_token = lexeme_Token_new(BREAK, "break");
-  continue_token = lexeme_Token_new(CONTINUE, "continue");
-  empty_token = lexeme_Token_new(EMPTY, "ø");
+  int_token = Singleton_new(INT);
+  function_token = Singleton_new(FUNCTION);
+  void_token = Singleton_new(VOID);
+  return_token = Singleton_new(RETURN);
+  break_token = Singleton_new(BREAK);
+  continue_token = Singleton_new(CONTINUE);
+  empty_token = Singleton_new(EMPTY);
 }
 
 Ast *symbol_Token_get(const char *s) {
