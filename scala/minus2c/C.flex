@@ -109,7 +109,7 @@ void count() {
 	ECHO;
 }
 
-Token *Token_new_no_data(int);
+Token *Token_new_no_data(int, int);
 
 Ast *Singleton_new(int type) {
     Ast *ans = (Ast *)malloc(sizeof(Ast));
@@ -119,20 +119,20 @@ Ast *Singleton_new(int type) {
 }
 
 Ast *lexeme_Token_new(int type, char * lexeme) {
-    Token *ans = Token_new_no_data(type);
+    Token *ans = Token_new_no_data(type, TOKEN_STRING);
 	ans->data.lexeme = lexeme;
     return (Ast *)ans;
 }
 
 Ast *int_Token_new(int type, int value) {
-    Token *ans = Token_new_no_data(type);
+    Token *ans = Token_new_no_data(type, TOKEN_INT);
 	ans->data.value = value;
     return (Ast *)ans;
 }
 
-Token *Token_new_no_data(int type) {
+Token *Token_new_no_data(int type, int tag) {
     Token *ans = (Token*)malloc(sizeof(Token));
-    ans->ast.tag = TOKEN;
+    ans->ast.tag = tag;
 	ans->ast.type = type;
     return ans;
 }

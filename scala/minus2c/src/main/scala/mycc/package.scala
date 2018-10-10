@@ -20,7 +20,7 @@ package object mycc {
       Return(None)
 
     case Singleton(kind) =>
-      Unary(kind)
+      Node0(kind)
 
     case Token("string", Left(value)) =>
       StringLiteral(value)
@@ -32,12 +32,12 @@ package object mycc {
       Identifier(identifier)
 
     case Token(kind, data) =>
-      Symbolic(kind, data)
+      Leaf(kind, data)
 
-    case Node("return", value) =>
+    case UnaryNode("return", value) =>
       Return(Some(specialize(value)))
 
-    case Node(kind, left) =>
+    case UnaryNode(kind, left) =>
       Node1(kind, specialize(left))
 
     case BinaryNode("if", cond, tail) =>

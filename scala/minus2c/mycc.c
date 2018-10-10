@@ -63,16 +63,16 @@ char *named(Ast *ast) {
 }
 
 POLYGLOT_DECLARE_STRUCT(ast);
-POLYGLOT_DECLARE_TYPE(Data);
 
 extern void *get_SymbTable_inst();
-void print_tree(Node *, int);
+void print_tree(UnaryNode *, int);
 void print_binary_tree(BinaryNode *, int);
 void print_ast0(Ast *, int);
 void print_int_constant(Token *);
 void print_string_constant(Token *);
-void print_token_default(Token *token);
-void print_token(Token *);
+void print_token_default(Token *);
+void print_token_string(Token *);
+void print_token_int(Token *);
 void print_singleton(Ast *);
 
 void print_level(int level) {
@@ -90,21 +90,24 @@ void print_ast0(Ast *ast, int level) {
   }
   print_level(level);
   switch (ast->tag) {
-  case NODE:
-    print_tree((Node *)ast, level);
+  case UNARY_NODE:
+    print_tree((UnaryNode *)ast, level);
     return;
   case BINARY_NODE:
     print_binary_tree((BinaryNode *)ast, level);
     return;
-  case TOKEN:
-    print_token((Token *)ast);
+  case TOKEN_STRING:
+    print_token_string((Token *)ast);
+    return;
+  case TOKEN_INT:
+    print_token_int((Token *)ast);
     return;
   case SINGLETON:
     print_singleton(ast);
   }
 }
 
-void print_tree(Node *node, int level) {
+void print_tree(UnaryNode *node, int level) {
   printf("%s\n", named(&node->ast));
   print_ast0(node->left, level + 2);
 }
@@ -115,13 +118,10 @@ void print_binary_tree(BinaryNode *node, int level) {
   print_ast0(node->right, level + 2);
 }
 
-void print_token(Token *token) {
+void print_token_string(Token *token) {
   switch (token->ast.type) {
   case STRING_LITERAL:
     print_string_constant(token);
-    break;
-  case CONSTANT:
-    print_int_constant(token);
     break;
   default:
     print_token_default(token);
@@ -129,7 +129,7 @@ void print_token(Token *token) {
   }
 }
 
-void print_int_constant(Token *constant) {
+void print_token_int(Token *constant) {
   printf("%d\n", constant->data.value);
 }
 
@@ -153,7 +153,7 @@ Ast *get_ans() { return polyglot_from_ast(ans); }
 static void *mycc_CAst;
 static void *(*mycc_CAst$Singleton_new)(void *);
 static void *(*mycc_CAst$Token_new)(void *, void *);
-static void *(*mycc_CAst$Node_new)(void *, void *);
+static void *(*mycc_CAst$UnaryNode_new)(void *, void *);
 static void *(*mycc_CAst$BinaryNode_new)(void *, void *, void *);
 
 static void *(*ArrayDeque_push)(void *);
@@ -171,8 +171,8 @@ void init_mycc_CAst() {
       polyglot_get_member(polyglot_java_type("mycc.CAst$Singleton"), "apply");
   mycc_CAst$Token_new =
       polyglot_get_member(polyglot_java_type("mycc.CAst$Token"), "apply");
-  mycc_CAst$Node_new =
-      polyglot_get_member(polyglot_java_type("mycc.CAst$Node"), "apply");
+  mycc_CAst$UnaryNode_new =
+      polyglot_get_member(polyglot_java_type("mycc.CAst$UnaryNode"), "apply");
   mycc_CAst$BinaryNode_new =
       polyglot_get_member(polyglot_java_type("mycc.CAst$BinaryNode"), "apply");
 
@@ -188,9 +188,10 @@ void init_mycc_CAst() {
 }
 
 void Ast_to_Scala(Ast *);
-void Node_to_Scala(Node *);
+void UnaryNode_to_Scala(UnaryNode *);
 void BinaryNode_to_Scala(BinaryNode *);
-void Token_to_Scala(Token *);
+void Token_int_to_Scala(Token *);
+void Token_string_to_Scala(Token *);
 void Singleton_to_Scala(Ast *);
 
 void *get_deque() { return ArrayDeque_inst; }
@@ -203,14 +204,17 @@ void Ast_to_Scala(Ast *ast) {
     init_mycc_CAst();
   }
   switch (ast->tag) {
-  case NODE:
-    Node_to_Scala((Node *)ast);
+  case UNARY_NODE:
+    UnaryNode_to_Scala((UnaryNode *)ast);
     return;
   case BINARY_NODE:
     BinaryNode_to_Scala((BinaryNode *)ast);
     return;
-  case TOKEN:
-    Token_to_Scala((Token *)ast);
+  case TOKEN_INT:
+    Token_int_to_Scala((Token *)ast);
+    return;
+  case TOKEN_STRING:
+    Token_string_to_Scala((Token *)ast);
     return;
   case SINGLETON:
     Singleton_to_Scala(ast);
@@ -227,25 +231,22 @@ void BinaryNode_to_Scala(BinaryNode *node) {
                                            ArrayDeque_pop(), ArrayDeque_pop()));
 }
 
-void Node_to_Scala(Node *node) {
+void UnaryNode_to_Scala(UnaryNode *node) {
   Ast_to_Scala(node->left);
-  ArrayDeque_push(
-      mycc_CAst$Node_new(JAVA_STRING(named(&node->ast)), ArrayDeque_pop()));
+  ArrayDeque_push(mycc_CAst$UnaryNode_new(JAVA_STRING(named(&node->ast)),
+                                          ArrayDeque_pop()));
 }
 
-void Token_to_Scala(Token *token) {
-  switch (token->ast.type) {
-  case CONSTANT:
-    ArrayDeque_push(
-        mycc_CAst$Token_new(JAVA_STRING(named(&token->ast)),
-                            scala_util_Right_Int_new(token->data.value)));
-    return;
-  default:
-    ArrayDeque_push(mycc_CAst$Token_new(
-        JAVA_STRING(named(&token->ast)),
-        scala_util_Left_String_new(JAVA_STRING(token->data.lexeme))));
-    return;
-  }
+void Token_string_to_Scala(Token *token) {
+  ArrayDeque_push(mycc_CAst$Token_new(
+      JAVA_STRING(named(&token->ast)),
+      scala_util_Left_String_new(JAVA_STRING(token->data.lexeme))));
+}
+
+void Token_int_to_Scala(Token *token) {
+  ArrayDeque_push(
+      mycc_CAst$Token_new(JAVA_STRING(named(&token->ast)),
+                          scala_util_Right_Int_new(token->data.value)));
 }
 
 void Singleton_to_Scala(Ast *ast) {

@@ -32,7 +32,7 @@ primary_expression
 
 postfix_expression
 	: primary_expression									{ $$ = $1; }
-	| postfix_expression '(' ')'    						{ $$ = Node_new(APPLY, $1); }
+	| postfix_expression '(' ')'    						{ $$ = UnaryNode_new(APPLY, $1); }
 	| postfix_expression '(' argument_expression_list ')' 	{ $$ = BinaryNode_new(APPLY, $1, $3); }
 	;
 
@@ -43,7 +43,7 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression				{ $$ = $1; }
-	| unary_operator unary_expression	{ $$ = Node_new((int)$1, $2); }
+	| unary_operator unary_expression	{ $$ = UnaryNode_new((int)$1, $2); }
 	;
 
 unary_operator
@@ -135,7 +135,7 @@ direct_declarator
 	| '(' declarator ')'							{ $$ = $2; }
     | direct_declarator '(' parameter_list ')' 		{ $$ = BinaryNode_new('F', $1, $3); }
 	| direct_declarator '(' identifier_list ')'		{ $$ = BinaryNode_new('F', $1, $3); }
-	| direct_declarator '(' ')'                		{ $$ = Node_new('F', $1); }
+	| direct_declarator '(' ')'                		{ $$ = UnaryNode_new('F', $1); }
 	;
 
 pointer
@@ -169,7 +169,7 @@ direct_abstract_declarator
 	: '(' abstract_declarator ')'    					{ $$ = $2; }
 	| '(' ')'    					 					{ $$ = empty_token; }
 	| '(' parameter_list ')'    	 					{ $$ = $2; }
-	| direct_abstract_declarator '(' ')'    			{ $$ = Node_new(APPLY, $1); }
+	| direct_abstract_declarator '(' ')'    			{ $$ = UnaryNode_new(APPLY, $1); }
 	| direct_abstract_declarator '(' parameter_list ')'	{ $$ = BinaryNode_new(APPLY, $1, $3); }
 	;
 
@@ -216,7 +216,7 @@ jump_statement
 	: CONTINUE ';'          { $$ = continue_token; }
 	| BREAK ';'             { $$ = break_token; }
 	| RETURN ';'	        { $$ = return_token; }
-	| RETURN expression ';'	{ $$ = Node_new(RETURN, $2); }
+	| RETURN expression ';'	{ $$ = UnaryNode_new(RETURN, $2); }
 	;
 
 translation_unit

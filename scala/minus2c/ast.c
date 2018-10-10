@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-POLYGLOT_DECLARE_STRUCT(node)
-
 Ast *BinaryNode_new(int t, Ast *left, Ast *right) {
   BinaryNode *a = (BinaryNode *)malloc(sizeof(BinaryNode));
   if (a == NULL) {
@@ -19,13 +17,13 @@ Ast *BinaryNode_new(int t, Ast *left, Ast *right) {
   return (Ast*)a;
 }
 
-Ast *Node_new(int t, Ast *left) {
-  Node *a = (Node *)malloc(sizeof(Node));
+Ast *UnaryNode_new(int t, Ast *left) {
+  UnaryNode *a = (UnaryNode *)malloc(sizeof(UnaryNode));
   if (a == NULL) {
     perror("Cannot make node");
     exit(1);
   }
-  a->ast.tag = NODE;
+  a->ast.tag = UNARY_NODE;
   a->ast.type = t;
   a->left = left;
   return (Ast *)a;
