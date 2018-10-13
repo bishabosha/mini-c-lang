@@ -6,66 +6,59 @@ package object mycc {
   import StorageTypes._
   import mycc.exception._
 
+  /**replace these to match expected values at each context level in C.y
+   */
   def specialize(ast: CAst): Ast = ast match {
-    case Singleton("int") =>
-      Type(int)
+    case Singleton(value) => onSingleton(value)
+    case TokenString(kind, lexeme) => onTokenString(kind, lexeme)
+    case TokenInt(kind, value) => onTokenInt(kind, value)
+    case UnaryNode(kind, a1) => onUnaryNode(kind, a1)
+    case BinaryNode(kind, a1, a2) => onBinaryNode(kind, a1, a2)
+  }
 
-    case Singleton("void") =>
-      Type(void)
+  def onSingleton(value: String): Ast = value match {
+    case "int" => Type(int)
+    case "void" => Type(void)
+    case "function" => Type(function)
+    case "ø" => ø
+    case "return" => Return(None)
+    case "auto" => Storage(auto)
+    case "extern" => Storage(extern)
+    case kind => Node0(kind)
+  }
 
-    case Singleton("function") =>
-      Type(function)
+  def onTokenString(kind: String, lexeme: String): Ast = kind match {
+    case "string" => StringLiteral(lexeme)
+    case "id" => Identifier(lexeme)
+    case _ => Leaf(kind, Left(lexeme))
+  }
 
-    case Singleton("ø") =>
-      ø
+  def onTokenInt(kind: String, value: Int): Ast = kind match {
+    case "constant" => Constant(value)
+    case _ => Leaf(kind, Right(value))
+  }
 
-    case Singleton("return") =>
-      Return(None)
+  def onUnaryNode(kind: String, a1: CAst): Ast = kind match {
+    case "return" => Return(Some(specialize(a1)))
+    case _ => Node1(kind, specialize(a1))
+  }
 
-    case Singleton("auto") =>
-      Storage(auto)
+  def onBinaryNode(kind: String, a1: CAst, a2: CAst): Ast = kind match {
+    case "D" => matchFunctionDefinition(a1, a2)
+    case "if" => matchIfElse(a1, a2)
+    case _ => Node2(kind, specialize(a1), specialize(a2))
+  }
 
-    case Singleton("extern") =>
-      Storage(extern)
+  def matchFunctionDefinition(declarators: CAst, body: CAst): Ast = {
+    val (decls, (name, args)) = matchDeclarators(declarators)
+    Function(decls, name, args, matchCompoundStatement(body))
+  }
 
-    case Singleton(kind) =>
-      Node0(kind)
-
-    case TokenString("string", value) =>
-      StringLiteral(value)
-
-    case TokenString("id", identifier) =>
-      Identifier(identifier)
-
-    case TokenString(kind, data) =>
-      Leaf(kind, Left(data))
-
-    case TokenInt("constant", value) =>
-      Constant(value)
-
-    case TokenInt(kind, data) =>
-      Leaf(kind, Right(data))
-
-    case UnaryNode("return", value) =>
-      Return(Some(specialize(value)))
-
-    case UnaryNode(kind, left) =>
-      Node1(kind, specialize(left))
-
-    case BinaryNode("D", declarators, body) =>
-      val (decls, (name, args)) = matchDeclarators(declarators)
-      Function(decls, name, args, matchCompoundStatement(body))
-
-    case BinaryNode("if", cond, tail) =>
-      tail match {
-        case BinaryNode("else", ifTrue, orElse) =>
-          If(specialize(cond), specialize(ifTrue), Some(specialize(orElse)))
-        case _ =>
-          If(specialize(cond), specialize(tail), None)
-      }
-
-    case BinaryNode(kind, left, right) =>
-      Node2(kind, specialize(left), specialize(right))
+  def matchIfElse(cond: CAst, bodyOrElse: CAst): Ast = bodyOrElse match {
+    case BinaryNode("else", ifTrue, orElse) =>
+      If(specialize(cond), specialize(ifTrue), Some(specialize(orElse)))
+    case body =>
+      If(specialize(cond), specialize(body), None)
   }
   
   def matchCompoundStatement(compoundStatement: CAst): Ast = compoundStatement match {
@@ -109,9 +102,8 @@ package object mycc {
     case Singleton("void") => LVoid
     case BinaryNode(",", tail, typeAndIdentifier) =>
       ListOf((matchTypeAndIdentifierAst(typeAndIdentifier) :: matchCommaList(tail)).reverse.toVector)
-    case BinaryNode("~", typeSpecifier, identifier) =>
-      ListOf(Vector(matchTypeAndIdentifier(specialize(typeSpecifier), specialize(identifier))))
-    case _ => throw SemanticError("not args list")
+    case typeAndIdentifier =>
+      ListOf(Vector(matchTypeAndIdentifierAst(typeAndIdentifier)))
   }
 
   def matchCommaList(list: CAst): List[(Type, Identifier)] = list match {
@@ -121,17 +113,20 @@ package object mycc {
   }
 
   def matchTypeAndIdentifierAst(typeAndIdentifier: CAst): (Type, Identifier) = typeAndIdentifier match {
-    case BinaryNode("~", typeSpecifier, identifier) => matchTypeAndIdentifier(specialize(typeSpecifier), specialize(identifier))
+    case BinaryNode("~", typeSpecifier, declarator) => declarator match {
+      case BinaryNode("F", _, _) => throw UnimplementedError("C style function args, use 'function' type with identifier")
+      case identifier => matchTypeAndIdentifier(specialize(typeSpecifier), specialize(identifier))
+    }
     case _ => throw SemanticError("not type and identifier")
   }
 
   def matchTypeAndIdentifier(typeAndIdentifier: (Ast, Ast)): (Type, Identifier) = typeAndIdentifier match {
     case t @ (_:Type, _:Identifier) => t.asInstanceOf[(Type, Identifier)]
-    case _ => throw SemanticError("not type and identifier")
+    case _ => throw UnexpectedAstNode(s"${typeAndIdentifier} not of type ${(Type, Identifier)}")
   }
 
   def matchIdentifier(ast: Ast): Identifier = ast match {
     case i: Identifier => i
-    case _ => throw SemanticError("Not Identifier")
+    case _ => throw UnexpectedAstNode("${typeAndIdentifier} not of type Identifier")
   }
 }
