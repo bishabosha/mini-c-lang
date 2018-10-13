@@ -65,6 +65,51 @@ int foo(int a, int b); => legit f declaration
 
 int *foo(int, int) {} => legit f definition | NOT_IN_SCOPE
 
+|>
+    int a, b, ans = 0;
+    int main(void) {
+        ans = a + b;
+        return ans;
+    }
+
+|>
+    int main(void) {
+        int a, b, ans;
+        a = 1;
+        b = 2;
+        ans = a + b;
+        return ans;
+    }
+
+|>
+    int main(void) { return 1 + 2; }
+
+|>
+    int main(void) { { int a = 0; } return a + 1; }
+
+|>
+    int main(void) { int a = 0; return a + 1; }
+
+|>
+    int main(int a) {
+        a = 0;
+        return a + 1;
+    }
+
+|>
+    int main(void) {}
+        => body: Block(ø)
+
+    int main(void) { {} {} }
+        => body: Block(Node2(;,Block(ø),Block(ø))))
+
+    int main(void) { {} }
+        => body: Block(Block(ø)))
+
+    int main(void) { ;; }
+
+    int main(void) { 1, 2, 3; }
+
 int main(void) {
     int a = 0;
     return a + 1;
@@ -77,7 +122,13 @@ int main(void) {
 
 int main(void) {
     int a, b, c = 0;
-    return a + b;
+    int d, e = 1;
+    return a + b + c + d + e;
+}
+
+int main(void) {
+    a, b, c = 0;
+    return a + b + c;
 }
 
 int main(void) {
@@ -91,6 +142,26 @@ int main(void) {
     int b = 1;
     int c = a + b;
     return c;
+}
+
+int main(void) {
+    a = 0;
+    return a + 1;
+}
+
+int main(void) {
+    a;
+    return a + 1;
+}
+
+int main(void) {
+    a, b, c;
+    return a + 1;
+}
+
+int main(void) {
+    int a;
+    return a + 1;
 }
 
 int main(void) {

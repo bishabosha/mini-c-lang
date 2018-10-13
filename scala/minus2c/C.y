@@ -190,10 +190,10 @@ statement
     ;
 
 compound_statement
-    : '{' '}'                                   { $$ = empty_token; }
-    | '{' statement_list '}'                    { $$ = $2; }
-    | '{' declaration_list '}'                  { $$ = $2; }
-    | '{' declaration_list statement_list '}'   { $$ = BinaryNode_new(';', $2, $3); }
+    : '{' '}'                                   { $$ = UnaryNode_new('B', empty_token); }
+    | '{' statement_list '}'                    { $$ = UnaryNode_new('B', $2); }
+    | '{' declaration_list '}'                  { $$ = UnaryNode_new('B', $2); }
+    | '{' declaration_list statement_list '}'   { $$ = UnaryNode_new('B', BinaryNode_new(';', $2, $3)); }
     ;
 
 declaration_list

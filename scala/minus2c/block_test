@@ -1,0 +1,59 @@
+
+|>  int main(void) {
+        int a, b, c = 0;
+        return a + b + c;
+    }
+
+    Function(
+        Storage(auto),
+        Type(int),
+        Identifier(main),
+        LVoid,
+        Block(
+            List(
+                Declaration(
+                    Storage(auto),
+                    Type(int),
+                    List(Identifier(a), Identifier(b), Identifier(c))
+                ), 
+                Assignment(
+                    List(Identifier(a), Identifier(b), Identifier(c)),
+                    Constant(0)
+                ),
+                Return(Some(Node2(+,Node2(+,Identifier(a),Identifier(b)),Identifier(c))))
+            )
+        )
+    )
+
+|>  {
+        a, b, c;
+        return a + 1;
+    }
+
+    Block(
+        List(
+            Identifier(a),
+            Identifier(b),
+            Identifier(c),
+            Return(Some(Node2(+,Identifier(a),Constant(1))))
+        )
+    )
+
+|>  {
+        a, b, c;
+        return a + 1;
+    }
+
+    Block(
+        List(
+            Declaration(Storage(auto),Type(int),List(Identifier(a))),
+            Assignment(List(Identifier(a)),Constant(10)),
+            Declaration(Storage(auto),Type(int),List(Identifier(b))),
+            Assignment(List(Identifier(b)),Constant(20)),
+            Declaration(Storage(auto),Type(int),List(Identifier(c))),
+            Assignment(List(Identifier(c)),Constant(30)),
+            Return(
+                Some(
+                    Assignment(
+                        List(Identifier(a), Identifier(b), Identifier(c)),
+                        Constant(50))))))
