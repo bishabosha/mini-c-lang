@@ -36,8 +36,6 @@ char *named(Ast *ast) {
     return "function";
   case APPLY:
     return "apply";
-  case LEAF:
-    return "leaf";
   case IF:
     return "if";
   case ELSE:

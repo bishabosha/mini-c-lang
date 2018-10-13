@@ -1,3 +1,39 @@
+extern main {}
+    => Function(Vector(Storage(extern)),Identifier(main),ListNone,ø)
+
+extern int main {}
+    => Function(Vector(Storage(extern), Type(int)),Identifier(main),ListNone,ø)
+
+extern int auto main {}
+    => Function(Vector(Storage(extern), Type(int), Storage(auto)),Identifier(main),ListNone,ø)
+
+main {}
+    => Function(Vector(),Identifier(main),ListNone,ø)
+
+main() {}
+    => Function(Vector(),Identifier(main),ListOf(Vector()),ø)
+
+int main() {}
+    => Function(Vector(Type(int)),Identifier(main),ListOf(Vector()),ø)
+
+int main(void) {}
+    => Function(Vector(Type(int)),Identifier(main),ListVoid,ø)
+
+int main(int a) {}
+    => Function(Vector(Type(int)),Identifier(main),ListOf(Vector((Type(int),Identifier(a)))),ø)
+
+int main(int a, int b) {}
+    => Function(Vector(Type(int)),Identifier(main),ListOf(Vector((Type(int),Identifier(a)), (Type(int),Identifier(b)))),ø)
+
+int main(int a, int b, int c) {}
+    => Function(Vector(Type(int)),Identifier(main),ListOf(Vector((Type(int),Identifier(a)), (Type(int),Identifier(b)), (Type(int),Identifier(c)))),ø)
+
+int main(int a, void) {}
+    => Error (not type and identifier)
+
+int main(a, b) {}
+    => Error (not type and identifier)
+
 function main(void) { int doubleit(int a) { return a + a; } return doubleit; }
 function main(int a, int b) { int sum(int x, int y) { return x + y; } return sum(a, b); }
 void main(void) { if(1) {} }
@@ -13,6 +49,21 @@ int main(int* a) { return *a + *a; }
 return 1 + 1;
 int o = 101;
 int o = "Hello, World!";
+int main() int a = 0; {}
+
+int (*foo)(int, int); => legit fpointer declaration     | NOT_IN_SCOPE
+int (*foo)(int a, int b); => legit fpointer declaration | NOT_IN_SCOPE
+
+int foo(int, int) {} => error, no param name
+int (*foo)(int, int) {} => error, expected ';' after top level declarator     | NOT_IN_SCOPE
+int (*foo)(int a, int b) {} => error, expected ';' after top level declarator | NOT_IN_SCOPE
+
+int *foo(int, int); => legit f declaration      | NOT_IN_SCOPE
+int *foo(int a, int b); => legit f declaration  | NOT_IN_SCOPE
+int foo(int, int); => legit f declaration
+int foo(int a, int b); => legit f declaration
+
+int *foo(int, int) {} => legit f definition | NOT_IN_SCOPE
 
 int main(void) {
     int a = 0;
