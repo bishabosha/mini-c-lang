@@ -7,6 +7,95 @@ object ParseCAst {
   import ArgList._
   import StorageTypes._
   import mycc.exception._
+  import PartialFunctionConversions._
+
+  def parseTranslationUnit(ast: CAst): List[Ast] = ast match {
+    case BinaryNode("E", list, externalDeclaration) =>
+      parseTranslationUnit(list) ++ parseExternalDeclaration(externalDeclaration)
+    case externalDeclaration =>
+      parseExternalDeclaration(externalDeclaration)
+  } 
+
+  def parseExternalDeclaration: PartialFunction[CAst, List[Ast]] =
+    parseFunctionDefinition.L | matchDeclaration
+
+  def parseFunctionDefinition: PartialFunction[CAst, Ast] = {
+    case BinaryNode("D", declarators, UnaryNode("B", body)) =>
+      val (storage, returnType, (name, args)) = matchDeclarators(declarators)
+      Function(storage, returnType, name, args, blockOf(matchStatements(body)))
+  }
+
+  def matchDeclaration: PartialFunction[CAst, List[Ast]] = {
+    case BinaryNode("~", specifiers, expr) =>
+      val (storage, declType) = matchDeclarationSpecifiers(specifiers)
+      val namesAndAssignments = matchNamesAndAssignments(expr)
+
+      namesAndAssignments.flatMap { (name, assignmentOp) =>
+        assignmentOp.map {
+          Declaration(storage, declType, name) :: Assignment(name, _) :: Nil
+        } getOrElse {
+          Declaration(storage, declType, name) :: Nil
+        }
+      }
+  }
+
+  def matchStatements: PartialFunction[CAst, List[Ast]] =
+    matchBlock.L |
+    matchListStatements |
+    matchDeclaration |
+    matchExprList |
+    matchAssignment.L |
+    matchIdentifier.L |
+    matchReturn |
+    matchDefault.L
+
+  def matchBlock: PartialFunction[CAst, Ast] = {
+    case UnaryNode("B", body) =>
+      Block(matchStatements(body))
+  }
+
+  def matchListStatements: PartialFunction[CAst, List[Ast]] = {
+    case BinaryNode(";", front, end) =>
+       matchStatements(front) ++ matchStatements(end)
+  }
+
+  def matchExprList: PartialFunction[CAst, List[Ast]] = {
+    case BinaryNode(",", front, end) => 
+      val namesAndAssignments = matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
+      namesAndAssignments.map { (name, assignmentOp) =>
+        assignmentOp.map {
+          Assignment(name, _)
+        } getOrElse {
+          name
+        }
+      }
+  }
+
+  def matchAssignment: PartialFunction[CAst, Ast] = {
+    case BinaryNode("=", TokenString("id", id), value) =>
+      Assignment(identifierOf(id), specialize(value))
+  }
+
+  def matchIdentifier: PartialFunction[CAst, Ast] = {
+    case TokenString("id", id) =>
+      Identifier(id)
+  }
+
+  def matchReturn: PartialFunction[CAst, List[Ast]] = {
+    case UnaryNode("return", value) => matchStatements(value) match {
+      case Nil => throw UnexpectedAstNode("expected non empty list")
+      case expr :: Nil => Return(Some(expr)) :: Nil
+      case list => list.init :+ Return(Some(list.last))
+    }
+  }
+
+  def matchDefault: PartialFunction[CAst, Ast] = {
+    case ast => specialize(ast)
+  }
+
+  def unimplemented[E <: Ast](msg: String): PartialFunction[CAst, E] = {
+    case _ => throw UnimplementedError(msg)
+  }
 
   def specialize(ast: CAst): Ast = ast match {
     case Singleton(value) => onSingleton(value)
@@ -24,80 +113,28 @@ object ParseCAst {
     case "return" => Return(None)
     case "auto" => Storage(auto)
     case "extern" => Storage(extern)
-    case kind => Node0(kind)
+    case kind => Legacy(Singleton(value))
   }
 
   def onTokenString(kind: String, lexeme: String): Ast = kind match {
     case "string" => StringLiteral(lexeme)
     case "id" => Identifier(lexeme)
-    case _ => Leaf(kind, Left(lexeme))
+    case _ => Legacy(TokenString(kind, lexeme))
   }
 
   def onTokenInt(kind: String, value: Int): Ast = kind match {
     case "constant" => Constant(value)
-    case _ => Leaf(kind, Right(value))
+    case _ => Legacy(TokenInt(kind, value))
   }
 
   def onUnaryNode(kind: String, a1: CAst): Ast = kind match {
     case "return" => Return(Some(specialize(a1)))
-    case _ => Node1(kind, specialize(a1))
+    case _ => Legacy(UnaryNode(kind, a1))
   }
 
   def onBinaryNode(kind: String, a1: CAst, a2: CAst): Ast = kind match {
-    case "D" => matchFunctionDefinition(a1, a2)
     case "if" => matchIfElse(a1, a2)
-    case _ => Node2(kind, specialize(a1), specialize(a2))
-  }
-
-  def matchFunctionDefinition(declarators: CAst, body: CAst): Ast = {
-    val (storage, returnType, (name, args)) = matchDeclarators(declarators)
-    Function(storage, returnType, name, args, matchBlock(body))
-  }
-  
-  def matchBlock(compoundStatement: CAst): Block = compoundStatement match {
-    case UnaryNode("B", body) => blockOf(matchStatementsInReverse(body).reverse)
-    case _ => ???
-  }
-
-  def matchStatementsInReverse(statement: CAst): List[Ast] = statement match {
-    case BinaryNode(";", front, end) =>
-      matchStatementsInReverse(end) ++ matchStatementsInReverse(front)
-
-    case BinaryNode("~", specifiers, expr) =>
-      val (storage, declType) = matchDeclarationSpecifiers(specifiers)
-      val namesAndAssignments = matchNamesAndAssignments(expr)
-
-      namesAndAssignments.reverse.flatMap { (name, assignmentOp) =>
-        assignmentOp.map {
-          Assignment(name, _) :: Declaration(storage, declType, name) :: Nil
-        } getOrElse {
-          Declaration(storage, declType, name) :: Nil
-        }
-      }
-      
-    case BinaryNode(",", front, end) => 
-      val namesAndAssignments = matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
-      namesAndAssignments.reverse.flatMap { (name, assignmentOp) =>
-        assignmentOp.map {
-          Assignment(name, _) :: Nil
-        } getOrElse {
-          name :: Nil
-        }
-      }
-
-    case BinaryNode("=", TokenString("id", id), value) =>
-      Assignment(identifierOf(id), specialize(value)) :: Nil
-
-    case TokenString("id", id) =>
-      Identifier(id) :: Nil
-
-    case UnaryNode("return", value) => matchStatementsInReverse(value) match {
-      case Nil => throw UnexpectedAstNode("expected non empty list")
-      case expr :: Nil => Return(Some(expr)) :: Nil
-      case list => Return(Some(list.head)) :: list.tail
-    }
-
-    case _ => specialize(statement) :: Nil
+    case _ => Legacy(BinaryNode(kind, a1, a2))
   }
 
   def matchNamesAndAssignments(expr: CAst): List[(Identifier, Option[Ast])] = expr match {
@@ -161,14 +198,14 @@ object ParseCAst {
   def matchArgsList(args: CAst): ArgList = args match {
     case Singleton("void") => LVoid
     case BinaryNode(",", tail, typeAndIdentifier) =>
-      ListOf((matchTypeAndIdentifierAst(typeAndIdentifier) :: matchCommaList(tail)).reverse.toVector)
+      ListOf((matchCommaList(tail) :+ matchTypeAndIdentifierAst(typeAndIdentifier)).toVector)
     case typeAndIdentifier =>
       ListOf(Vector(matchTypeAndIdentifierAst(typeAndIdentifier)))
   }
 
   def matchCommaList(list: CAst): List[(Type, Identifier)] = list match {
     case BinaryNode(",", tail, typeAndIdentifier) =>
-      matchTypeAndIdentifierAst(typeAndIdentifier) :: matchCommaList(tail)
+      matchCommaList(tail) :+ matchTypeAndIdentifierAst(typeAndIdentifier)
     case typeAndIdentifier => matchTypeAndIdentifierAst(typeAndIdentifier) :: Nil
   }
 

@@ -1,59 +1,17 @@
+int a, b, c, d;
+int foo(void) {
+    a = 10, b = 50, c = b, d = 20;
+}
+int main(void) {
+    a;
+    return 0;
+}
 
-|>  int main(void) {
-        int a, b, c = 0;
-        return a + b + c;
-    }
-
-    Function(
-        Storage(auto),
-        Type(int),
-        Identifier(main),
-        LVoid,
-        Block(
-            List(
-                Declaration(Storage(auto),Type(int),Identifier(a)),
-                Declaration(Storage(auto),Type(int),Identifier(b)),
-                Declaration(Storage(auto),Type(int),Identifier(c)),
-                Assignment(Identifier(c),Constant(0)),
-                Return(Some(Node2(+,Node2(+,Identifier(a),Identifier(b)),Identifier(c))))))
-
-|>  {
-        a, b, c;
-        return a + 1;
-    }
-
-    Block(
-        List(
-            Identifier(a),
-            Identifier(b),
-            Identifier(c),
-            Return(Some(Node2(+,Identifier(a),Constant(1))))
-        )
-    )
-
-|>  {
-        a, b, c;
-        return a + 1;
-    }
-
-    Block(
-        List(
-            Declaration(Storage(auto),Type(int),List(Identifier(a))),
-            Assignment(List(Identifier(a)),Constant(10)),
-            Declaration(Storage(auto),Type(int),List(Identifier(b))),
-            Assignment(List(Identifier(b)),Constant(20)),
-            Declaration(Storage(auto),Type(int),List(Identifier(c))),
-            Assignment(List(Identifier(c)),Constant(30)),
-            Return(
-                Some(
-                    Assignment(
-                        List(Identifier(a), Identifier(b), Identifier(c)),
-                        Constant(50))))))
-
-|>  int foo(void) {
-        int a = 10, b = 50, c = b, d = 20;
-    }
-
+List(
+    Declaration(auto,int,Identifier(a)), 
+    Declaration(auto,int,Identifier(b)), 
+    Declaration(auto,int,Identifier(c)), 
+    Declaration(auto,int,Identifier(d)), 
     Function(
         auto,
         int,
@@ -61,11 +19,16 @@
         LVoid,
         Block(
             List(
-                Declaration(auto,int,Identifier(a)), 
-                Assignment(Identifier(a),Constant(10)), 
-                Declaration(auto,int,Identifier(b)), 
-                Assignment(Identifier(b),Constant(50)), 
-                Declaration(auto,int,Identifier(c)), 
-                Assignment(Identifier(c),Identifier(b)), 
-                Declaration(auto,int,Identifier(d)),
-                Assignment(Identifier(d),Constant(20)))))
+                Assignment(Identifier(a),Constant(10)),
+                Assignment(Identifier(b),Constant(50)),
+                Assignment(Identifier(c),Identifier(b)),
+                Assignment(Identifier(d),Constant(20))))), 
+    Function(
+        auto,
+        int,
+        Identifier(main),
+        LVoid,
+        Block(
+            List(
+                Identifier(a), 
+                Return(Some(Constant(0)))))))

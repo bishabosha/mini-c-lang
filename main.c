@@ -1,11 +1,10 @@
 #include <stdio.h>
 
+int a, b, c, d;
 int foo(void) {
-    int a = 10, b = 50, c = b, d = 20;
+    a = 10, b = 50, c = b, d = 20;
 }
-
 int main(void) {
-    printf("foo: %d", foo());
-
+    a;
     return 0;
 }

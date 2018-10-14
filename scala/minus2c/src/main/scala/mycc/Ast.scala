@@ -32,10 +32,7 @@ enum Ast {
   case Declaration(storage: StorageTypes, declType: Types, name: Identifier)
   case Function(storage: StorageTypes, returnType: Types, name: Identifier, args: ArgList, body: Block)
   case Block(inner: List[Ast])
-  case Leaf(kind: String, data: Either[String, Int])
-  case Node0(kind: String)
-  case Node1(kind: String, left: Ast)
-  case Node2(kind: String, left: Ast, right: Ast)
+  case Legacy(inner: CAst)
 }
 
 object Ast {
