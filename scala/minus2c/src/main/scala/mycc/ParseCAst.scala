@@ -19,13 +19,13 @@ object ParseCAst {
   def parseExternalDeclaration: PartialFunction[CAst, List[Ast]] =
     parseFunctionDefinition.L | matchDeclaration
 
-  def parseFunctionDefinition: PartialFunction[CAst, Ast] = {
+  private val parseFunctionDefinition: PartialFunction[CAst, Ast] = {
     case BinaryNode("D", declarators, UnaryNode("B", body)) =>
       val (storage, returnType, (name, args)) = matchDeclarators(declarators)
-      Function(storage, returnType, name, args, blockOf(matchStatements(body)))
+      Function(storage, returnType, name, args, matchCompoundStatements(body))
   }
 
-  def matchDeclaration: PartialFunction[CAst, List[Ast]] = {
+  private val matchDeclaration: PartialFunction[CAst, List[Ast]] = {
     case BinaryNode("~", specifiers, expr) =>
       val (storage, declType) = matchDeclarationSpecifiers(specifiers)
       val namesAndAssignments = matchNamesAndAssignments(expr)
@@ -39,7 +39,7 @@ object ParseCAst {
       }
   }
 
-  def matchStatements: PartialFunction[CAst, List[Ast]] =
+  def matchCompoundStatements: PartialFunction[CAst, List[Ast]] =
     matchBlock.L |
     matchListStatements |
     matchDeclaration |
@@ -49,17 +49,16 @@ object ParseCAst {
     matchReturn |
     matchDefault.L
 
-  def matchBlock: PartialFunction[CAst, Ast] = {
-    case UnaryNode("B", body) =>
-      Block(matchStatements(body))
+  private val matchBlock: PartialFunction[CAst, Ast] = {
+    case UnaryNode("B", body) => Block(matchCompoundStatements(body))
   }
 
-  def matchListStatements: PartialFunction[CAst, List[Ast]] = {
+  private val matchListStatements: PartialFunction[CAst, List[Ast]] = {
     case BinaryNode(";", front, end) =>
-       matchStatements(front) ++ matchStatements(end)
+      matchCompoundStatements(front) ++ matchCompoundStatements(end)
   }
 
-  def matchExprList: PartialFunction[CAst, List[Ast]] = {
+  private val matchExprList: PartialFunction[CAst, List[Ast]] = {
     case BinaryNode(",", front, end) => 
       val namesAndAssignments = matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
       namesAndAssignments.map { (name, assignmentOp) =>
@@ -71,30 +70,32 @@ object ParseCAst {
       }
   }
 
-  def matchAssignment: PartialFunction[CAst, Ast] = {
-    case BinaryNode("=", TokenString("id", id), value) =>
-      Assignment(identifierOf(id), specialize(value))
+  private val matchAssignment: PartialFunction[CAst, Ast] = {
+    case BinaryNode("=", TokenString("id", id), value) => Assignment(identifierOf(id), specialize(value))
   }
 
-  def matchIdentifier: PartialFunction[CAst, Ast] = {
-    case TokenString("id", id) =>
-      Identifier(id)
+  private val matchIdentifier: PartialFunction[CAst, Identifier] = {
+    case TokenString("id", id) => Identifier(id).asInstanceOf[Identifier]
   }
 
-  def matchReturn: PartialFunction[CAst, List[Ast]] = {
-    case UnaryNode("return", value) => matchStatements(value) match {
+  private val matchReturn: PartialFunction[CAst, List[Ast]] = {
+    case UnaryNode("return", value) => matchCompoundStatements(value) match {
       case Nil => throw UnexpectedAstNode("expected non empty list")
       case expr :: Nil => Return(Some(expr)) :: Nil
       case list => list.init :+ Return(Some(list.last))
     }
   }
 
-  def matchDefault: PartialFunction[CAst, Ast] = {
+  private val matchDefault: PartialFunction[CAst, Ast] = {
     case ast => specialize(ast)
   }
 
-  def unimplemented[E <: Ast](msg: String): PartialFunction[CAst, E] = {
-    case _ => throw UnimplementedError(msg)
+  // def unimplemented[I, E <: Ast](msg: I => String): PartialFunction[I, E] = {
+  //   case value => throw UnimplementedError(msg(value))
+  // }
+
+  def unexpected[I, E <: Ast](msg: I => String): PartialFunction[I, E] = {
+    case value => throw UnexpectedAstNode(msg(value))
   }
 
   def specialize(ast: CAst): Ast = ast match {
@@ -166,65 +167,71 @@ object ParseCAst {
 
   def matchTildaList(list: CAst): List[Type | Storage] = list match {
     case BinaryNode("~", specifier, tail) =>
-      matchStorageOrType(specialize(specifier)) :: matchTildaList(tail)
-    case single => matchStorageOrType(specialize(single)) :: Nil
+      matchStorageOrType(specifier) :: matchTildaList(tail)
+    case single => matchStorageOrType(single) :: Nil
   }
 
-  def matchStorageOrType(value: Ast): Type | Storage = value match {
-    case s: Storage => s
-    case t: Type => t
-    case _ => throw SemanticError("Not Storage or Type")
+  private val matchStorage: PartialFunction[CAst, Storage] = {
+    case Singleton(kind) => kind match {
+      case "extern" => Storage(extern).asInstanceOf[Storage]
+      case "auto" => Storage(auto).asInstanceOf[Storage]
+    }
   }
+
+  private val matchType: PartialFunction[CAst, Type] = {
+    case Singleton(kind) => kind match {
+      case "int" => Type(int).asInstanceOf[Type]
+      case "function" => Type(function).asInstanceOf[Type]
+      case "void" => Type(void).asInstanceOf[Type]
+    }
+  }
+
+  def matchStorageOrType: PartialFunction[CAst, Type | Storage] = matchType | matchStorage
 
   def matchDeclarators(declarators: CAst): (StorageTypes, Types, (Identifier, ArgList)) = declarators match {
-    case BinaryNode("d", types, nameAndArgs) =>
+    case BinaryNode("d", types, functionDeclarator) =>
       val (storage, returnType) = matchDeclarationSpecifiers(types)
-      (storage, returnType, matchNameAndArgs(nameAndArgs))
-    case nameAndArgs => // warning implicit return type 'int'
-      (auto, int, matchNameAndArgs(nameAndArgs))
+      (storage, returnType, matchFunctionDeclarator(functionDeclarator))
+    case functionDeclarator => // warning implicit return type 'int'
+      (auto, int, matchFunctionDeclarator(functionDeclarator))
   }
 
-  def matchNameAndArgs(nameAndArgs: CAst): (Identifier, ArgList) = nameAndArgs match {
-    case UnaryNode("F", name) =>
-      (matchIdentifier(specialize(name)), ListOf(Vector()))
-    case BinaryNode("F", name, args) =>
-      (matchIdentifier(specialize(name)), matchArgsList(args))
-    case BinaryNode("H", _, _) =>
-      throw UnimplementedError("Identifier only function parameter list not implemented.")
-    case _ => 
-      throw SemanticError("No args on Function definition")
+  def matchFunctionDeclarator(nameAndArgs: CAst): (Identifier, ArgList) = {
+    nameAndArgs match {
+      case UnaryNode("F", name) =>
+        (matchIdentifier(name), ListOf(Vector()))
+      case BinaryNode("F", name, args) =>
+        (matchIdentifier(name), matchArgsList(args))
+      case BinaryNode("H", _, _) =>
+        throw UnimplementedError("Identifier only function parameter list not implemented.")
+      case _ => 
+        throw SemanticError("No args on Function definition")
+    }
   }
 
   def matchArgsList(args: CAst): ArgList = args match {
-    case Singleton("void") => LVoid
-    case BinaryNode(",", tail, typeAndIdentifier) =>
-      ListOf((matchCommaList(tail) :+ matchTypeAndIdentifierAst(typeAndIdentifier)).toVector)
-    case typeAndIdentifier =>
-      ListOf(Vector(matchTypeAndIdentifierAst(typeAndIdentifier)))
+    case Singleton("void") =>
+      LVoid
+    case parameterList =>
+      ListOf(matchParameterList(parameterList).toVector)
   }
 
-  def matchCommaList(list: CAst): List[(Type, Identifier)] = list match {
-    case BinaryNode(",", tail, typeAndIdentifier) =>
-      matchCommaList(tail) :+ matchTypeAndIdentifierAst(typeAndIdentifier)
-    case typeAndIdentifier => matchTypeAndIdentifierAst(typeAndIdentifier) :: Nil
+  def matchParameterList(list: CAst): List[(Types, Identifier)] = list match {
+    case BinaryNode(",", tail, parameter) =>
+      matchParameterList(tail) :+ matchParameter(parameter)
+    case parameter =>
+      matchParameter(parameter) :: Nil
   }
 
-  def matchTypeAndIdentifierAst(typeAndIdentifier: CAst): (Type, Identifier) = typeAndIdentifier match {
+  def matchParameter(parameter: CAst): (Types, Identifier) = parameter match {
     case BinaryNode("~", typeSpecifier, declarator) => declarator match {
       case BinaryNode("F", _, _) => throw UnimplementedError("C style function args, use 'function' type with identifier")
-      case identifier => matchTypeAndIdentifier(specialize(typeSpecifier), specialize(identifier))
+      case identifier =>
+        val identifierOnly = matchIdentifier | unexpected(value => "${value} is not an Identifier")
+        val typeOnly = matchType | unexpected(value => "${value} is not a Type")
+        (typeOnly(typeSpecifier).id, identifierOnly(identifier))
     }
     case _ => throw SemanticError("not type and identifier")
-  }
-
-  def matchTypeAndIdentifier(typeAndIdentifier: (Ast, Ast)): (Type, Identifier) = typeAndIdentifier match {
-    case t @ (_:Type, _:Identifier) => t.asInstanceOf[(Type, Identifier)]
-    case _ => throw UnexpectedAstNode(s"${typeAndIdentifier} not of type ${(Type, Identifier)}")
-  }
-
-  def matchIdentifier(ast: Ast): Identifier = ast match {
-    case i: Identifier => i
-    case _ => throw UnexpectedAstNode("${typeAndIdentifier} not of type Identifier")
   }
 
   def matchIfElse(cond: CAst, bodyOrElse: CAst): Ast = bodyOrElse match {

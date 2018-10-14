@@ -16,8 +16,10 @@ enum StorageTypes {
 
 enum ArgList {
   case LVoid
-  case ListOf(list: Vector[(Type, Identifier)])
+  case ListOf(list: Vector[(Types, Identifier)])
 }
+
+case object LVoid
 
 enum Ast {
   case ø
@@ -30,7 +32,7 @@ enum Ast {
   case Return(value: Option[Ast])
   case Assignment(lvalue: Identifier, rvalue: Ast)
   case Declaration(storage: StorageTypes, declType: Types, name: Identifier)
-  case Function(storage: StorageTypes, returnType: Types, name: Identifier, args: ArgList, body: Block)
+  case Function(storage: StorageTypes, returnType: Types, name: Identifier, args: ArgList, body: List[Ast])
   case Block(inner: List[Ast])
   case Legacy(inner: CAst)
 }
@@ -39,5 +41,5 @@ object Ast {
   inline def storageOf(kind: StorageTypes): Storage = Storage(kind).asInstanceOf[Storage]
   inline def typeOf(kind: Types): Type = Type(kind).asInstanceOf[Type]
   inline def identifierOf(id: String): Identifier = Identifier(id).asInstanceOf[Identifier]
-  inline def blockOf(statements: List[Ast]): Block = Block(statements).asInstanceOf[Block]
+  // inline def blockOf(statements: List[Ast]): Block = Block(statements).asInstanceOf[Block]
 }

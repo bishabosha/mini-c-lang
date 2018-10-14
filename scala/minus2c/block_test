@@ -17,18 +17,16 @@ List(
         int,
         Identifier(foo),
         LVoid,
-        Block(
-            List(
-                Assignment(Identifier(a),Constant(10)),
-                Assignment(Identifier(b),Constant(50)),
-                Assignment(Identifier(c),Identifier(b)),
-                Assignment(Identifier(d),Constant(20))))), 
+        List(
+            Assignment(Identifier(a),Constant(10)),
+            Assignment(Identifier(b),Constant(50)),
+            Assignment(Identifier(c),Identifier(b)),
+            Assignment(Identifier(d),Constant(20))))), 
     Function(
         auto,
         int,
         Identifier(main),
         LVoid,
-        Block(
-            List(
-                Identifier(a), 
-                Return(Some(Constant(0)))))))
+        List(
+            Identifier(a), 
+            Return(Some(Constant(0)))))))
