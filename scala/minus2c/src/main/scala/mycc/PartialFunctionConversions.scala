@@ -6,6 +6,10 @@ object PartialFunctionConversions {
   }
 
   implicit class ToList[A, B](`this`: PartialFunction[A, B]) {
-    def L: PartialFunction[A, List[B]] = `this` andThen { _ :: Nil}
+    def L :PartialFunction[A, List[B]] = `this` ->> { _ :: Nil}
+  }
+
+  implicit class Chain[A, B](`this`: PartialFunction[A, B]) {
+    def ->>[C](f: B => C) :PartialFunction[A, C] = `this` andThen f
   }
 }

@@ -20,9 +20,15 @@ object ParseCAst {
     parseFunctionDefinition.L | matchDeclaration
 
   private val parseFunctionDefinition: PartialFunction[CAst, Ast] = {
-    case BinaryNode("D", declarators, UnaryNode("B", body)) =>
-      val (storage, returnType, (name, args)) = matchDeclarators(declarators)
-      Function(storage, returnType, name, args, matchCompoundStatements(body))
+    case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
+      case BinaryNode("d", types, functionDeclarator) =>
+        val (storage, returnType) = matchDeclarationSpecifiers(types)
+        val (name, args) = matchFunctionDeclarator(functionDeclarator)
+        Function(storage, returnType, name, args, matchCompoundStatements(body))
+      case functionDeclarator => // warning implicit return type 'int'
+        val (name, args) = matchFunctionDeclarator(functionDeclarator)
+        Function(auto, int, name, args, matchCompoundStatements(body))
+    }
   }
 
   private val matchDeclaration: PartialFunction[CAst, List[Ast]] = {
@@ -94,8 +100,12 @@ object ParseCAst {
   //   case value => throw UnimplementedError(msg(value))
   // }
 
-  def unexpected[I, E <: Ast](msg: I => String): PartialFunction[I, E] = {
+  def unexpectedError[I, E <: Ast](msg: I => String): PartialFunction[I, E] = {
     case value => throw UnexpectedAstNode(msg(value))
+  }
+
+  def semanticError[I, E <: Ast](msg: I => String): PartialFunction[I, E] = {
+    case value => throw SemanticError(msg(value))
   }
 
   def specialize(ast: CAst): Ast = ast match {
@@ -147,8 +157,8 @@ object ParseCAst {
   }
 
   def matchDeclarationSpecifiers(specifiers: CAst): (StorageTypes, Types) = {
-    val (storages, types) = matchTildaList(specifiers)
-      .partition(_.isInstanceOf[Storage])
+    val (storages, types) =
+      matchDeclarationSpecifierList(specifiers).partition(_.isInstanceOf[Storage])
 
     val storage: StorageTypes = storages match {
       case Nil => auto
@@ -165,10 +175,10 @@ object ParseCAst {
     (storage, returnType)
   }
 
-  def matchTildaList(list: CAst): List[Type | Storage] = list match {
+  def matchDeclarationSpecifierList(list: CAst): List[Type | Storage] = list match {
     case BinaryNode("~", specifier, tail) =>
-      matchStorageOrType(specifier) :: matchTildaList(tail)
-    case single => matchStorageOrType(single) :: Nil
+      matchDeclarationSpecifier(specifier) :: matchDeclarationSpecifierList(tail)
+    case single => matchDeclarationSpecifier(single) :: Nil
   }
 
   private val matchStorage: PartialFunction[CAst, Storage] = {
@@ -186,37 +196,23 @@ object ParseCAst {
     }
   }
 
-  def matchStorageOrType: PartialFunction[CAst, Type | Storage] = matchType | matchStorage
+  def matchDeclarationSpecifier: PartialFunction[CAst, Type | Storage] = matchType | matchStorage
 
-  def matchDeclarators(declarators: CAst): (StorageTypes, Types, (Identifier, ArgList)) = declarators match {
-    case BinaryNode("d", types, functionDeclarator) =>
-      val (storage, returnType) = matchDeclarationSpecifiers(types)
-      (storage, returnType, matchFunctionDeclarator(functionDeclarator))
-    case functionDeclarator => // warning implicit return type 'int'
-      (auto, int, matchFunctionDeclarator(functionDeclarator))
+  def matchFunctionDeclarator: PartialFunction[CAst, (Identifier, ArgList)] =
+    matchDirectFunctionDeclarator | semanticError(_ => "No args on Function definition")
+
+  private val matchDirectFunctionDeclarator: PartialFunction[CAst, (Identifier, ArgList)] = {
+    case UnaryNode("F", name) =>
+      (matchIdentifier(name), LAny)
+    case UnaryNode("V", name) =>
+      (matchIdentifier(name), LVoid)
+    case BinaryNode("F", name, args) =>
+      (matchIdentifier(name), LParam(matchParameterList(args).toVector))
+    case BinaryNode("H", _, _) =>
+      throw UnimplementedError("Identifier only function parameter list not implemented.")
   }
 
-  def matchFunctionDeclarator(nameAndArgs: CAst): (Identifier, ArgList) = {
-    nameAndArgs match {
-      case UnaryNode("F", name) =>
-        (matchIdentifier(name), ListOf(Vector()))
-      case BinaryNode("F", name, args) =>
-        (matchIdentifier(name), matchArgsList(args))
-      case BinaryNode("H", _, _) =>
-        throw UnimplementedError("Identifier only function parameter list not implemented.")
-      case _ => 
-        throw SemanticError("No args on Function definition")
-    }
-  }
-
-  def matchArgsList(args: CAst): ArgList = args match {
-    case Singleton("void") =>
-      LVoid
-    case parameterList =>
-      ListOf(matchParameterList(parameterList).toVector)
-  }
-
-  def matchParameterList(list: CAst): List[(Types, Identifier)] = list match {
+  def matchParameterList: PartialFunction[CAst, List[(Types, Identifier)]] = {
     case BinaryNode(",", tail, parameter) =>
       matchParameterList(tail) :+ matchParameter(parameter)
     case parameter =>
@@ -227,8 +223,8 @@ object ParseCAst {
     case BinaryNode("~", typeSpecifier, declarator) => declarator match {
       case BinaryNode("F", _, _) => throw UnimplementedError("C style function args, use 'function' type with identifier")
       case identifier =>
-        val identifierOnly = matchIdentifier | unexpected(value => "${value} is not an Identifier")
-        val typeOnly = matchType | unexpected(value => "${value} is not a Type")
+        val identifierOnly = matchIdentifier | unexpectedError(value => "${value} is not an Identifier")
+        val typeOnly = matchType | unexpectedError(value => "${value} is not a Type")
         (typeOnly(typeSpecifier).id, identifierOnly(identifier))
     }
     case _ => throw SemanticError("not type and identifier")

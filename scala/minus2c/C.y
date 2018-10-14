@@ -151,6 +151,7 @@ direct_function_declarator
     : direct_variable_declarator '(' parameter_list ')'     { $$ = BinaryNode_new('F', $1, $3); }
     | direct_variable_declarator '(' identifier_list ')'    { $$ = BinaryNode_new('H', $1, $3); }
     | direct_variable_declarator '(' ')'                    { $$ = UnaryNode_new('F', $1); }
+    | direct_variable_declarator '(' VOID ')'               { $$ = UnaryNode_new('V', $1); }
     ;
 
 parameter_list

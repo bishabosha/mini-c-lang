@@ -15,8 +15,8 @@ enum StorageTypes {
 }
 
 enum ArgList {
-  case LVoid
-  case ListOf(list: Vector[(Types, Identifier)])
+  case LVoid, LAny
+  case LParam(list: Vector[(Types, Identifier)])
 }
 
 case object LVoid
