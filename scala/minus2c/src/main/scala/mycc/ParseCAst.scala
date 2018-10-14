@@ -53,101 +53,74 @@ object ParseCAst {
     val (storage, returnType, (name, args)) = matchDeclarators(declarators)
     Function(storage, returnType, name, args, matchBlock(body))
   }
-
-  def matchIfElse(cond: CAst, bodyOrElse: CAst): Ast = bodyOrElse match {
-    case BinaryNode("else", ifTrue, orElse) =>
-      If(specialize(cond), specialize(ifTrue), Some(specialize(orElse)))
-    case body =>
-      If(specialize(cond), specialize(body), None)
-  }
   
   def matchBlock(compoundStatement: CAst): Block = compoundStatement match {
-    case UnaryNode("B", body) => Block(matchStatements(body).reverse).asInstanceOf[Block]
+    case UnaryNode("B", body) => blockOf(matchStatementsInReverse(body).reverse)
     case _ => ???
   }
 
-  def matchStatements(list: CAst): List[Ast] = list match {
-    case BinaryNode(";", front, end) => matchStatement(end) ++ matchStatements(front)
-    case end => matchStatement(end)
-  }
+  def matchStatementsInReverse(statement: CAst): List[Ast] = statement match {
+    case BinaryNode(";", front, end) =>
+      matchStatementsInReverse(end) ++ matchStatementsInReverse(front)
 
-  def matchStatement(statement: CAst): List[Ast] = statement match {
     case BinaryNode("~", specifiers, expr) =>
       val (storage, declType) = matchDeclarationSpecifiers(specifiers)
-      val (names, assignmentOp) = matchNameAndOrAssignment(expr)
+      val namesAndAssignments = matchNamesAndAssignments(expr)
 
-      val declarations = Declaration(storage, declType, names)
-
-      assignmentOp.map {
-        Assignment(names, _) :: declarations :: Nil // will be reversed // TODO: Assignment is only 1 var at a time
-      } getOrElse {
-        declarations :: Nil
+      namesAndAssignments.reverse.flatMap { (name, assignmentOp) =>
+        assignmentOp.map {
+          Assignment(name, _) :: Declaration(storage, declType, name) :: Nil
+        } getOrElse {
+          Declaration(storage, declType, name) :: Nil
+        }
       }
       
     case BinaryNode(",", front, end) => 
-      val (names, assignmentOp) = matchIdentifierListAssignment(front, end)
-      assignmentOp.map {
-        Assignment(names, _) :: Nil // TODO: Assignment is only 1 var at a time
-      } getOrElse {
-        names.reverse
+      val namesAndAssignments = matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
+      namesAndAssignments.reverse.flatMap { (name, assignmentOp) =>
+        assignmentOp.map {
+          Assignment(name, _) :: Nil
+        } getOrElse {
+          name :: Nil
+        }
       }
 
     case BinaryNode("=", TokenString("id", id), value) =>
-      Assignment(Identifier(id).asInstanceOf[Identifier], specialize(value)) :: Nil
-
+      Assignment(identifierOf(id), specialize(value)) :: Nil
 
     case TokenString("id", id) =>
-      Identifier(id).asInstanceOf[Identifier] :: Nil
+      Identifier(id) :: Nil
 
-    case UnaryNode("return", value) => matchStatement(value) match {
+    case UnaryNode("return", value) => matchStatementsInReverse(value) match {
       case Nil => throw UnexpectedAstNode("expected non empty list")
       case expr :: Nil => Return(Some(expr)) :: Nil
-      case list => Return(list.lastOption) :: Nil
+      case list => Return(Some(list.head)) :: list.tail
     }
 
+    case _ => specialize(statement) :: Nil
+  }
+
+  def matchNamesAndAssignments(expr: CAst): List[(Identifier, Option[Ast])] = expr match {
+    case TokenString("id", id) => List((identifierOf(id), None))
+    case BinaryNode("=", TokenString("id", id), value) => List((identifierOf(id), Some(specialize(value))))
+    case BinaryNode(",", front, end) =>
+      matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
     case _ => ???
   }
 
-  def matchNameAndOrAssignment(expr: CAst): (List[Identifier], Option[Ast]) = expr match {
-    case TokenString("id", id) => (List(Identifier(id).asInstanceOf[Identifier]), None)
-    case BinaryNode("=", TokenString("id", id), value) => (List(Identifier(id).asInstanceOf[Identifier]), Some(specialize(value)))
-    case BinaryNode(",", front, end) => matchIdentifierListAssignment(front, end)
-    case _ => ???
-  }
-
-  def matchIdentifierListAssignment(front: CAst, end: CAst): (List[Identifier], Option[Ast]) = {
-    val idents = parseIdentifierList(front)
-    parseIdentifierOrAssignment(end) match {
-      case (i: Identifier, a: Ast) => (idents ++ List(i), Some(a))
-      case i: Identifier => (idents ++ List(i), None)
-    }
-  }
-
-  def parseIdentifierList(expr: CAst): List[Identifier] = expr match {
-    case BinaryNode(",", front, end) => parseIdentifierList(front) ++ parseIdentifierList(end)
-    case TokenString("id", id) => Identifier(id).asInstanceOf[Identifier] :: Nil
-    case _ => ???
-  }
-
-  def parseIdentifierOrAssignment(expr: CAst): Identifier | (Identifier, Ast) = expr match {
-    case TokenString("id", id) => Identifier(id).asInstanceOf[Identifier]
-    case BinaryNode("=", TokenString("id", id), value) => (Identifier(id).asInstanceOf[Identifier], specialize(value))
-    case _ => ???
-  }
-
-  def matchDeclarationSpecifiers(specifiers: CAst): (Storage, Type) = {
+  def matchDeclarationSpecifiers(specifiers: CAst): (StorageTypes, Types) = {
     val (storages, types) = matchTildaList(specifiers)
       .partition(_.isInstanceOf[Storage])
 
-    val storage: Storage = storages match {
-      case Nil => storageOf(auto)
-      case (s: Storage) :: Nil => s
+    val storage: StorageTypes = storages match {
+      case Nil => auto
+      case (s: Storage) :: Nil => s.id
       case _ => throw SemanticError("More than one storage class may not be specified.")
     }
 
-    val returnType: Type = types match {
-      case Nil => typeOf(int) // warning implicit return type 'int'
-      case (t: Type) :: Nil => t
+    val returnType: Types = types match {
+      case Nil => int // warning implicit return type 'int'
+      case (t: Type) :: Nil => t.id
       case _ => throw SemanticError("Invalid combination of type specifiers.")
     }
 
@@ -166,13 +139,12 @@ object ParseCAst {
     case _ => throw SemanticError("Not Storage or Type")
   }
 
-  def matchDeclarators(declarators: CAst): (Storage, Type, (Identifier, ArgList)) = declarators match {
+  def matchDeclarators(declarators: CAst): (StorageTypes, Types, (Identifier, ArgList)) = declarators match {
     case BinaryNode("d", types, nameAndArgs) =>
-      val(storage, returnType) = matchDeclarationSpecifiers(types)
+      val (storage, returnType) = matchDeclarationSpecifiers(types)
       (storage, returnType, matchNameAndArgs(nameAndArgs))
-    case nameAndArgs =>
-      // warning implicit return type 'int'
-      (storageOf(auto), typeOf(int), matchNameAndArgs(nameAndArgs))
+    case nameAndArgs => // warning implicit return type 'int'
+      (auto, int, matchNameAndArgs(nameAndArgs))
   }
 
   def matchNameAndArgs(nameAndArgs: CAst): (Identifier, ArgList) = nameAndArgs match {
@@ -216,5 +188,12 @@ object ParseCAst {
   def matchIdentifier(ast: Ast): Identifier = ast match {
     case i: Identifier => i
     case _ => throw UnexpectedAstNode("${typeAndIdentifier} not of type Identifier")
+  }
+
+  def matchIfElse(cond: CAst, bodyOrElse: CAst): Ast = bodyOrElse match {
+    case BinaryNode("else", ifTrue, orElse) =>
+      If(specialize(cond), specialize(ifTrue), Some(specialize(orElse)))
+    case body =>
+      If(specialize(cond), specialize(body), None)
   }
 }

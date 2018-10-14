@@ -11,19 +11,11 @@
         LVoid,
         Block(
             List(
-                Declaration(
-                    Storage(auto),
-                    Type(int),
-                    List(Identifier(a), Identifier(b), Identifier(c))
-                ), 
-                Assignment(
-                    List(Identifier(a), Identifier(b), Identifier(c)),
-                    Constant(0)
-                ),
-                Return(Some(Node2(+,Node2(+,Identifier(a),Identifier(b)),Identifier(c))))
-            )
-        )
-    )
+                Declaration(Storage(auto),Type(int),Identifier(a)),
+                Declaration(Storage(auto),Type(int),Identifier(b)),
+                Declaration(Storage(auto),Type(int),Identifier(c)),
+                Assignment(Identifier(c),Constant(0)),
+                Return(Some(Node2(+,Node2(+,Identifier(a),Identifier(b)),Identifier(c))))))
 
 |>  {
         a, b, c;
@@ -57,3 +49,23 @@
                     Assignment(
                         List(Identifier(a), Identifier(b), Identifier(c)),
                         Constant(50))))))
+
+|>  int foo(void) {
+        int a = 10, b = 50, c = b, d = 20;
+    }
+
+    Function(
+        auto,
+        int,
+        Identifier(foo),
+        LVoid,
+        Block(
+            List(
+                Declaration(auto,int,Identifier(a)), 
+                Assignment(Identifier(a),Constant(10)), 
+                Declaration(auto,int,Identifier(b)), 
+                Assignment(Identifier(b),Constant(50)), 
+                Declaration(auto,int,Identifier(c)), 
+                Assignment(Identifier(c),Identifier(b)), 
+                Declaration(auto,int,Identifier(d)),
+                Assignment(Identifier(d),Constant(20)))))

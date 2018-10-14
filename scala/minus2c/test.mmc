@@ -141,7 +141,7 @@ int main(void) {
     int a = 0;
     int b = 1;
     int c = a + b;
-    return c;
+    return a, b, c = 20;
 }
 
 int main(void) {
