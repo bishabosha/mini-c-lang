@@ -3,3 +3,12 @@ target
 .DS_Store
 .vscode
 .idea
+*.log
+*.bc
+*.o
+*.out
+C.output
+C.tab.c
+C.tab.h
+lex.yy.c
+mycclib

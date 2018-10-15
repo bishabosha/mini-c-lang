@@ -111,8 +111,8 @@ init_declarator_list
     ;
 
 init_declarator
-    : declarator                            { $$ = $1; }
-    | declarator '=' assignment_expression  { $$ = BinaryNode_new('=', $1, $3); }
+    : variable_declarator                            { $$ = $1; }
+    | variable_declarator '=' assignment_expression  { $$ = BinaryNode_new('=', $1, $3); }
     ;
 
 storage_class_specifier

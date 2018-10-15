@@ -131,7 +131,7 @@ int main(void) {
 int main(void) {
     int a, b, c = 0;
     int d, e = 1;
-    return a + b + c + d + e;
+    return 0;
 }
 
 int main(void) {
