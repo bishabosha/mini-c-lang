@@ -1,10 +1,14 @@
 #include <stdio.h>
 
-int a, b, c, d;
 int foo() {
-    a = 10, b = 50, c = b, d = 20;
+    int a = 1 + bar() * 2 + baz(2, 3);
+    return a;
 }
-int main(void) {
-    foo(1, 2);
-    return 0;
+
+int bar() {
+  return 0;
+}
+
+int baz(int a, int b) {
+    return a + b;
 }

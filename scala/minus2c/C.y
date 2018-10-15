@@ -44,15 +44,15 @@ argument_expression_list
 
 unary_expression
     : postfix_expression                { $$ = $1; }
-    | unary_operator unary_expression   { $$ = UnaryNode_new((int)$1, $2); }
+    | unary_operator unary_expression   { $$ = UnaryNode_new($1, $2); }
     ;
 
 unary_operator
-    : '&'   { $$ = $1; }
-    | '*'   { $$ = $1; }
-    | '+'   { $$ = $1; }
-    | '-'   { $$ = $1; }
-    | '!'   { $$ = $1; }
+    : '&'   { $$ = '&'; }
+    | '*'   { $$ = '*'; }
+    | '+'   { $$ = '+'; }
+    | '-'   { $$ = '-'; }
+    | '!'   { $$ = '!'; }
     ;
 
 multiplicative_expression
