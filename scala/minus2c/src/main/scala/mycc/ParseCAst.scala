@@ -24,7 +24,7 @@ object ParseCAst {
   def parseExternalDeclaration: PartialFunction[CAst, List[Ast]] =
     parseFunctionDefinition.L | matchDeclaration
 
-  private val parseFunctionDefinition: PartialFunction[CAst, Ast] = {
+  private val parseFunctionDefinition: PartialFunction[CAst, Function] = {
     case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
       case BinaryNode("d", types, functionDeclarator) =>
         val (storage, returnType) = matchDeclarationSpecifiers(types)
@@ -54,13 +54,11 @@ object ParseCAst {
     matchBlock.L |
     matchMultiList |
     matchDeclaration |
-    matchExprList |
-    matchAssignment.L |
-    matchIdentifier.L |
-    matchReturn |
-    unimplementedError(value => "$value is not supported yet.")
+    matchExpressionsStatement |
+    matchJumpStatement |
+    unimplementedError(value => s"$value is not supported yet.")
 
-  private val matchBlock: PartialFunction[CAst, Ast] = {
+  private val matchBlock: PartialFunction[CAst, Block] = {
     case UnaryNode("B", body) => Block(matchCompoundStatements(body))
   }
 
@@ -69,86 +67,104 @@ object ParseCAst {
       matchCompoundStatements(front) ++ matchCompoundStatements(end)
   }
 
-  private val matchExprList: PartialFunction[CAst, List[Ast]] = {
-    case BinaryNode(",", front, end) => 
-      val namesAndAssignments = matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
-      namesAndAssignments.map { (name, assignmentOp) =>
-        assignmentOp.map {
-          Assignment(name, _)
-        } getOrElse {
-          name
-        }
-      }
+  // private val matchExprList: PartialFunction[CAst, List[Ast]] = {
+  //   case BinaryNode(",", front, end) => 
+  //     val namesAndAssignments = matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
+  //     namesAndAssignments.map { (name, assignmentOp) =>
+  //       assignmentOp.map {
+  //         Assignment(name, _)
+  //       } getOrElse {
+  //         name
+  //       }
+  //     }
+  // }
+
+  private def matchAssignments: PartialFunction[CAst, Assignments] = matchAssignment | matchEqualities
+
+  private def matchEqualities: PartialFunction[CAst, Equalities] = matchEquality | matchRelationals
+
+  private def matchRelationals: PartialFunction[CAst, Relationals] = matchRelational | matchAdditives
+
+  private def matchAdditives: PartialFunction[CAst, Additives] = matchAdditive | matchMultiplicatives
+
+  private def matchMultiplicatives: PartialFunction[CAst, Multiplicatives] = matchMultiplicative | matchUnaries
+
+  private def matchUnaries: PartialFunction[CAst, Unaries] = matchUnary | matchPostfix
+
+  private def matchPostfix: PartialFunction[CAst, Postfix] = matchApplication | matchPrimary
+  
+  private def matchPrimary: PartialFunction[CAst, Primary] = matchIdentifier | matchConstExpWrapperOrString
+
+  private def matchConstExpWrapperOrString: PartialFunction[CAst, Primary] = matchConstant | matchExpWrapperOrString
+
+  private def matchExpWrapperOrString: PartialFunction[CAst, Primary] = matchLazyExpressions | matchStringLiteral
+
+  private val matchAssignment: PartialFunction[CAst, Assignment] = {
+    case BinaryNode("=", TokenString("id", id), value) => Assignment(identifierOf(id), matchAssignments(value))
   }
-
-  private val matchAssignment: PartialFunction[CAst, Ast] = {
-    case BinaryNode("=", TokenString("id", id), value) => Assignment(identifierOf(id), matchAssignmentExpr(value))
-  }
-
-  private def matchAssignmentExpr: PartialFunction[CAst, Ast] = matchAssignment | matchEqualities
-
-  private def matchUnaries: PartialFunction[CAst, Unaries] = matchPostfix | matchUnary
-
-  private def matchMultiplicatives: PartialFunction[CAst, Multiplicatives] = matchUnaries | matchMultiplicative
-
-  private def matchAdditives: PartialFunction[CAst, Additives] = matchMultiplicatives | matchAdditive
-
-  private def matchRelationals: PartialFunction[CAst, Relationals] = matchAdditives | matchRelational
-
-  private def matchEqualities: PartialFunction[CAst, Equalities] = matchRelationals | matchEquality
 
   private val matchEquality: PartialFunction[CAst, Equality] = {
-    case BinaryNode("==", left, right) => Equality(EQUAL, matchEqualities(left), matchRelationals(right)).asInstanceOf[Equality]
-    case BinaryNode("!=", left, right) => Equality(NOT_EQUAL, matchEqualities(left), matchRelationals(right)).asInstanceOf[Equality]
+    case BinaryNode("==", left, right) => Equality(EQUAL, matchEqualities(left), matchRelationals(right))
+    case BinaryNode("!=", left, right) => Equality(NOT_EQUAL, matchEqualities(left), matchRelationals(right))
   }
 
   private val matchRelational: PartialFunction[CAst, Relational] = {
-    case BinaryNode("<", left, right) => Relational(LT, matchRelationals(left), matchAdditives(right)).asInstanceOf[Relational]
-    case BinaryNode(">", left, right) => Relational(GT, matchRelationals(left), matchAdditives(right)).asInstanceOf[Relational]
-    case BinaryNode("<=", left, right) => Relational(LT_EQ, matchRelationals(left), matchAdditives(right)).asInstanceOf[Relational]
-    case BinaryNode(">=", left, right) => Relational(GT_EQ, matchRelationals(left), matchAdditives(right)).asInstanceOf[Relational]
+    case BinaryNode("<", left, right) => Relational(LT, matchRelationals(left), matchAdditives(right))
+    case BinaryNode(">", left, right) => Relational(GT, matchRelationals(left), matchAdditives(right))
+    case BinaryNode("<=", left, right) => Relational(LT_EQ, matchRelationals(left), matchAdditives(right))
+    case BinaryNode(">=", left, right) => Relational(GT_EQ, matchRelationals(left), matchAdditives(right))
   }
 
   private val matchAdditive: PartialFunction[CAst, Additive] = {
-    case BinaryNode("+", left, right) => Additive(PLUS, matchAdditives(left), matchMultiplicatives(right)).asInstanceOf[Additive]
-    case BinaryNode("-", left, right) => Additive(MINUS, matchAdditives(left), matchMultiplicatives(right)).asInstanceOf[Additive]
+    case BinaryNode("+", left, right) => Additive(PLUS, matchAdditives(left), matchMultiplicatives(right))
+    case BinaryNode("-", left, right) => Additive(MINUS, matchAdditives(left), matchMultiplicatives(right))
   }
 
   private val matchMultiplicative: PartialFunction[CAst, Multiplicative] = {
-    case BinaryNode("*", left, right) => Multiplicative(MULTIPLY, matchMultiplicatives(left), matchUnaries(right)).asInstanceOf[Multiplicative]
-    case BinaryNode("/", left, right) => Multiplicative(DIVIDE, matchMultiplicatives(left), matchUnaries(right)).asInstanceOf[Multiplicative]
+    case BinaryNode("*", left, right) => Multiplicative(MULTIPLY, matchMultiplicatives(left), matchUnaries(right))
+    case BinaryNode("/", left, right) => Multiplicative(DIVIDE, matchMultiplicatives(left), matchUnaries(right))
   }
 
   private val matchUnary: PartialFunction[CAst, Unary] = {
-    case UnaryNode("&", unary) => Unary(REF, matchUnaries(unary)).asInstanceOf[Unary]
-    case UnaryNode("*", unary) => Unary(POINTER_ACCESS, matchUnaries(unary)).asInstanceOf[Unary]
-    case UnaryNode("+", unary) => Unary(POSTIVE, matchUnaries(unary)).asInstanceOf[Unary]
-    case UnaryNode("-", unary) => Unary(NEGATIVE, matchUnaries(unary)).asInstanceOf[Unary]
-    case UnaryNode("!", unary) => Unary(NOT, matchUnaries(unary)).asInstanceOf[Unary]
-  }
-
-  private def matchIdentOrConst: PartialFunction[CAst, Primary] = matchIdentifier | matchConstant
-
-  private def matchPrimary: PartialFunction[CAst, Primary] = matchIdentOrConst | matchStringLiteral
-
-  private def matchPostfix: PartialFunction[CAst, Postfix] = matchPrimary | matchApplication
-
-  private val matchIdentifier: PartialFunction[CAst, Identifier] = {
-    case TokenString("id", id) => Identifier(id).asInstanceOf[Identifier]
-  }
-
-  private val matchConstant: PartialFunction[CAst, Constant] = {
-    case TokenInt("constant", id) => Constant(id).asInstanceOf[Constant]
-  }
-
-  private val matchStringLiteral: PartialFunction[CAst, StringLiteral] = {
-    case TokenString("string", value) => StringLiteral(value).asInstanceOf[StringLiteral]
+    case UnaryNode("&", unary) => Unary(REF, matchUnaries(unary))
+    case UnaryNode("*", unary) => Unary(POINTER_ACCESS, matchUnaries(unary))
+    case UnaryNode("+", unary) => Unary(POSTIVE, matchUnaries(unary))
+    case UnaryNode("-", unary) => Unary(NEGATIVE, matchUnaries(unary))
+    case UnaryNode("!", unary) => Unary(NOT, matchUnaries(unary))
   }
 
   private val matchApplication: PartialFunction[CAst, Application] = {
-    case BinaryNode("apply", name, args) => Application(matchPostfix(name), List(Legacy(args))).asInstanceOf[Application]
-    case UnaryNode("apply", name) => Application(matchPostfix(name), Nil).asInstanceOf[Application]
+    case BinaryNode("apply", name, args) => throw UnimplementedError("Application with args list")
+    case UnaryNode("apply", name) => Application(matchPostfix(name), Nil)
   }
+
+  private val matchIdentifier: PartialFunction[CAst, Identifier] = {
+    case TokenString("id", id) => Identifier(id)
+  }
+
+  private val matchConstant: PartialFunction[CAst, Constant] = {
+    case TokenInt("constant", id) => Constant(id)
+  }
+
+  private val matchLazyExpressions: PartialFunction[CAst, LazyExpressions] = {
+    case UnaryNode("e", expressions) => LazyExpressions(matchExpressions(expressions))
+  }
+
+  private def matchExpressionsStatement: PartialFunction[CAst, Expressions] = matchEmpty | matchExpressions
+
+  private def matchExpressions: PartialFunction[CAst, Expressions] = matchAssignmentsAsExpressions | matchExpressionList
+
+  private def matchAssignmentsAsExpressions: PartialFunction[CAst, Expressions] = matchAssignments.L
+
+  private val matchExpressionList: PartialFunction[CAst, Expressions] = {
+    case BinaryNode(",", expressions, assignments) => matchExpressions(expressions) :+ matchAssignments(assignments)
+  }
+
+  private val matchStringLiteral: PartialFunction[CAst, StringLiteral] = {
+    case TokenString("string", value) => StringLiteral(value)
+  }
+
+  private def matchJumpStatement: PartialFunction[CAst, List[Ast]] = matchReturn
 
   private val matchReturn: PartialFunction[CAst, List[Ast]] = {
     case UnaryNode("return", value) => matchCompoundStatements(value) match {
@@ -158,8 +174,8 @@ object ParseCAst {
     }
   }
 
-  private val matchLegacy: PartialFunction[CAst, Ast] = {
-    case ast => Legacy(ast)
+  private val matchEmpty: PartialFunction[CAst, Expressions] = {
+    case Singleton("ø") => Nil
   }
 
   def unimplementedError[I, E <: Ast](msg: I => String): PartialFunction[I, E] = {
@@ -176,7 +192,7 @@ object ParseCAst {
 
   def matchNamesAndAssignments(expr: CAst): List[(Identifier, Option[Ast])] = expr match {
     case TokenString("id", id) => List((identifierOf(id), None))
-    case BinaryNode("=", TokenString("id", id), value) => List((identifierOf(id), Some(matchAssignmentExpr(value))))
+    case BinaryNode("=", TokenString("id", id), value) => List((identifierOf(id), Some(matchAssignments(value))))
     case BinaryNode(",", front, end) =>
       matchNamesAndAssignments(front) ++ matchNamesAndAssignments(end)
     case _ => ???
@@ -209,16 +225,16 @@ object ParseCAst {
 
   private val matchStorage: PartialFunction[CAst, Storage] = {
     case Singleton(kind) => kind match {
-      case "extern" => Storage(extern).asInstanceOf[Storage]
-      case "auto" => Storage(auto).asInstanceOf[Storage]
+      case "extern" => Storage(extern)
+      case "auto" => Storage(auto)
     }
   }
 
   private val matchType: PartialFunction[CAst, Type] = {
     case Singleton(kind) => kind match {
-      case "int" => Type(int).asInstanceOf[Type]
-      case "function" => Type(function).asInstanceOf[Type]
-      case "void" => Type(void).asInstanceOf[Type]
+      case "int" => Type(int)
+      case "function" => Type(function)
+      case "void" => Type(void)
     }
   }
 

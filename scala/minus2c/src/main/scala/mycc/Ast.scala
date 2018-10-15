@@ -35,36 +35,38 @@ enum ArgList {
   case LParam(list: Vector[(Types, Identifier)])
 }
 
-enum Ast {
-  case ø
-  case Identifier(id: String)
-  case Constant(value: Int)
-  case StringLiteral(value: String)
-  case Type(id: Types)
-  case Storage(id: StorageTypes)
-  case If(cond: Ast, ifTrue: Ast, orElse: Option[Ast])
-  case Return(value: Option[Ast])
-  case Application(operand: Postfix, args: List[Ast])
-  case Unary(op: UnaryOperators, value: Unaries)
-  case Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries)
-  case Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives)
-  case Relational(op: RelationalOperators, left: Relationals, right: Additives)
-  case Equality(op: EqualityOperators, left: Equalities, right: Relationals)
-  case Assignment(lvalue: Identifier, rvalue: Ast)
-  case Declaration(storage: StorageTypes, declType: Types, name: Identifier)
-  case Function(storage: StorageTypes, returnType: Types, name: Identifier, args: ArgList, body: List[Ast])
-  case Block(inner: List[Ast])
-  case Legacy(inner: CAst)
-}
+sealed trait Ast
+
+case class Identifier(id: String) extends Ast
+case class Constant(value: Int) extends Ast
+case class StringLiteral(value: String) extends Ast
+case class Type(id: Types) extends Ast
+case class Storage(id: StorageTypes) extends Ast
+case class Return(value: Option[Ast]) extends Ast
+case class Application(operand: Postfix, args: List[Ast]) extends Ast
+case class LazyExpressions(value: Expressions) extends Ast
+case class Unary(op: UnaryOperators, value: Unaries) extends Ast
+case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries) extends Ast
+case class Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives) extends Ast
+case class Relational(op: RelationalOperators, left: Relationals, right: Additives) extends Ast
+case class Equality(op: EqualityOperators, left: Equalities, right: Relationals) extends Ast
+case class Assignment(lvalue: Identifier, rvalue: Ast) extends Ast
+case class Declaration(storage: StorageTypes, declType: Types, name: Identifier) extends Ast
+case class Function(storage: StorageTypes, returnType: Types, name: Identifier, args: ArgList, body: List[Ast]) extends Ast
+case class Block(inner: List[Ast]) extends Ast
 
 object Ast {
-  type Primary = Identifier | Constant | StringLiteral
-  type Postfix = Primary | Application
-  type Unaries = Postfix | Unary
-  type Multiplicatives = Unaries | Multiplicative
-  type Additives = Multiplicatives | Additive
-  type Relationals = Additives | Relational
-  type Equalities = Relationals | Equality
+  type Expressions = List[Assignments]
+  type Assignments = Assignment | Equalities 
+  type Equalities = Equality | Relationals
+  type Relationals = Relational | Additives
+  type Additives = Additive | Multiplicatives
+  type Multiplicatives = Multiplicative | Unaries
+  type Unaries = Unary | Postfix
+  type Postfix = Application | Primary
+  type Primary = Identifier | Constant | StringLiteral | LazyExpressions
+
+
   inline def storageOf(kind: StorageTypes): Storage = Storage(kind).asInstanceOf[Storage]
   inline def typeOf(kind: Types): Type = Type(kind).asInstanceOf[Type]
   inline def identifierOf(id: String): Identifier = Identifier(id).asInstanceOf[Identifier]

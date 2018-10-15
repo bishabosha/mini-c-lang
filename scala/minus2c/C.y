@@ -28,7 +28,7 @@ primary_expression
     : IDENTIFIER            { $$ = lasttok; }
     | CONSTANT              { $$ = lasttok; }
     | STRING_LITERAL        { $$ = lasttok; }
-    | '(' expression ')'    { $$ = $2; }
+    | '(' expression ')'    { $$ = UnaryNode_new('e', $2); }
     ;
 
 postfix_expression

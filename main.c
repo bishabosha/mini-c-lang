@@ -1,8 +1,11 @@
 #include <stdio.h>
 
 int foo() {
-    int a = 1 + bar() * 2 + baz(2, 3);
-    return a;
+    int b;
+    int a;
+    a = b = 1, 2 * 3;
+    b;
+    return b;
 }
 
 int bar() {
