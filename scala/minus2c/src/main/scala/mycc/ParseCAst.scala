@@ -1,22 +1,23 @@
 package mycc
 
+import CAst._
+import Ast._
+import Types._
+import ArgList._
+import StorageTypes._
+import EqualityOperators._
+import RelationalOperators._
+import AdditiveOperators._
+import MultiplicativeOperators._
+import UnaryOperators._
+import mycc.exception._
+import PartialFunctionConversions._
+
 object ParseCAst {
-  import CAst._
-  import Ast._
-  import Types._
-  import ArgList._
-  import StorageTypes._
-  import EqualityOperators._
-  import RelationalOperators._
-  import AdditiveOperators._
-  import MultiplicativeOperators._
-  import UnaryOperators._
-  import mycc.exception._
-  import PartialFunctionConversions._
+
+  def apply(ast: CAst): List[Declarations] = translationUnit(ast)
 
   private type Parse[T] = PartialFunction[CAst, T]
-
-  def goal(ast: CAst): List[Declarations] = translationUnit(ast)
 
   private def translationUnit: Parse[List[Declarations]] =
     externalDeclarationList | externalDeclaration
@@ -53,8 +54,7 @@ object ParseCAst {
   private def declarationsAndAssignments: Parse[List[Declarations]] =
     variableDeclaration |
     functionDefinition.L |
-    `type`.E |
-    storage.E
+    declarationSpecifier.E
 
   private def expressionsStatement: Parse[Expressions] = empty | expressions
   private def jumpStatement: Parse[List[Statements]] = `return`.L
@@ -114,8 +114,6 @@ object ParseCAst {
   }
 
   private val unary: Parse[Unary] = {
-    case UnaryNode("&", unary) => Unary(REF, unaries(unary))
-    case UnaryNode("*", unary) => Unary(POINTER_ACCESS, unaries(unary))
     case UnaryNode("+", unary) => Unary(POSTIVE, unaries(unary))
     case UnaryNode("-", unary) => Unary(NEGATIVE, unaries(unary))
     case UnaryNode("!", unary) => Unary(NOT, unaries(unary))
@@ -176,24 +174,8 @@ object ParseCAst {
 
   private def initDeclarator: Parse[InitDeclarator] = identifier | assignment
 
-  private def declarationSpecifiersSpecific(specifiers: CAst): (StorageTypes, Types) = {
-    val (storages, types) =
-      declarationSpecifiers(specifiers).partition(_.isInstanceOf[Storage])
-
-    val storage: StorageTypes = storages match {
-      case Nil => auto
-      case (s: Storage) :: Nil => s.id
-      case _ => throw SemanticError("More than one storage class may not be specified.")
-    }
-
-    val returnType: Types = types match {
-      case Nil => int // warning implicit return type 'int'
-      case (t: Type) :: Nil => t.id
-      case _ => throw SemanticError("Invalid combination of type specifiers.")
-    }
-
-    (storage, returnType)
-  }
+  private def declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
+    declarationSpecifiers ->> reduceDeclarationSpecifiers
 
   private def declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
     declarationSpecifierList | declarationSpecifier.L
@@ -216,7 +198,6 @@ object ParseCAst {
     case Singleton("function") => Type(function)
     case Singleton("void") => Type(void)
   }
-
 
   private def functionDeclarator: Parse[(Identifier, ArgList)] =
     directFunctionDeclarator | semanticError(_ => "No args on Function definition")

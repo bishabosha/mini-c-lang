@@ -43,16 +43,10 @@ argument_expression_list
     ;
 
 unary_expression
-    : postfix_expression                { $$ = $1; }
-    | unary_operator unary_expression   { $$ = UnaryNode_new($1, $2); }
-    ;
-
-unary_operator
-    : '&'   { $$ = '&'; }
-    | '*'   { $$ = '*'; }
-    | '+'   { $$ = '+'; }
-    | '-'   { $$ = '-'; }
-    | '!'   { $$ = '!'; }
+    : postfix_expression     { $$ = $1; }
+    | '+' unary_expression   { $$ = UnaryNode_new('+', $2); }
+    | '-' unary_expression   { $$ = UnaryNode_new('-', $2); }
+    | '!' unary_expression   { $$ = UnaryNode_new('!', $2); }
     ;
 
 multiplicative_expression

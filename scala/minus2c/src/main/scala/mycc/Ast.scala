@@ -23,7 +23,7 @@ enum MultiplicativeOperators {
 }
 
 enum UnaryOperators {
-  case REF, NOT, POSTIVE, NEGATIVE, POINTER_ACCESS
+  case NOT, POSTIVE, NEGATIVE
 }
 
 enum StorageTypes {
@@ -41,7 +41,7 @@ object Ast {
   type Statements = Block | Declarations | Assignments | Return
   type InitDeclarator = Identifier | Assignment
   type DeclarationSpecifiers = Type | Storage
-  type Declarations = DeclarationSpecifiers | Declaration | Function | Assignment
+  type Declarations = Declaration | Function | Assignment
   type Expressions = List[Assignments]
   type Assignments = Assignment | Equalities 
   type Equalities = Equality | Relationals
