@@ -123,14 +123,6 @@ object ParseCAst {
     case Singleton("ø") => Nil
   }
 
-  private val expressions: Parse[Expressions] =
-    expressionList |
-    assignmentsAsExpressions
-
-  private val expressionsStatement: Parse[Expressions] =
-    empty |
-    expressions
-
   private val initDeclaratorList: Parse[List[InitDeclarator]] = {
     case BinaryNode(",", front, end) =>
       initDeclarators(front) :+ initDeclarator(end)
@@ -152,6 +144,33 @@ object ParseCAst {
     case Singleton("void") => Type(void)
   }
 
+  private val directFunctionDeclarator: Parse[FunctionDeclarator] = {
+    case UnaryNode("F", name) =>
+      FunctionDeclarator(identifier(name), LAny)
+    case UnaryNode("V", name) =>
+      FunctionDeclarator(identifier(name), LVoid)
+    case BinaryNode("F", name, args) =>
+      FunctionDeclarator(identifier(name), LParam(parameters(args).toVector))
+  }
+
+  private val parameterList: Parse[List[Parameter]] = {
+    case BinaryNode(",", tail, param) =>
+      parameters(tail) :+ parameter(param)
+  }
+
+  private val typesAndIdentifier: Parse[Parameter] = {
+    case BinaryNode("~", typeSpecifier, ident) =>
+      (types(typeSpecifier), identifier(ident))
+  }
+
+  private val expressions: Parse[Expressions] =
+    expressionList |
+    assignmentsAsExpressions
+
+  private val expressionsStatement: Parse[Expressions] =
+    empty |
+    expressions
+
   private val declarationSpecifier: Parse[DeclarationSpecifiers] =
     `type` |
     storage
@@ -162,15 +181,6 @@ object ParseCAst {
 
   private val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
     declarationSpecifiers ->> reduceDeclarationSpecifiers
-
-  private val directFunctionDeclarator: Parse[FunctionDeclarator] = {
-    case UnaryNode("F", name) =>
-      FunctionDeclarator(identifier(name), LAny)
-    case UnaryNode("V", name) =>
-      FunctionDeclarator(identifier(name), LVoid)
-    case BinaryNode("F", name, args) =>
-      FunctionDeclarator(identifier(name), LParam(parameters(args).toVector))
-  }
 
   private val functionDeclarator: Parse[FunctionDeclarator] =
     directFunctionDeclarator
@@ -193,16 +203,6 @@ object ParseCAst {
   private val typesOrIdentifierToTyped: Parse[Parameter] =
     types |
     identifier ->> { int -> }
-
-  private val parameterList: Parse[List[Parameter]] = {
-    case BinaryNode(",", tail, param) =>
-      parameters(tail) :+ parameter(param)
-  }
-
-  private val typesAndIdentifier: Parse[Parameter] = {
-    case BinaryNode("~", typeSpecifier, ident) =>
-      (types(typeSpecifier), identifier(ident))
-  }
 
   private val parameter: Parse[Parameter] =
     typesAndIdentifier |
