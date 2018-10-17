@@ -2,15 +2,15 @@ package object mycc {
   import Ast._
   import StorageTypes._
   import Types._
-  import ParseCAst._
+  import parseCAst._
   import exception.SemanticError
 
-  def parseAst(ast: CAst): (Context, Goal) = ParseCAst(ast)
+  def parseAst(ast: CAst): (Context, Goal) = parseCAst(ast)
 
   def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) = {
     val (storages, types) =
         declarationSpecifiers.partition(_.isInstanceOf[Storage])
-
+        
     val storage: StorageTypes = storages match {
       case Nil => auto
       case (s: Storage) :: Nil => s.id

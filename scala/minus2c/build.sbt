@@ -12,4 +12,5 @@ lazy val root = project
 
     // https://mvnrepository.com/artifact/org.graalvm/graal-sdk
     libraryDependencies += "org.graalvm" % "graal-sdk" % "1.0.0-rc7"
+
   )

@@ -56,7 +56,7 @@ object Ast {
 }
 
 case class Identifier(id: String) extends Ast
-case class FunctionDeclarator(name: Identifier, args: ArgList)
+case class FunctionDeclarator(id: Identifier, args: ArgList)
 case class Constant(value: Int) extends Ast
 case class StringLiteral(value: String) extends Ast
 case class Type(id: Types) extends Ast
@@ -71,5 +71,5 @@ case class Relational(op: RelationalOperators, left: Relationals, right: Additiv
 case class Equality(op: EqualityOperators, left: Equalities, right: Relationals) extends Ast
 case class Assignment(lvalue: Identifier, rvalue: Assignments) extends Ast
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator) extends Ast
-case class Function(storage: StorageTypes, returnType: Types, declarator: FunctionDeclarator, body: List[Statements]) extends Ast
+case class Function(id: Identifier, body: List[Statements]) extends Ast
 case class Block(inner: List[Statements]) extends Ast

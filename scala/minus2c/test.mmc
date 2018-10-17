@@ -134,12 +134,38 @@ int main(void) {
     return 0;
 }
 
-int main(void) {
-    int a, b, c = 0;
-    int foo(void);
-    int foo;
-    return 0;
-}
+|> BAD
+
+    int main(void) {
+        int a, b, c = 0;
+        int foo(int);
+        void foo(int);
+        return 0;
+    }
+
+    int main(void) {
+        int a, b, b = 0;
+        return 0;
+    }
+
+    int main(void) {
+        int a, b = 0;
+        int b(void);
+        return 0;
+    }
+
+|> GOOD
+
+    int main(void);
+    int x = 0;
+    int main(void) {
+        int foo(int);
+        int a, b = 0;
+        int foo(int) {
+            return 0;
+        }
+        return 0;
+    }
 
 int main(void) {
     a, b, c = 0;

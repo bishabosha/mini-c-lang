@@ -12,20 +12,22 @@ import MultiplicativeOperators._
 import UnaryOperators._
 import mycc.exception._
 import PartialFunctionConversions._
-import ParseCAst._
+import parseCAst._
+import scala.collection.mutable
 
-object ParseCAst {
-  private type Parse[T] = PartialFunction[CAst, T]
+object parseCAst extends Stage {
+  type Source   = CAst
+  type Context  = Bindings
+  type Goal     = List[Declarations]
 
-  type Context = Bindings
-  type Goal = List[Declarations]
-
-  def apply(ast: CAst): (Context, Goal) = new ParseCAst().goal(ast)
+  override def apply(source: Source): (Context, Goal) = new parseCAst().goal(source)
 }
 
-class ParseCAst {
+class parseCAst private {
 
-  private var context: Context = Bindings(Map(), Nil)
+  private type Parse[T] = PartialFunction[CAst, T]
+  private var context: Context = Bindings.default
+  private val identPool = new mutable.AnyRefMap[String, Identifier]()
 
   private def goal: Parse[(Context, Goal)] =
     translationUnit ->> { goal => context -> goal }
@@ -35,12 +37,12 @@ class ParseCAst {
     externalDeclaration
     
   private def externalDeclaration: Parse[List[Declarations]] =
-    functionDefinition.L |
+    functionDefinition |
     declarationsAndAssignments
 
   private def declarationsAndAssignments: Parse[List[Declarations]] =
     variableDeclaration |
-    functionDefinition.L |
+    functionDefinition |
     declarationSpecifier.E
 
   private def declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
@@ -114,9 +116,6 @@ class ParseCAst {
     identifier |
     functionDeclarator
 
-  private def functionDeclarator: Parse[FunctionDeclarator] =
-    directFunctionDeclarator
-
   private def types: Parse[Types] =
     `type` ->> { _.id }
 
@@ -139,45 +138,42 @@ class ParseCAst {
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
     case BinaryNode("E", list, decl) =>
-      translationUnit(list).++[Declarations, List[Declarations]](externalDeclaration(decl))
+      translationUnit(list)
+        .++[Declarations, List[Declarations]](externalDeclaration(decl))
   }
 
-  private val functionDefinition: Parse[Function] = {
+  private val functionDefinition: Parse[List[Declarations]] = {
     // add declaration before definition - then check declarations are compatible
     //  - store declaration in context not declarator
     case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
       case BinaryNode("d", types, declarator) =>
         val (storage, returnType) = declarationSpecifiersSpecific(types)
-        Function(storage, returnType, functionDeclarator(declarator), compoundStatements(body))
+        functionDeclarator(declarator) match {
+          case f @ FunctionDeclarator(i, _) =>
+            declareInScope(i, storage, returnType, f).toList
+              .:+[Declarations, List[Declarations]](Function(i, compoundStatements(body)))
+        }
       case declarator => // warning implicit return type 'int'
-        Function(auto, int, functionDeclarator(declarator), compoundStatements(body))
+        functionDeclarator(declarator) match {
+          case f @ FunctionDeclarator(i, _) =>
+            declareInScope(i, auto, int, f).toList
+              .:+[Declarations, List[Declarations]](Function(i, compoundStatements(body)))
+        }
     }
   }
 
   private val variableDeclaration: Parse[List[Declarations]] = {
     case BinaryNode("~", specifiers, expr) =>
-      val (storage, declType) = declarationSpecifiersSpecific(specifiers)
+      val (s, d) = declarationSpecifiersSpecific(specifiers)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
-        case i @ Identifier(s) =>
-          assertNewInLocalScope(s, i)
-          Declaration(storage, declType, i) :: Nil
-        case f @ FunctionDeclarator(Identifier(s), _) =>
-          assertNewInLocalScope(s, f)
-          Declaration(storage, declType, f) :: Nil
-        case a @ Assignment((i @ Identifier(s)), _) =>
-          assertNewInLocalScope(s, i)
-          Declaration(storage, declType, i) :: a :: Nil
+        case i: Identifier =>
+          declareInScope(i, s, d, i).toList
+        case f @ FunctionDeclarator(id, _) =>
+          declareInScope(id, s, d, f).toList
+        case a @ Assignment(i, _) =>
+          declareInScope(i, s, d, i).toList
+            .:+[Declarations, List[Declarations]](a)
       }
-  }
-
-  def assertNewInLocalScope(id: String, declarator: Declarator): Unit = {
-    for (existing <- context.canDeclare(id)) existing match {
-      case Identifier(i) =>
-        throw new SemanticError(s"redefinition of $i")
-      case FunctionDeclarator(Identifier(i), _) =>
-        throw new SemanticError(s"function $i already declared")
-    }
-    context = context + (id -> declarator)
   }
 
   private val block: Parse[Block] = {
@@ -228,7 +224,7 @@ class ParseCAst {
   }
 
   private val identifier: Parse[Identifier] = {
-    case TokenString("id", id) => Identifier(id)
+    case TokenString("id", id) => identPool.getOrElseUpdate(id, Identifier(id))
   }
 
   private val constant: Parse[Constant] = {
@@ -277,7 +273,7 @@ class ParseCAst {
     case Singleton("void") => Type(void)
   }
 
-  private val directFunctionDeclarator: Parse[FunctionDeclarator] = {
+  private val functionDeclarator: Parse[FunctionDeclarator] = {
     case UnaryNode("F", name) =>
       FunctionDeclarator(identifier(name), LAny)
     case UnaryNode("V", name) =>
@@ -294,5 +290,29 @@ class ParseCAst {
   private val typesAndIdentifier: Parse[Parameter] = {
     case BinaryNode("~", typeSpecifier, ident) =>
       (types(typeSpecifier), identifier(ident))
+  }
+
+  def declareInScope(identifier: Identifier, storage: StorageTypes, types: Types, declarator: Declarator): Option[Declaration] = {
+    for (Declaration(s, t, existing) <- context.canDeclare(identifier)) existing match {
+      case _: Identifier => declarator match {
+        case _: FunctionDeclarator =>
+          throw new SemanticError(s"Redefinition of '${identifier.id}' as a function type.")
+        case _ =>
+          throw new SemanticError(s"Redefinition of '${identifier.id}'.")
+      }
+      case _: FunctionDeclarator => declarator match {
+        case f: FunctionDeclarator =>
+          if (existing == f && s == storage && t == types) {
+            return None
+          } else {
+            throw new SemanticError(s"Redefinition of function '${identifier.id}' with incompatible types.")
+          }
+        case _ =>
+          throw new SemanticError(s"Redefinition of function '${identifier.id}' to variable.")
+      }
+    }
+    val declaration = Declaration(storage, types, declarator)
+    context = context + (identifier -> declaration)
+    Some(declaration)
   }
 }
