@@ -12,12 +12,130 @@ import MultiplicativeOperators._
 import UnaryOperators._
 import mycc.exception._
 import PartialFunctionConversions._
+import ParseCAst._
 
 object ParseCAst {
-
-  def apply(ast: CAst): List[Declarations] = translationUnit(ast)
-
   private type Parse[T] = PartialFunction[CAst, T]
+
+  type Context = Unit
+  type Goal = List[Declarations]
+
+  def apply(ast: CAst): (Context, Goal) = new ParseCAst().goal(ast)
+}
+
+class ParseCAst {
+
+  private var context: Context = ()
+
+  private def goal: Parse[(Context, Goal)] =
+    translationUnit ->> { goal => context -> goal }
+
+  private def translationUnit: Parse[Goal] =
+    externalDeclarationList |
+    externalDeclaration
+    
+  private def externalDeclaration: Parse[List[Declarations]] =
+    functionDefinition.L |
+    declarationsAndAssignments
+
+  private def declarationsAndAssignments: Parse[List[Declarations]] =
+    variableDeclaration |
+    functionDefinition.L |
+    declarationSpecifier.E
+
+  private def declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
+    declarationSpecifierList |
+    declarationSpecifier.L
+
+  private def declarationSpecifier: Parse[DeclarationSpecifiers] =
+    `type` |
+    storage
+
+  private def declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
+    declarationSpecifiers ->> reduceDeclarationSpecifiers
+
+  private def jumpStatement: Parse[List[Statements]] =
+    `return`.L
+
+  private def expressionsStatement: Parse[Expressions] =
+    empty |
+    expressions
+
+  private def expressions: Parse[Expressions] =
+    expressionList |
+    assignmentsAsExpressions
+
+  private def assignmentsAsExpressions: Parse[Expressions] =
+    assignments.L
+
+  private def assignments: Parse[Assignments] =
+    assignment |
+    equalities
+
+  private def equalities: Parse[Equalities] =
+    equality |
+    relationals
+
+  private def relationals: Parse[Relationals] =
+    relational |
+    additives
+
+  private def additives: Parse[Additives] =
+    additive |
+    multiplicatives
+
+  private def multiplicatives: Parse[Multiplicatives] =
+    multiplicative |
+    unaries
+
+  private def unaries: Parse[Unaries] =
+    unary |
+    postfix
+
+  private def postfix: Parse[Postfix] =
+    application |
+    primary
+
+  private def primary: Parse[Primary] =
+    identifier |
+    (constant |
+      (lazyExpressions |
+        stringLiteral))
+
+  private def initDeclarators: Parse[List[InitDeclarator]] =
+    initDeclaratorList |
+    initDeclarator.L
+
+  private def initDeclarator: Parse[InitDeclarator] =
+    declarator |
+    assignment 
+
+  private def declarator: Parse[InitDeclarator] =
+    identifier |
+    functionDeclarator
+
+  private def functionDeclarator: Parse[FunctionDeclarator] =
+    directFunctionDeclarator
+
+  private def types: Parse[Types] =
+    `type` ->> { _.id }
+
+  private def parameters: Parse[List[Parameter]] =
+    parameterList |
+    parameter.L
+
+  private def parameter: Parse[Parameter] =
+    typesAndIdentifier |
+    (types |
+      identifier ->> { int -> })
+
+  private def compoundStatements: Parse[List[Statements]] =
+    block.L |
+    multiList |
+    declarationsAndAssignments |
+    expressionsStatement |
+    jumpStatement |
+    { case value => throw UnimplementedError(s"statement: $value") }
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
     case BinaryNode("E", list, decl) =>
@@ -38,9 +156,12 @@ object ParseCAst {
     case BinaryNode("~", specifiers, expr) =>
       val (storage, declType) = declarationSpecifiersSpecific(specifiers)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
-        case i: Identifier => Declaration(storage, declType, i) :: Nil
-        case f: FunctionDeclarator => Declaration(storage, declType, f) :: Nil
-        case a @ Assignment(i, _) => Declaration(storage, declType, i) :: a :: Nil
+        case i: Identifier =>
+          Declaration(storage, declType, i) :: Nil
+        case f: FunctionDeclarator =>
+          Declaration(storage, declType, f) :: Nil
+        case a @ Assignment(i, _) =>
+          Declaration(storage, declType, i) :: a :: Nil
       }
   }
 
@@ -116,9 +237,6 @@ object ParseCAst {
     case Singleton("return") => Return(Nil)
   }
 
-  private val jumpStatement: Parse[List[Statements]] =
-    `return`.L
-
   private val empty: Parse[Expressions] = {
     case Singleton("ø") => Nil
   }
@@ -162,117 +280,4 @@ object ParseCAst {
     case BinaryNode("~", typeSpecifier, ident) =>
       (types(typeSpecifier), identifier(ident))
   }
-
-  private val expressions: Parse[Expressions] =
-    expressionList |
-    assignmentsAsExpressions
-
-  private val expressionsStatement: Parse[Expressions] =
-    empty |
-    expressions
-
-  private val declarationSpecifier: Parse[DeclarationSpecifiers] =
-    `type` |
-    storage
-
-  private val declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
-    declarationSpecifierList |
-    declarationSpecifier.L
-
-  private val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
-    declarationSpecifiers ->> reduceDeclarationSpecifiers
-
-  private val functionDeclarator: Parse[FunctionDeclarator] =
-    directFunctionDeclarator
-
-  private val declarator: Parse[InitDeclarator] =
-    identifier |
-    functionDeclarator
-
-  private val initDeclarator: Parse[InitDeclarator] =
-    declarator |
-    assignment 
-
-  private val initDeclarators: Parse[List[InitDeclarator]] =
-    initDeclaratorList |
-    initDeclarator.L
-
-  private val types: Parse[Types] =
-    `type` ->> { _.id }
-
-  private val typesOrIdentifierToTyped: Parse[Parameter] =
-    types |
-    identifier ->> { int -> }
-
-  private val parameter: Parse[Parameter] =
-    typesAndIdentifier |
-    typesOrIdentifierToTyped
-
-  private val parameters: Parse[List[Parameter]] =
-    parameterList |
-    parameter.L
-
-  private val expWrapperOrString: Parse[Primary] =
-    lazyExpressions |
-    stringLiteral
-
-  private val constExpWrapperOrString: Parse[Primary] =
-    constant |
-    expWrapperOrString
-
-  private val primary: Parse[Primary] =
-    identifier |
-    constExpWrapperOrString
-
-  private val postfix: Parse[Postfix] =
-    application |
-    primary
-
-  private val unaries: Parse[Unaries] =
-    unary |
-    postfix
-
-  private val multiplicatives: Parse[Multiplicatives] =
-    multiplicative |
-    unaries
-
-  private val additives: Parse[Additives] =
-    additive |
-    multiplicatives
-
-  private val relationals: Parse[Relationals] =
-    relational |
-    additives
-
-  private val equalities: Parse[Equalities] =
-    equality |
-    relationals
-
-  private val assignments: Parse[Assignments] =
-    assignment |
-    equalities
-
-  private val assignmentsAsExpressions: Parse[Expressions] =
-    assignments.L
-
-  private val declarationsAndAssignments: Parse[List[Declarations]] =
-    variableDeclaration |
-    functionDefinition.L |
-    declarationSpecifier.E
-
-  private val externalDeclaration: Parse[List[Declarations]] =
-    functionDefinition.L |
-    declarationsAndAssignments
-
-  private val translationUnit: Parse[List[Declarations]] =
-    externalDeclarationList |
-    externalDeclaration
-
-  private def compoundStatements: Parse[List[Statements]] =
-    block.L |
-    multiList |
-    declarationsAndAssignments |
-    expressionsStatement |
-    jumpStatement |
-    { case value => throw UnimplementedError(s"statement: $value") }
 }

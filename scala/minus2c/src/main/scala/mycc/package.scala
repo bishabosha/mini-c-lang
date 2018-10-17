@@ -2,9 +2,10 @@ package object mycc {
   import Ast._
   import StorageTypes._
   import Types._
+  import ParseCAst._
   import exception.SemanticError
 
-  def parseAst(ast: CAst): List[Ast] = ParseCAst(ast)
+  def parseAst(ast: CAst): (Context, Goal) = ParseCAst(ast)
 
   def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) = {
     val (storages, types) =

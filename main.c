@@ -1,11 +1,9 @@
 #include <stdio.h>
 
-int baz(int a, int b) {
-  int;auto;
-  return a + b, 1 + 1;
-}
+int foo();
 
-int main(void) {
-  printf("baz: %d", baz(3, 5));
+foo() {
   return 0;
 }
+
+int b() { return foo(); }
