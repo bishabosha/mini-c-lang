@@ -1,9 +1,8 @@
 #include <stdio.h>
 
-int foo();
-
-foo() {
-  return 0;
+int foo() {
+  char a;
+  int a = 0;
 }
 
-int b() { return foo(); }
+int main(void) { return 0; }

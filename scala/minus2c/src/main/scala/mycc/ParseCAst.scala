@@ -17,7 +17,7 @@ import ParseCAst._
 object ParseCAst {
   private type Parse[T] = PartialFunction[CAst, T]
 
-  type Context = Unit
+  type Context = Bindings
   type Goal = List[Declarations]
 
   def apply(ast: CAst): (Context, Goal) = new ParseCAst().goal(ast)
@@ -25,7 +25,7 @@ object ParseCAst {
 
 class ParseCAst {
 
-  private var context: Context = ()
+  private var context: Context = Bindings(Map(), Nil)
 
   private def goal: Parse[(Context, Goal)] =
     translationUnit ->> { goal => context -> goal }
@@ -143,6 +143,8 @@ class ParseCAst {
   }
 
   private val functionDefinition: Parse[Function] = {
+    // add declaration before definition - then check declarations are compatible
+    //  - store declaration in context not declarator
     case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
       case BinaryNode("d", types, declarator) =>
         val (storage, returnType) = declarationSpecifiersSpecific(types)
@@ -156,13 +158,26 @@ class ParseCAst {
     case BinaryNode("~", specifiers, expr) =>
       val (storage, declType) = declarationSpecifiersSpecific(specifiers)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
-        case i: Identifier =>
+        case i @ Identifier(s) =>
+          assertNewInLocalScope(s, i)
           Declaration(storage, declType, i) :: Nil
-        case f: FunctionDeclarator =>
+        case f @ FunctionDeclarator(Identifier(s), _) =>
+          assertNewInLocalScope(s, f)
           Declaration(storage, declType, f) :: Nil
-        case a @ Assignment(i, _) =>
+        case a @ Assignment((i @ Identifier(s)), _) =>
+          assertNewInLocalScope(s, i)
           Declaration(storage, declType, i) :: a :: Nil
       }
+  }
+
+  def assertNewInLocalScope(id: String, declarator: Declarator): Unit = {
+    for (existing <- context.canDeclare(id)) existing match {
+      case Identifier(i) =>
+        throw new SemanticError(s"redefinition of $i")
+      case FunctionDeclarator(Identifier(i), _) =>
+        throw new SemanticError(s"function $i already declared")
+    }
+    context = context + (id -> declarator)
   }
 
   private val block: Parse[Block] = {

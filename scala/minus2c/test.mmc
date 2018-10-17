@@ -135,6 +135,13 @@ int main(void) {
 }
 
 int main(void) {
+    int a, b, c = 0;
+    int foo(void);
+    int foo;
+    return 0;
+}
+
+int main(void) {
     a, b, c = 0;
     return a + b + c;
 }
