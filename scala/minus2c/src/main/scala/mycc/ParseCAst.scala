@@ -19,18 +19,10 @@ object ParseCAst {
 
   private type Parse[T] = PartialFunction[CAst, T]
 
-  private def translationUnit: Parse[List[Declarations]] =
-    externalDeclarationList |
-    externalDeclaration
-
   private val externalDeclarationList: Parse[List[Declarations]] = {
     case BinaryNode("E", list, decl) =>
       translationUnit(list).++[Declarations, List[Declarations]](externalDeclaration(decl))
   }
-
-  private def externalDeclaration: Parse[List[Declarations]] =
-    functionDefinition.L |
-    declarationsAndAssignments
 
   private val functionDefinition: Parse[Function] = {
     case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
@@ -52,26 +44,6 @@ object ParseCAst {
       }
   }
 
-  private def declarationsAndAssignments: Parse[List[Declarations]] =
-    variableDeclaration |
-    functionDefinition.L |
-    declarationSpecifier.E
-
-  private def expressionsStatement: Parse[Expressions] =
-    empty |
-    expressions
-
-  private def jumpStatement: Parse[List[Statements]] =
-    `return`.L
-
-  private def compoundStatements: Parse[List[Statements]] =
-    block.L |
-    multiList |
-    declarationsAndAssignments |
-    expressionsStatement |
-    jumpStatement |
-    { case value => throw UnimplementedError(s"statement: $value") }
-
   private val block: Parse[Block] = {
     case UnaryNode("B", body) => Block(compoundStatements(body))
   }
@@ -80,42 +52,6 @@ object ParseCAst {
     case BinaryNode(";", front, end) =>
       compoundStatements(front) ++ compoundStatements(end)
   }
-
-  private def expressions: Parse[Expressions] =
-    expressionList |
-    assignmentsAsExpressions
-    
-  private def assignments: Parse[Assignments] =
-    assignment |
-    equalities
-
-  private def equalities: Parse[Equalities] =
-    equality |
-    relationals
-
-  private def relationals: Parse[Relationals] =
-    relational |
-    additives
-
-  private def additives: Parse[Additives] =
-    additive |
-    multiplicatives
-
-  private def multiplicatives: Parse[Multiplicatives] =
-    multiplicative |
-    unaries
-
-  private def unaries: Parse[Unaries] =
-    unary |
-    postfix
-  
-  private def postfix: Parse[Postfix] =
-    application |
-    primary
-
-  private def primary: Parse[Primary] =
-    identifier |
-    constExpWrapperOrString
 
   private val assignment: Parse[Assignment] = {
     case BinaryNode("=", TokenString("id", id), value) => Assignment(Identifier(id), assignments(value))
@@ -180,9 +116,20 @@ object ParseCAst {
     case Singleton("return") => Return(Nil)
   }
 
+  private val jumpStatement: Parse[List[Statements]] =
+    `return`.L
+
   private val empty: Parse[Expressions] = {
     case Singleton("ø") => Nil
   }
+
+  private val expressions: Parse[Expressions] =
+    expressionList |
+    assignmentsAsExpressions
+
+  private val expressionsStatement: Parse[Expressions] =
+    empty |
+    expressions
 
   private val initDeclaratorList: Parse[List[InitDeclarator]] = {
     case BinaryNode(",", front, end) =>
@@ -234,7 +181,7 @@ object ParseCAst {
 
   private val initDeclarator: Parse[InitDeclarator] =
     declarator |
-    assignment
+    assignment 
 
   private val initDeclarators: Parse[List[InitDeclarator]] =
     initDeclaratorList |
@@ -273,6 +220,59 @@ object ParseCAst {
     constant |
     expWrapperOrString
 
+  private val primary: Parse[Primary] =
+    identifier |
+    constExpWrapperOrString
+
+  private val postfix: Parse[Postfix] =
+    application |
+    primary
+
+  private val unaries: Parse[Unaries] =
+    unary |
+    postfix
+
+  private val multiplicatives: Parse[Multiplicatives] =
+    multiplicative |
+    unaries
+
+  private val additives: Parse[Additives] =
+    additive |
+    multiplicatives
+
+  private val relationals: Parse[Relationals] =
+    relational |
+    additives
+
+  private val equalities: Parse[Equalities] =
+    equality |
+    relationals
+
+  private val assignments: Parse[Assignments] =
+    assignment |
+    equalities
+
   private val assignmentsAsExpressions: Parse[Expressions] =
     assignments.L
+
+  private val declarationsAndAssignments: Parse[List[Declarations]] =
+    variableDeclaration |
+    functionDefinition.L |
+    declarationSpecifier.E
+
+  private val externalDeclaration: Parse[List[Declarations]] =
+    functionDefinition.L |
+    declarationsAndAssignments
+
+  private val translationUnit: Parse[List[Declarations]] =
+    externalDeclarationList |
+    externalDeclaration
+
+  private def compoundStatements: Parse[List[Statements]] =
+    block.L |
+    multiList |
+    declarationsAndAssignments |
+    expressionsStatement |
+    jumpStatement |
+    { case value => throw UnimplementedError(s"statement: $value") }
 }
