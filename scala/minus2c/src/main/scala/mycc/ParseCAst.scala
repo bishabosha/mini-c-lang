@@ -20,7 +20,8 @@ object ParseCAst {
   private type Parse[T] = PartialFunction[CAst, T]
 
   private def translationUnit: Parse[List[Declarations]] =
-    externalDeclarationList | externalDeclaration
+    externalDeclarationList |
+    externalDeclaration
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
     case BinaryNode("E", list, decl) =>
@@ -28,17 +29,16 @@ object ParseCAst {
   }
 
   private def externalDeclaration: Parse[List[Declarations]] =
-    functionDefinition.L | declarationsAndAssignments
+    functionDefinition.L |
+    declarationsAndAssignments
 
   private val functionDefinition: Parse[Function] = {
     case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
       case BinaryNode("d", types, declarator) =>
         val (storage, returnType) = declarationSpecifiersSpecific(types)
-        val (name, args) = functionDeclarator(declarator)
-        Function(storage, returnType, name, args, compoundStatements(body))
+        Function(storage, returnType, functionDeclarator(declarator), compoundStatements(body))
       case declarator => // warning implicit return type 'int'
-        val (name, args) = functionDeclarator(declarator)
-        Function(auto, int, name, args, compoundStatements(body))
+        Function(auto, int, functionDeclarator(declarator), compoundStatements(body))
     }
   }
 
@@ -47,6 +47,7 @@ object ParseCAst {
       val (storage, declType) = declarationSpecifiersSpecific(specifiers)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
         case i: Identifier => Declaration(storage, declType, i) :: Nil
+        case f: FunctionDeclarator => Declaration(storage, declType, f) :: Nil
         case a @ Assignment(i, _) => Declaration(storage, declType, i) :: a :: Nil
       }
   }
@@ -56,8 +57,12 @@ object ParseCAst {
     functionDefinition.L |
     declarationSpecifier.E
 
-  private def expressionsStatement: Parse[Expressions] = empty | expressions
-  private def jumpStatement: Parse[List[Statements]] = `return`.L
+  private def expressionsStatement: Parse[Expressions] =
+    empty |
+    expressions
+
+  private def jumpStatement: Parse[List[Statements]] =
+    `return`.L
 
   private def compoundStatements: Parse[List[Statements]] =
     block.L |
@@ -65,7 +70,7 @@ object ParseCAst {
     declarationsAndAssignments |
     expressionsStatement |
     jumpStatement |
-    unimplementedError(value => s"statement: $value")
+    { case value => throw UnimplementedError(s"statement: $value") }
 
   private val block: Parse[Block] = {
     case UnaryNode("B", body) => Block(compoundStatements(body))
@@ -76,15 +81,41 @@ object ParseCAst {
       compoundStatements(front) ++ compoundStatements(end)
   }
 
-  private def expressions: Parse[Expressions] = expressionList | assignmentsAsExpressions
-  private def assignments: Parse[Assignments] = assignment | equalities
-  private def equalities: Parse[Equalities] = equality | relationals
-  private def relationals: Parse[Relationals] = relational | additives
-  private def additives: Parse[Additives] = additive | multiplicatives
-  private def multiplicatives: Parse[Multiplicatives] = multiplicative | unaries
-  private def unaries: Parse[Unaries] = unary | postfix
-  private def postfix: Parse[Postfix] = application | primary
-  private def primary: Parse[Primary] = identifier | constExpWrapperOrString
+  private def expressions: Parse[Expressions] =
+    expressionList |
+    assignmentsAsExpressions
+    
+  private def assignments: Parse[Assignments] =
+    assignment |
+    equalities
+
+  private def equalities: Parse[Equalities] =
+    equality |
+    relationals
+
+  private def relationals: Parse[Relationals] =
+    relational |
+    additives
+
+  private def additives: Parse[Additives] =
+    additive |
+    multiplicatives
+
+  private def multiplicatives: Parse[Multiplicatives] =
+    multiplicative |
+    unaries
+
+  private def unaries: Parse[Unaries] =
+    unary |
+    postfix
+  
+  private def postfix: Parse[Postfix] =
+    application |
+    primary
+
+  private def primary: Parse[Primary] =
+    identifier |
+    constExpWrapperOrString
 
   private val assignment: Parse[Assignment] = {
     case BinaryNode("=", TokenString("id", id), value) => Assignment(Identifier(id), assignments(value))
@@ -133,7 +164,7 @@ object ParseCAst {
   }
 
   private val lazyExpressions: Parse[LazyExpressions] = {
-    case UnaryNode("e", exprs) => LazyExpressions(expressions(exprs))
+    case UnaryNode("~", exprs) => LazyExpressions(expressions(exprs))
   }
 
   private val expressionList: Parse[Expressions] = {
@@ -153,35 +184,10 @@ object ParseCAst {
     case Singleton("ø") => Nil
   }
 
-  private def unimplementedError[E <: Ast](msg: Any => String): Parse[E] = {
-    case value => throw UnimplementedError(msg(value))
-  }
-
-  private def unexpectedError[E <: Ast](msg: Any => String): Parse[E] = {
-    case value => throw UnexpectedAstNode(msg(value))
-  }
-
-  private def semanticError[E <: Ast](msg: Any => String): Parse[E] = {
-    case value => throw SemanticError(msg(value))
-  }
-
-  private def initDeclarators: Parse[List[InitDeclarator]] = initDeclaratorList | initDeclarator.L
-
-  private def initDeclaratorList: Parse[List[InitDeclarator]] = {
+  private val initDeclaratorList: Parse[List[InitDeclarator]] = {
     case BinaryNode(",", front, end) =>
       initDeclarators(front) :+ initDeclarator(end)
   }
-
-  private def initDeclarator: Parse[InitDeclarator] = identifier | assignment
-
-  private def declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
-    declarationSpecifiers ->> reduceDeclarationSpecifiers
-
-  private def declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
-    declarationSpecifierList | declarationSpecifier.L
-
-  private def declarationSpecifier: Parse[DeclarationSpecifiers] =
-    `type` | storage
 
   private val declarationSpecifierList: Parse[List[DeclarationSpecifiers]] = {
     case BinaryNode("~", specifier, tail) =>
@@ -199,41 +205,74 @@ object ParseCAst {
     case Singleton("void") => Type(void)
   }
 
-  private def functionDeclarator: Parse[(Identifier, ArgList)] =
-    directFunctionDeclarator | semanticError(_ => "No args on Function definition")
+  private val declarationSpecifier: Parse[DeclarationSpecifiers] =
+    `type` |
+    storage
 
-  private val directFunctionDeclarator: Parse[(Identifier, ArgList)] = {
+  private val declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
+    declarationSpecifierList |
+    declarationSpecifier.L
+
+  private val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
+    declarationSpecifiers ->> reduceDeclarationSpecifiers
+
+  private val directFunctionDeclarator: Parse[FunctionDeclarator] = {
     case UnaryNode("F", name) =>
-      (identifier(name), LAny)
+      FunctionDeclarator(identifier(name), LAny)
     case UnaryNode("V", name) =>
-      (identifier(name), LVoid)
+      FunctionDeclarator(identifier(name), LVoid)
     case BinaryNode("F", name, args) =>
-      (identifier(name), LParam(parameterList(args).toVector))
-    case BinaryNode("H", _, _) =>
-      throw UnimplementedError("Identifier only function parameter list not implemented.")
+      FunctionDeclarator(identifier(name), LParam(parameters(args).toVector))
   }
 
-  private def parameterList: Parse[List[(Types, Identifier)]] = {
+  private val functionDeclarator: Parse[FunctionDeclarator] =
+    directFunctionDeclarator
+
+  private val declarator: Parse[InitDeclarator] =
+    identifier |
+    functionDeclarator
+
+  private val initDeclarator: Parse[InitDeclarator] =
+    declarator |
+    assignment
+
+  private val initDeclarators: Parse[List[InitDeclarator]] =
+    initDeclaratorList |
+    initDeclarator.L
+
+  private val types: Parse[Types] =
+    `type` ->> { _.id }
+
+  private val typesOrIdentifierToTyped: Parse[Parameter] =
+    types |
+    identifier ->> { int -> }
+
+  private val parameterList: Parse[List[Parameter]] = {
     case BinaryNode(",", tail, param) =>
-      parameterList(tail) :+ parameter(param)
-    case param =>
-      parameter(param) :: Nil
+      parameters(tail) :+ parameter(param)
   }
 
-  private def parameter: Parse[(Types, Identifier)] = {
-    case BinaryNode("~", typeSpecifier, declarator) => declarator match {
-      case BinaryNode("F", _, _) => throw UnimplementedError("C style function args, use 'function' type with identifier")
-      case ident =>
-        val identifierOnly = identifier | unexpectedError(value => "${value} is not an Identifier")
-        val typeOnly = `type` | unexpectedError(value => "${value} is not a Type")
-        (typeOnly(typeSpecifier).id, identifierOnly(ident))
-    }
-    case _ => throw SemanticError("not type and identifier")
+  private val typesAndIdentifier: Parse[Parameter] = {
+    case BinaryNode("~", typeSpecifier, ident) =>
+      (types(typeSpecifier), identifier(ident))
   }
 
-  private def constExpWrapperOrString: Parse[Primary] = constant | expWrapperOrString
+  private val parameter: Parse[Parameter] =
+    typesAndIdentifier |
+    typesOrIdentifierToTyped
 
-  private def expWrapperOrString: Parse[Primary] = lazyExpressions | stringLiteral
+  private val parameters: Parse[List[Parameter]] =
+    parameterList |
+    parameter.L
 
-  private def assignmentsAsExpressions: Parse[Expressions] = assignments.L
+  private val expWrapperOrString: Parse[Primary] =
+    lazyExpressions |
+    stringLiteral
+
+  private val constExpWrapperOrString: Parse[Primary] =
+    constant |
+    expWrapperOrString
+
+  private val assignmentsAsExpressions: Parse[Expressions] =
+    assignments.L
 }
