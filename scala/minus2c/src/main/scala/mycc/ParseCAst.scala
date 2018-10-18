@@ -71,7 +71,7 @@ class parseCAst private {
     assignments.L
 
   private def assignments: Parse[Assignments] =
-    assignment |
+    assignment ->> existsInScope |
     equalities
 
   private def equalities: Parse[Equalities] =
@@ -99,10 +99,13 @@ class parseCAst private {
     primary
 
   private def primary: Parse[Primary] =
-    identifier |
+    identifierInScope |
     (constant |
       (lazyExpressions |
         stringLiteral))
+
+  private def identifierInScope: Parse[Identifier] = 
+    identifier ->> existsInScope
 
   private def initDeclarators: Parse[List[InitDeclarator]] =
     initDeclaratorList |
@@ -143,22 +146,11 @@ class parseCAst private {
   }
 
   private val functionDefinition: Parse[List[Declarations]] = {
-    // add declaration before definition - then check declarations are compatible
-    //  - store declaration in context not declarator
     case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
       case BinaryNode("d", types, declarator) =>
-        val (storage, returnType) = declarationSpecifiersSpecific(types)
-        functionDeclarator(declarator) match {
-          case f @ FunctionDeclarator(i, _) =>
-            declareInScope(i, storage, returnType, f).toList
-              .:+[Declarations, List[Declarations]](Function(i, compoundStatements(body)))
-        }
-      case declarator => // warning implicit return type 'int'
-        functionDeclarator(declarator) match {
-          case f @ FunctionDeclarator(i, _) =>
-            declareInScope(i, auto, int, f).toList
-              .:+[Declarations, List[Declarations]](Function(i, compoundStatements(body)))
-        }
+        yieldDefinition(declarationSpecifiersSpecific(types), body) { functionDeclarator(declarator) }
+      case declarator =>
+        yieldDefinition((auto, int), body) { functionDeclarator(declarator) }
     }
   }
 
@@ -186,7 +178,7 @@ class parseCAst private {
   }
 
   private val assignment: Parse[Assignment] = {
-    case BinaryNode("=", TokenString("id", id), value) => Assignment(Identifier(id), assignments(value))
+    case BinaryNode("=", id, value) => Assignment(identifier(id), assignments(value))
   }
 
   private val equality: Parse[Equality] = {
@@ -292,8 +284,22 @@ class parseCAst private {
       (types(typeSpecifier), identifier(ident))
   }
 
-  def declareInScope(identifier: Identifier, storage: StorageTypes, types: Types, declarator: Declarator): Option[Declaration] = {
-    for (Declaration(s, t, existing) <- context.canDeclare(identifier)) existing match {
+  private def yieldDefinition(
+    declarators: (StorageTypes, Types),
+    body: CAst
+  ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
+    case f @ FunctionDeclarator(i, _) =>
+      declareInScope(i, declarators._1, declarators._2, f).toList
+        .:+[Declarations, List[Declarations]](Function(i, compoundStatements(body)))
+  }
+
+  def declareInScope(
+    identifier: Identifier,
+    storage: StorageTypes,
+    types: Types,
+    declarator: Declarator
+  ): Option[Declaration] = {
+    for (Declaration(s, t, existing) <- context.local(identifier)) existing match {
       case _: Identifier => declarator match {
         case _: FunctionDeclarator =>
           throw new SemanticError(s"Redefinition of '${identifier.id}' as a function type.")
@@ -314,5 +320,19 @@ class parseCAst private {
     val declaration = Declaration(storage, types, declarator)
     context = context + (identifier -> declaration)
     Some(declaration)
+  }
+
+  def existsInScope(ast: Identifier | Assignment): Identifier = {
+    def result(i: Identifier): Identifier =
+      if (context.scope(i).isDefined) {
+        i
+      } else {
+        throw SemanticError(s"Identifier '${i.id}' is undefined")
+      }
+
+    ast match {
+      case i: Identifier => result(i)
+      case _ @ Assignment(i, _) => result(i)
+    }
   }
 }
