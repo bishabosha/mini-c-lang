@@ -1,5 +1,6 @@
 [x] check scope for undeclared identifier access
-[ ] frame based scoping
+[x] frame based scoping
+[ ] return is tail
 [ ] interpret
 [ ] a normal form
 [ ] tac

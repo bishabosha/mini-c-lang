@@ -21,6 +21,7 @@ object Parser {
       MyCCLib.print_ast(t)
       try {
         val (context, ast) = parseAst(MyCCLib.astToScala(t))
+        println(context)
         println(ast)
         printAst(context, ast)
       } catch {

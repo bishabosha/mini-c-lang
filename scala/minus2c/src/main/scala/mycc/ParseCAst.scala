@@ -26,7 +26,7 @@ object parseCAst extends Stage {
 class parseCAst private {
 
   private type Parse[T] = PartialFunction[CAst, T]
-  private var context: Context = Bindings.default
+  private var context: Context = Bindings.Empty
   private val identPool = new mutable.AnyRefMap[String, Identifier]()
 
   private def goal: Parse[(Context, Goal)] =
@@ -169,7 +169,9 @@ class parseCAst private {
   }
 
   private val block: Parse[Block] = {
-    case UnaryNode("B", body) => Block(compoundStatements(body))
+    case UnaryNode("B", body) => stacked {
+      Block(compoundStatements(body))
+    }
   }
 
   private val multiList: Parse[List[Statements]] = {
@@ -211,7 +213,7 @@ class parseCAst private {
   }
 
   private val application: Parse[Application] = {
-    case BinaryNode("apply", name, args) => throw UnimplementedError("Application with args list")
+    case BinaryNode("apply", name, args) => Application(postfix(name), expressions(args))
     case UnaryNode("apply", name) => Application(postfix(name), Nil)
   }
 
@@ -290,7 +292,18 @@ class parseCAst private {
   ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
     case f @ FunctionDeclarator(i, _) =>
       declareInScope(i, declarators._1, declarators._2, f).toList
-        .:+[Declarations, List[Declarations]](Function(i, compoundStatements(body)))
+        .:+[Declarations, List[Declarations]]{
+          stacked {
+            Function(i, compoundStatements(body))
+          }
+        }
+  }
+
+  def stacked[A](parser: => A): A = {
+    context = context.stack
+    val result = parser
+    context = context.popOrElse { Bindings.Empty }
+    result
   }
 
   def declareInScope(
