@@ -20,7 +20,9 @@ object Parser {
     for (t <- tree.filter(!_.isNull)) {
       MyCCLib.print_ast(t)
       try {
-        println(parseAst(MyCCLib.astToScala(t))._2)
+        val (context, ast) = parseAst(MyCCLib.astToScala(t))
+        println(ast)
+        printAst(context, ast)
       } catch {
         case e: (SemanticError | UnexpectedAstNode | UnimplementedError) =>
           Console.err.println(s"[ERROR] $e")
