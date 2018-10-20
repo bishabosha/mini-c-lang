@@ -3,36 +3,90 @@ package mycc
 import Ast._
 import StorageTypes._
 import Types._
+import RelationalOperators._
+import AdditiveOperators._
+import EqualityOperators._
+import MultiplicativeOperators._
+import UnaryOperators._
 import ArgList._
 import parseCAst._
-import exception.SemanticError
+import exception._
 
 object printAst {
 
-  def apply(context: Context, nodes: List[Ast]): Unit = printAst0(context, nodes, 0)
+  private val endl = System.lineSeparator
 
-  private def printAst0(context: Context, nodes: List[Ast], level: Int): Unit = {
-    for (node <- nodes) {
-      printAstNode(context, node, level)
+  def apply(context: Context, nodes: List[Ast]): Unit = println(astNode(context, nodes, 0))
+
+  private def astNode(context: Context, nodes: List[Ast], level: Int): String = {
+    (for (node <- nodes.view) yield astNode(context, node, level)).mkString
+  }
+
+  private def astNode(context: Context, node: Ast, level: Int): String = {
+    def getIt(value: Ast): String = astNode(context, value, level);
+    def exp(value: Assignments): String = expr(context, value, level);
+    var lvl = getLevel(level)
+    node match {
+      case Declaration(storage, types, declarator) =>
+        declarator match {
+          case Identifier(id) =>
+            s"$lvl${storageToString(storage)}$types $id;$endl"
+          case FunctionDeclarator(Identifier(id), args) =>
+            s"$lvl${storageToString(storage)}$types $id${getArgList(args)};$endl"
+        }
+      case Assignment(Identifier(id), value) =>
+        s"$lvl$id = ${exp(value)};$endl"
+      case t @ Temporary(v) =>
+        s"$lvl${getId(t)} = ${exp(v)};$endl"
+      case Function(i @ Identifier(id), b) =>
+        (for (Declaration(storage, types, FunctionDeclarator(_, args)) <- context.scope(i)) yield
+          fn(context, storage, types, id, args, b, level)
+        ).getOrElse { "" }
+      case Block(b) => block(context, b, level)
+      case Return(Nil) => s"${lvl}return;$endl"
+      case Return(v) =>
+        val newArgs = v.map(exp).mkString(", ")
+        s"${lvl}return $newArgs;$endl"
+      case _ => s"${lvl}???$endl"
     }
   }
 
-  private def printAstNode(context: Context, node: Ast, level: Int): Unit = node match {
-    case Declaration(storage, types, declarator) =>
-      declarator match {
-        case Identifier(id) => printLeveln(s"${storageToString(storage)}$types $id;", level)
-        case FunctionDeclarator(Identifier(id), args) =>
-          printLeveln(s"${storageToString(storage)}$types $id${getArgList(args)};", level)
-      }
-    case Assignment(Identifier(id), value) =>
-      printLeveln(s"$id = ???;", level)
-    case Function(i @ Identifier(id), b) =>
-      for (Declaration(storage, types, FunctionDeclarator(_, args)) <- context.scope(i)) {
-        printFn(context, storage, types, id, args, b, level)
-      }
-    case b: Block => printBlock(context, b, level)
-    case _ => printLeveln("???", level)
+  private def expr(context: Context, node: Assignments, level: Int): String = {
+    def getIt(value: Assignments): String = expr(context, value, level)
+    node match {
+      case Application(i, args) =>
+        val newArgs = args.map(getIt).mkString(", ")
+        s"${getIt(i)}($newArgs)"
+      case Equality(op, l, r) =>
+        getBinary(op, getIt(l), getIt(r))
+      case Relational(op, l, r) =>
+        getBinary(op, getIt(l), getIt(r))
+      case Additive(op, l, r) =>
+        getBinary(op, getIt(l), getIt(r))
+      case Multiplicative(op, l, r) =>
+        getBinary(op, getIt(l), getIt(r))
+      case Unary(op, v) =>
+        getUnary(op, getIt(v))
+      case Constant(v) =>
+        s"$v"
+      case StringLiteral(str) =>
+        s""""$str""""
+      case Identifier(i) =>
+        s"$i"
+      case t: Temporary =>
+        getId(t)
+      case x =>
+        throw UnexpectedAstNode(x.toString)
+    }
   }
+
+  private def getId(t: Temporary): String = s"_${t.hashCode}".take(7)
+
+  private def getUnary(op: Operand, v: String): String =
+    s"${op.symbol}$v"
+
+  private def getBinary(op: Operand, l: String, r: String): String =
+    s"$l ${op.symbol} $r"
 
   private def getArgList(a: ArgList): String = a match {
     case LVoid => "(void)"
@@ -44,22 +98,21 @@ object printAst {
       }.mkString("(", ", ", ")")
   }
 
-  private def printFn(context: Context, storage: StorageTypes, types: Types, name: String, args: ArgList, b: List[Statements], level: Int): Unit = {
-    printLeveln(s"${storageToString(storage)}$types $name${getArgList(args)} {", level)
-    if (!b.isEmpty) {
-      printAst0(context, b, inc(level))
-    }
-    printLeveln("}", level)
+  private def fn(context: Context, storage: StorageTypes, types: Types, name: String, args: ArgList, b: List[Statements], level: Int): String = {
+    var lvl: String = getLevel(level)
+    var res = s"$lvl${storageToString(storage)}$types $name${getArgList(args)} {$endl"
+    if (!b.isEmpty)
+      res + astNode(context, b, inc(level)) + s"$lvl}$endl"
+    else
+      res + s"}$endl"
   }
 
-  private def printBlock(context: Context, b: Block, level: Int): Unit = {
-    printLevel("{", level)
-    if (b.inner.isEmpty) {
-      println("}")
+  private def block(context: Context, b: List[Statements], level: Int): String = {
+    var lvl: String = getLevel(level)
+    if (b.isEmpty) {
+      s"$lvl{}$endl"
     } else {
-      println
-      printAst0(context, b.inner, inc(level))
-      printLeveln("}", level)
+      s"$lvl{$endl${astNode(context, b, inc(level))}$lvl}$endl"      
     }
   }
 
@@ -70,12 +123,10 @@ object printAst {
     case _ => s"$s "
   }
 
-  private def printLeveln(s: String, l: Int): Unit = printLevel(s + "\n", l)
+  private def getLevel(l: Int): String = " " * l
 
-  private def printLevel(s: String, l: Int): Unit = {
-    for (_ <- 0 to l - 1) {
-      print(" ")
-    }
-    print(s)
+  private def getRoot(temporary: Temporary): Assignments = temporary.rvalue match {
+    case t: Temporary => getRoot(t)
+    case x => x 
   }
 }

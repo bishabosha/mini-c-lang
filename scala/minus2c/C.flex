@@ -101,7 +101,6 @@ void count() {
             column += 8 - (column % 8);
         else
             column++;
-    ECHO;
 }
 
 Ast *Singleton_new(int type) {

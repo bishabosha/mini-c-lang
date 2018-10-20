@@ -1,7 +1,15 @@
 [x] check scope for undeclared identifier access
 [x] frame based scoping
+[x] a-normal form
+    [x] exprs
+    [x] statements
+    [x] return
+[-] constant folding
+    [x] binary expression of constants
+    [ ] fold reduced constants through binary expression
+    [ ] fold unary operator of constant
+[ ] bindings cursor
 [ ] return is tail
 [ ] interpret
-[ ] a normal form
 [ ] tac
 [ ] run tac

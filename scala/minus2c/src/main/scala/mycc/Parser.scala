@@ -12,18 +12,16 @@ object Parser {
     MyCCLib.init_SymbTable()
     println("--C COMPILER")
     MyCCLib.yyparse()
-    println(s"symbols: ${MyCCLib.get_SymbTable_inst}")
     val tree: Option[Value] = Option(MyCCLib.get_ans)
-    val treePointer = tree.map(_.asNativePointer).getOrElse(0L)
-    printf("parse finished with 0x%08X\n", treePointer)
 
     for (t <- tree.filter(!_.isNull)) {
-      MyCCLib.print_ast(t)
+      // MyCCLib.print_ast(t)
       try {
         val (context, ast) = parseAst(MyCCLib.astToScala(t))
-        println(context)
-        println(ast)
-        printAst(context, ast)
+        // println(ast)
+        val (context2, astFlattened) = flattenAst(context, ast)
+        println("CODE:")
+        printAst(context2, astFlattened)
       } catch {
         case e: (SemanticError | UnexpectedAstNode | UnimplementedError) =>
           Console.err.println(s"[ERROR] $e")

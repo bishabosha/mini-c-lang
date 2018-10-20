@@ -15,6 +15,12 @@ import PartialFunctionConversions._
 import parseCAst._
 import scala.collection.mutable
 
+object Std {
+  val declarations = List[Declaration](
+    Declaration(extern, void, FunctionDeclarator(Identifier("print_int"), LParam(Vector((int, Identifier("value"))))))
+  )
+}
+
 object parseCAst extends Stage {
   type Source   = CAst
   type Context  = Bindings
@@ -25,8 +31,10 @@ object parseCAst extends Stage {
 
 class parseCAst private {
 
-  private type Parse[T] = PartialFunction[CAst, T]
-  private var context: Context = Bindings.Empty
+  private type Parse[T] = PartialFunction[Source, T]
+  private type Flatten[T] = PartialFunction[T, List[T]]
+  private type FlattenO[T, O] = PartialFunction[T, O]
+  private var context: Context = Bindings.withSeen(Bindings.extractFrom(Std.declarations))
   private val identPool = new mutable.AnyRefMap[String, Identifier]()
 
   private def goal: Parse[(Context, Goal)] =
@@ -71,7 +79,7 @@ class parseCAst private {
     assignments.L
 
   private def assignments: Parse[Assignments] =
-    assignment ->> existsInScope |
+    assignment ->> existsInScope(_.lvalue) |
     equalities
 
   private def equalities: Parse[Equalities] =
@@ -105,7 +113,7 @@ class parseCAst private {
         stringLiteral))
 
   private def identifierInScope: Parse[Identifier] = 
-    identifier ->> existsInScope
+    identifier ->> existsInScope(identity)
 
   private def initDeclarators: Parse[List[InitDeclarator]] =
     initDeclaratorList |
@@ -146,12 +154,10 @@ class parseCAst private {
   }
 
   private val functionDefinition: Parse[List[Declarations]] = {
-    case BinaryNode("D", declarators, UnaryNode("B", body)) => declarators match {
-      case BinaryNode("d", types, declarator) =>
-        yieldDefinition(declarationSpecifiersSpecific(types), body) { functionDeclarator(declarator) }
-      case declarator =>
-        yieldDefinition((auto, int), body) { functionDeclarator(declarator) }
-    }
+    case BinaryNode("D", declarators, UnaryNode("B", body)) =>
+      functionDef(declarators, Some(body))
+    case BinaryNode("D", declarators, Singleton("B")) =>
+      functionDef(declarators, None)
   }
 
   private val variableDeclaration: Parse[List[Declarations]] = {
@@ -169,9 +175,12 @@ class parseCAst private {
   }
 
   private val block: Parse[Block] = {
-    case UnaryNode("B", body) => stacked {
-      Block(compoundStatements(body))
-    }
+    case UnaryNode("B", body) =>
+      stacked {
+        Block(compoundStatements(body))
+      }
+    case Singleton("B") =>
+      Block(Nil)
   }
 
   private val multiList: Parse[List[Statements]] = {
@@ -286,27 +295,36 @@ class parseCAst private {
       (types(typeSpecifier), identifier(ident))
   }
 
+  private def functionDef(declarators: Source, bodyOp: Option[Source]): List[Declarations] = declarators match {
+    case BinaryNode("d", types, declarator) =>
+      yieldDefinition(declarationSpecifiersSpecific(types), bodyOp) { functionDeclarator(declarator) }
+    case declarator =>
+      yieldDefinition((auto, int), bodyOp) { functionDeclarator(declarator) }
+  }
+
   private def yieldDefinition(
     declarators: (StorageTypes, Types),
-    body: CAst
+    bodyOp: Option[Source]
   ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
     case f @ FunctionDeclarator(i, _) =>
       declareInScope(i, declarators._1, declarators._2, f).toList
-        .:+[Declarations, List[Declarations]]{
-          stacked {
-            Function(i, compoundStatements(body))
-          }
+        .:+[Declarations, List[Declarations]] {
+          val bodyParsed =
+            for (b <- bodyOp) yield stacked {
+              compoundStatements(b)
+            }
+          Function(i, bodyParsed.getOrElse { Nil })
         }
-  }
+  }    
 
-  def stacked[A](parser: => A): A = {
+  private def stacked[A](parser: => A): A = {
     context = context.stack
     val result = parser
     context = context.popOrElse { Bindings.Empty }
     result
   }
 
-  def declareInScope(
+  private def declareInScope(
     identifier: Identifier,
     storage: StorageTypes,
     types: Types,
@@ -335,17 +353,13 @@ class parseCAst private {
     Some(declaration)
   }
 
-  def existsInScope(ast: Identifier | Assignment): Identifier = {
-    def result(i: Identifier): Identifier =
-      if (context.scope(i).isDefined) {
-        i
-      } else {
-        throw SemanticError(s"Identifier '${i.id}' is undefined")
-      }
-
-    ast match {
-      case i: Identifier => result(i)
-      case _ @ Assignment(i, _) => result(i)
-    }
-  }
+  private def existsInScope[A](get: A => Identifier): A => A =
+    id =>
+      get.andThen {
+        ident =>
+          if (!context.scope(ident).isDefined) {
+            throw SemanticError(s"Identifier '${ident.id}' is undefined")
+          }
+          id
+      }(id)
 }

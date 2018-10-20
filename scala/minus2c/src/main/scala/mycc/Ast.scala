@@ -1,29 +1,48 @@
 package mycc
 
+import mycc._
 import Ast._
+import EqualityOperators._
+import RelationalOperators._
+import AdditiveOperators._
+import MultiplicativeOperators._
 
 enum Types {
   case int, void, function
 }
 
-enum EqualityOperators {
-  case EQUAL, NOT_EQUAL
+import scala.language.implicitConversions
+
+trait Operand(val symbol: String)
+trait BinaryOp(val op: (Int, Int) => Int)
+
+enum EqualityOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
+  case EQUAL      extends EqualityOperators(_==_, "==")
+  case NOT_EQUAL  extends EqualityOperators(_!=_, "!=")
 }
 
-enum RelationalOperators {
-  case LT, GT, LT_EQ, GT_EQ
+enum RelationalOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
+  case LT     extends RelationalOperators(_<_, "<")
+  case GT     extends RelationalOperators(_>_, ">")
+  case LT_EQ  extends RelationalOperators(_<=_, "<=")
+  case GT_EQ  extends RelationalOperators(_>=_, ">=")
 }
 
-enum AdditiveOperators {
-  case PLUS, MINUS
+enum AdditiveOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
+  case PLUS  extends AdditiveOperators(_+_, "+")
+  case MINUS extends AdditiveOperators(_-_, "-")
 }
 
-enum MultiplicativeOperators {
-  case MULTIPLY, DIVIDE, MODULUS
+enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
+  case MULTIPLY extends MultiplicativeOperators(_*_, "*")
+  case DIVIDE   extends MultiplicativeOperators(_/_, "/")
+  case MODULUS  extends MultiplicativeOperators(_%_, "%")
 }
 
-enum UnaryOperators {
-  case NOT, POSTIVE, NEGATIVE
+enum UnaryOperators(symbol: String) extends Operand(symbol) {
+  case NOT      extends UnaryOperators("!")
+  case POSTIVE  extends UnaryOperators("+")
+  case NEGATIVE extends UnaryOperators("-")
 }
 
 enum StorageTypes {
@@ -38,6 +57,8 @@ enum ArgList {
 sealed trait Ast
 
 object Ast {
+  type Key = Identifier
+  type Tac = Assignment | Temporary
   type Parameter = (Types, Identifier) | Types
   type Statements = Block | Declarations | Assignments | Return
   type Declarator = Identifier | FunctionDeclarator
@@ -45,14 +66,23 @@ object Ast {
   type DeclarationSpecifiers = Type | Storage
   type Declarations = Declaration | Function | Assignment
   type Expressions = List[Assignments]
-  type Assignments = Assignment | Equalities 
+  type Assignments = Assignment | Equalities
   type Equalities = Equality | Relationals
   type Relationals = Relational | Additives
   type Additives = Additive | Multiplicatives
   type Multiplicatives = Multiplicative | Unaries
   type Unaries = Unary | Postfix
   type Postfix = Application | Primary
-  type Primary = Identifier | Constant | StringLiteral | LazyExpressions
+  type Primary = Identifier | Constant | StringLiteral | LazyExpressions | Temporary
+}
+
+case class Temporary(rvalue: Assignments) extends Ast {
+  override def hashCode() = System.identityHashCode(this)
+  override def equals(that: Any): Boolean =
+    that match {
+      case that: Temporary => that.canEqual(this) && (this eq that)
+      case _ => false
+  }
 }
 
 case class Identifier(id: String) extends Ast
@@ -62,7 +92,7 @@ case class StringLiteral(value: String) extends Ast
 case class Type(id: Types) extends Ast
 case class Storage(id: StorageTypes) extends Ast
 case class Return(value: Expressions) extends Ast
-case class Application(operand: Postfix, args: Expressions) extends Ast
+case class Application(Operand: Postfix, args: Expressions) extends Ast
 case class LazyExpressions(value: Expressions) extends Ast
 case class Unary(op: UnaryOperators, value: Unaries) extends Ast
 case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries) extends Ast

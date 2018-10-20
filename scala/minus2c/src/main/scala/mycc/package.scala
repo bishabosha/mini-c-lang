@@ -7,6 +7,9 @@ package object mycc {
 
   def parseAst(ast: CAst): (Context, Goal) = parseCAst(ast)
 
+  import scala.language.implicitConversions
+  implicit def bool2Int(b: Boolean): Int = if (b) 1 else 0
+
   def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) = {
     val (storages, types) =
         declarationSpecifiers.partition(_.isInstanceOf[Storage])

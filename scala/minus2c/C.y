@@ -3,7 +3,7 @@
 #define YYSTYPE Ast*
 #define YYDEBUG 1
 extern Ast *int_token, *void_token, *function_token, *return_token, *break_token, *continue_token,
-    *empty_token, *extern_token, *auto_token, *lasttok;
+    *empty_token, *extern_token, *auto_token, *empty_block_token, *lasttok;
 Ast *ans;
 %}
 
@@ -179,10 +179,15 @@ statement
     ;
 
 compound_statement
-    : '{' '}'                                 { $$ = UnaryNode_new('B', empty_token); }
-    | '{' statement_list '}'                  { $$ = UnaryNode_new('B', $2); }
-    | '{' declaration_list '}'                { $$ = UnaryNode_new('B', $2); }
-    | '{' declaration_list statement_list '}' { $$ = UnaryNode_new('B', BinaryNode_new(';', $2, $3)); }
+    : '{' '}'                          { $$ = empty_block_token; }
+    | '{' compound_statement_inner '}' { $$ = UnaryNode_new('B', $2); }
+    ;
+
+compound_statement_inner
+    : statement_list                            { $$ = $1; }
+    | declaration_list                          { $$ = $1; }
+    | declaration_list compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
+    | statement_list   compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
     ;
 
 declaration_list
