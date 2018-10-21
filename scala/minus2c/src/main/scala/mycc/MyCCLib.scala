@@ -6,10 +6,9 @@ import org.graalvm.polyglot._
 
 object MyCCLib {
   private val polyglot = Context.newBuilder().allowAllAccess(true).build
-  
   private val source = Source.newBuilder("llvm", getClass.getResource("/mycclib")).build
   private val myCCLib = polyglot.eval(source)
-
+  
   def init_SymbTable(): Unit = myCCLib.getMember("init_SymbTable").executeVoid()
   def yyparse(): Unit = myCCLib.getMember("yyparse").executeVoid()
   def set_debug(value: java.lang.Boolean): Unit = myCCLib.getMember("set_debug").executeVoid(value)

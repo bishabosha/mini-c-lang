@@ -310,14 +310,19 @@ class parseCAst private {
       declareInScope(i, declarators._1, declarators._2, f).toList
         .:+[Declarations, List[Declarations]] {
           val bodyParsed =
-            for (b <- bodyOp) yield stacked {
-              args match {
-                case LParam(l) => declareParamsInScope(l)
-                case _ =>
+            for (b <- bodyOp) yield {
+              stacked {
+                args match {
+                  case LParam(l) => declareParamsInScope(l)
+                  case _ =>
+                }
+                compoundStatements(b)
               }
-              compoundStatements(b)
             }
-          Function(i, bodyParsed.getOrElse { Nil })
+          if (declarators._2 != void) tailYieldsValue(bodyParsed)
+          define {
+            Function(i, bodyParsed.getOrElse { Nil })
+          }
         }
   }    
 
@@ -367,11 +372,24 @@ class parseCAst private {
     Some(declaration)
   }
 
+  private def define(f: => Function): Function = {
+    val definition = f
+    context = context.define(definition.id -> definition)
+    definition
+  }
+
   private def existsInScope[A](get: A => Identifier): A => Unit =
     get.andThen { ident =>
       if (!context.scope(ident).isDefined) {
         throw SemanticError(s"Identifier '${ident.id}' is undefined")
       }
+    }
+
+  private def tailYieldsValue(statements: Option[List[Statements]]): Unit =
+    statements match {
+      case Some(body) if body.lastOption.forall(_.isInstanceOf[Return]) =>
+      case _ =>
+        throw SemanticError("Tail of function does not return a value.")
     }
 
   private def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) = {

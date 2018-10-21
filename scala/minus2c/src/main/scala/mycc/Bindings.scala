@@ -4,11 +4,11 @@ import Ast._
 import Bindings._
 
 object Bindings {  
-  val Empty = Bindings(Map(), Nil, Nil)
+  val Empty = Bindings(Map(), Map(), Nil, Nil)
 
-  def withParents(parents: List[Bindings]) = Bindings(Map(), parents, Nil)
+  def withParents(parents: List[Bindings]) = Bindings(Map(), Map(), parents, Nil)
 
-  def withSeen(seen: Map[Key, Declaration]) = Bindings(seen, Nil, Nil)
+  def withSeen(seen: Map[Key, Declaration]) = Bindings(seen, Map(), Nil, Nil)
 
   def extractFrom(declarations: List[Declaration]): Map[Key, Declaration] =
     (for (d @ Declaration(_, _, decl) <- declarations)
@@ -22,6 +22,7 @@ object Bindings {
 }
 
 case class Bindings(val seen: Map[Key, Declaration],
+                    val definitions: Map[Key, Function],
                     val parents: List[Bindings],
                     val children: List[Bindings]) {
 
@@ -41,7 +42,11 @@ case class Bindings(val seen: Map[Key, Declaration],
 
   def local(id: Identifier): Option[Declaration] = seen.get(id)
 
-  def +(pair: (Identifier, Declaration)): Bindings = Bindings(seen + pair, parents, children)
+  def +(pair: (Identifier, Declaration)): Bindings = Bindings(seen + pair, definitions, parents, children)
 
-  def addChild(child: Bindings) = Bindings(seen, parents, children :+ child)
+  def define(pair: (Identifier, Function)): Bindings = Bindings(seen, definitions + pair, parents, children)
+
+  def definition(id: Identifier): Option[Function] = definitions.get(id)
+
+  def addChild(child: Bindings) = Bindings(seen, definitions, parents, children :+ child)
 }

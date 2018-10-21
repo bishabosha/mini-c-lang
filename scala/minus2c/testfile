@@ -1,5 +1,5 @@
-int foo();
-
-int main() {
-    foo() * 2;
+int a = 0, b = 0, c = 0;
+int main(void) {
+    a = 1000, b = 20, c = 20;
+    return (b > c, 8 * b <= a, c + 7 * 9 < a);
 }
