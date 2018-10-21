@@ -48,14 +48,32 @@ class flattenAst private (var context: Context) {
   private def statements: Flatten[Statements] =
     block.L |
     declarations |
-    assignments |
     jumpStatements
 
   private def assignments: FlattenO[Statements, Stack] =
     assignmentsImpl ->> { _.reverse }
 
+  private def expressions: FlattenO[Expressions, Stack] =
+    identity ->> { _.flatMap[StackVar, Stack](assignmentsImpl) }
+
+  private def assignmentsImpl: FlattenO[Statements, Stack] =
+    assignmentsRoot |
+    constants.E
+
   private def jumpStatements: Flatten[Statements] =
     jumpStatementsImpl ->> { _.reverse }
+
+  private def tryReduce: FlattenO[Assignments, Stack] =
+    assignmentsRoot |
+    (constants ->> Temporary).L
+
+  private def arg[A <: Statements, O >: Primary]: FlattenO[A, O] =
+    nodes |
+    ex
+
+  private def ex[A <: Statements]: FlattenO[A, Primary] =
+    constants |
+    exAssign
 
   private def function: Flatten[Statements] = {
     case Function(i, body) => Function(i, statementList(body)) :: Nil
@@ -70,13 +88,8 @@ class flattenAst private (var context: Context) {
   }
 
   private val jumpStatementsImpl: Flatten[Statements] = {
-    case Return(v) =>
-      extractN(v) { Return(_) }
+    case Return(v) => extractN(v) { Return(_) }
   }
-
-  private def assignmentsImpl: FlattenO[Statements, Stack] =
-    assignmentsRoot |
-    constants.E
 
   private val assignmentsRoot: FlattenO[Statements, Stack] = {    
     case Assignment(i, v) => extractAssignment(i, v)
@@ -85,12 +98,9 @@ class flattenAst private (var context: Context) {
     case Additive(op, l, r) => extractBinary(Additive.apply, op, l, r)
     case Multiplicative(op, l, r) => extractBinary(Multiplicative.apply, op, l, r)
     case Unary(op, v) => extractUnary(Unary.apply, op, v)
-    case LazyExpressions(e) => (expressions ->> { _.reverse })(e)
     case Application(p, e) => extractApplication(p, e)
+    case LazyExpressions(e) => (expressions ->> { _.reverse })(e)
   }
-
-  private def expressions: FlattenO[Expressions, Stack] =
-    identity ->> { _.flatMap[StackVar, Stack](assignmentsImpl) }
 
   private def extractApplication(p: Postfix, e: Expressions): Stack = p match {
       case a: Application => extractApplicationA(a, e)
@@ -123,40 +133,31 @@ class flattenAst private (var context: Context) {
     }
   }
 
-  private def extractApplicationP(p: Primary, e: Expressions): Stack = {
+  private def extractApplicationP(p: Primary, e: Expressions): Stack =
     extractNT(e) { Application(p, _) }
-  }
 
-  private def extractAssignment(id: Identifier, v: Assignments): Stack = {
+  private def extractAssignment(id: Identifier, v: Assignments): Stack =
     extractN(List(v)) { assignmentArgs(id) }
-  }
 
   private def extractUnary[Op <: UnaryOp, A >: Primary](
     f: (Op, A) => Assignments,
     operand: Op, v: Assignments
-  ): Stack = {
-    extractNT(List(v)) { unaryArgs(f, operand) }
-  }
+  ): Stack = extractNT(List(v)) { unaryArgs(f, operand) }
 
   private def extractBinary[Op <: BinaryOp, A >: Primary, B >: Primary](
     f: (Op, A, B) => Assignments,
     operand: Op,
     l: Assignments,
     r: Assignments
-  ): Stack =
-    extractNT(List(l, r)) { binaryArgs(f, operand) }
+  ): Stack = extractNT(List(l, r)) { binaryArgs(f, operand) }
 
   private def extractN[O >: StackVar](e: Expressions)(
     f: (List[Assignments]) => O
-  ): List[O] = {
-    extractNC(e) { (args, stack) => f(args) :: stack }
-  }
+  ): List[O] = extractNC(e) { (args, stack) => f(args) :: stack }
 
   private def extractNT(e: Expressions)(
     f: (List[Assignments]) => Assignments
-  ): Stack = {
-    extractNC(e) { (args, stack) => Temporary(f(args)) :: stack }
-  }
+  ): Stack = extractNC(e) { (args, stack) => Temporary(f(args)) :: stack }
 
   private def assignmentArgs(id: Identifier): PartialFunction[List[Assignments], Assignment] = {
     case (a: Assignments) :: _ => Assignment(id, a)
@@ -190,35 +191,22 @@ class flattenAst private (var context: Context) {
       }
   }
 
-  //(7 == a == b == 4 + a) => t1:[4 + a] => t2:[b == t1] => t3:[7 == t2] => t3
-
-  // (1 + 2) => [2, 1] => [t(1)]
-
   private def extractNC[A](e: Expressions)(f: (List[Assignments], Stack) => A): A = {
     val (args, repush, stack) =
-      e.map[Stack, List[Stack]](tryReduce)
-       .aggregate { (Nil: List[Assignments], Nil: Stack, Nil: Stack) } (
-          (acc, argStack) => {
-            val (args, repush, stack) = acc
-            argStack match {
-              case Temporary(c) :: rest if isPrimary(c) =>
-                (args :+ c, repush, stack ++ rest)
-              case (a @ Assignment(id, _)) :: rest =>
-                (args :+ id, a :: repush, stack ++ rest)
-              case s :: rest =>
-                (args :+ s, s :: repush, stack ++ rest)
-              case Nil =>
-                acc
-            }
-          },
-          (acc1, acc2) => {
-            val (args1, repush1, stack1) = acc1
-            val (args2, repush2, stack2) = acc2
-            (args1 ++ args2, repush1 ++ repush2, stack1 ++ stack2)
-          }
-        )
-    val end: Stack = repush ++ stack
-    f(args, end)
+      e.map(tryReduce).foldLeft(Nil: List[Assignments], Nil: Stack, Nil: Stack) { (acc, argStack) => 
+        val (args, repush, stack) = acc
+        argStack match {
+          case Temporary(c) :: (rest: Stack) if isPrimary(c) =>
+            (args :+ c, repush, rest ++ stack)
+          case (a @ Assignment(id, _)) :: (rest: Stack) =>
+            (args :+ id, a :: repush, rest ++ stack)
+          case s :: (rest: Stack) =>
+            (args :+ s, s :: repush, rest ++ stack)
+          case Nil =>
+            acc
+        }
+      } 
+    f(args, repush ++ stack)
   }
 
   private def isPrimary(assignments: Assignments): Boolean = assignments match {
@@ -226,49 +214,26 @@ class flattenAst private (var context: Context) {
     case _ => false
   }
 
-  private def canFold(assignments: Assignments): Boolean = assignments match {
-    case _: Constant | _: Identifier | _: StringLiteral => true
-    case Equality(_, l, r) if isPrimary(l) && isPrimary(r) => true
-    case Relational(_, l, r) if isPrimary(l) && isPrimary(r) => true
-    case Multiplicative(_, l, r) if isPrimary(l) && isPrimary(r) => true
-    case Unary(_, v) if isPrimary(v) => true
-    case Application(_, args) if args.forall(a => isPrimary(a) || a.isInstanceOf[Temporary]) => true
-    case _ => false
-  }
-
-  private def tryReduce: FlattenO[Assignments, Stack] =
-    assignmentsRoot |
-    (constants ->> Temporary).L
-
-  private def arg[A <: Statements, O >: Primary]: FlattenO[A, O] =
-    constants |
-     (nodes |
-      exAssign)
-
-  private def ex[A <: Statements]: FlattenO[A, Primary] =
-    constants |
-    exAssign
-
   private def exAssign[A >: Primary]: FlattenO[A, Primary] = {
     case a: Assignment => a.lvalue
   }
 
   private def constants[A <: Statements, O >: Primary]: FlattenO[A, O] = {
-    case constants @ (
+    case c @ (
       _: Identifier
     | _: Constant
     | _: StringLiteral
     | _: Temporary
-    ) => constants
+    ) => c
   }
 
   private def nodes[A <: Statements, O >: Primary]: FlattenO[A, O] = {
-    case constants @ (
+    case n @ (
       _: Equality
     | _: Relational
     | _: Additive
     | _: Multiplicative
     | _: Unary
-    ) => constants.asInstanceOf[O]
+    ) => n.asInstanceOf[O]
   }
 }

@@ -162,7 +162,7 @@ int main(void) {
         int foo(int);
         int a, b = 0;
         int foo(int) {
-            return 0;
+            return a;
         }
         return 0;
     }
@@ -350,7 +350,7 @@ int main(void) {
 int foo(int, int, int);
 int main(void) {
     int a;
-    foo(1 == 1 + 1, 2 == 2 + 2, 4 + a);
+    foo(1 == 1 + 1, 2 == 2 + 3, 4 + a);
 }
 
 int foo(int);
@@ -364,7 +364,15 @@ int main(void) {
     int a;
     int b;
     int c;
-    foo(7 == a == b == 4 + c);
+    int d = foo(7 == a == b == 4 + c);
+}
+
+int foo(int);
+int main(void) {
+    int a;
+    int b;
+    int c;
+    return foo(7 == a == b == 4 + c);
 }
 
 int foo(int);
@@ -385,4 +393,12 @@ int foo(int);
 int main(void) {
     int a;
     foo(7 == a);
+}
+
+int foo(int);
+int main(void) {
+    int a;
+    int b;
+    int c;
+    foo(7 + a + b + 4 + c);
 }

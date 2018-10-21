@@ -15,7 +15,7 @@ object Parser {
     val tree: Option[Value] = Option(MyCCLib.get_ans)
 
     for (t <- tree.filter(!_.isNull)) {
-      MyCCLib.print_ast(t)
+      // MyCCLib.print_ast(t)
       try {
         val (context, ast) = parseAst(MyCCLib.astToScala(t))
         // println(ast)

@@ -39,9 +39,7 @@ object printAst {
       case t @ Temporary(v) =>
         s"$lvl${getId(t)} = ${exp(v)};$endl"
       case Function(i @ Identifier(id), b) =>
-        (for (Declaration(storage, types, FunctionDeclarator(_, args)) <- context.scope(i)) yield
-          fn(context, storage, types, id, args, b, level)
-        ).getOrElse { "" }
+        fn(context, id, b, level)
       case Block(b) => block(context, b, level)
       case Return(Nil) => s"${lvl}return;$endl"
       case Return(v) =>
@@ -80,7 +78,7 @@ object printAst {
     }
   }
 
-  private def getId(t: Temporary): String = s"_${t.hashCode}".take(7)
+  private def getId(t: Temporary): String = s"_${t.hashCode}".take(6)
 
   private def getUnary(op: Operand, v: String): String =
     s"${op.symbol} $v"
@@ -98,9 +96,9 @@ object printAst {
       }.mkString("(", ", ", ")")
   }
 
-  private def fn(context: Context, storage: StorageTypes, types: Types, name: String, args: ArgList, b: List[Statements], level: Int): String = {
+  private def fn(context: Context, name: String, b: List[Statements], level: Int): String = {
     var lvl: String = getLevel(level)
-    var res = s"$lvl${storageToString(storage)}$types $name${getArgList(args)} {$endl"
+    var res = s"$lvl$name: {$endl"
     if (!b.isEmpty)
       res + astNode(context, b, inc(level)) + s"$lvl}$endl"
     else

@@ -306,11 +306,15 @@ class parseCAst private {
     declarators: (StorageTypes, Types),
     bodyOp: Option[Source]
   ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
-    case f @ FunctionDeclarator(i, _) =>
+    case f @ FunctionDeclarator(i, args) =>
       declareInScope(i, declarators._1, declarators._2, f).toList
         .:+[Declarations, List[Declarations]] {
           val bodyParsed =
             for (b <- bodyOp) yield stacked {
+              args match {
+                case LParam(l) => declareParamsInScope(l)
+                case _ =>
+              }
               compoundStatements(b)
             }
           Function(i, bodyParsed.getOrElse { Nil })
@@ -322,6 +326,16 @@ class parseCAst private {
     val result = parser
     context = context.popOrElse { Bindings.Empty }
     result
+  }
+
+  private def declareParamsInScope(args: Vector[Parameter]): Unit = {
+    for (p <- args) {
+      p match {
+        case (t: Types, i: Identifier) =>
+          declareInScope(i, auto, t, i)
+        case _ =>
+      }
+    }
   }
 
   private def declareInScope(
