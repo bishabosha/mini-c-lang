@@ -1,0 +1,13 @@
+private def tryReduce(operand: Operand, l: Assignments, r: Assignments)(orElse: => List[Tac]): List[Tac] = l match {
+    case Constant(lc) => r match {
+      case Constant(rc) => Temporary(Constant(operand.op(lc, rc))) :: Nil
+      // case Temporary(Constant(rc)) => Temporary(Constant(operand.op(lc, rc))) :: Nil
+      case _ => orElse
+    }
+    // case Temporary(Constant(lc)) => r match {
+    //   case Constant(rc) => Temporary(Constant(operand.op(lc, rc))) :: Nil
+    //   case Temporary(Constant(rc)) => Temporary(Constant(operand.op(lc, rc))) :: Nil
+    //   case _ => orElse
+    // }
+    case _ => orElse
+  }

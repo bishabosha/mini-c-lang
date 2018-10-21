@@ -15,6 +15,7 @@ import scala.language.implicitConversions
 
 trait Operand(val symbol: String)
 trait BinaryOp(val op: (Int, Int) => Int)
+trait UnaryOp(val op: Int => Int)
 
 enum EqualityOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
   case EQUAL      extends EqualityOperators(_==_, "==")
@@ -39,10 +40,10 @@ enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Oper
   case MODULUS  extends MultiplicativeOperators(_%_, "%")
 }
 
-enum UnaryOperators(symbol: String) extends Operand(symbol) {
-  case NOT      extends UnaryOperators("!")
-  case POSTIVE  extends UnaryOperators("+")
-  case NEGATIVE extends UnaryOperators("-")
+enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with UnaryOp(op) {
+  case NOT      extends UnaryOperators(_ == 0, "!")
+  case POSTIVE  extends UnaryOperators(identity, "+")
+  case NEGATIVE extends UnaryOperators(_ * -1, "-")
 }
 
 enum StorageTypes {
@@ -58,7 +59,6 @@ sealed trait Ast
 
 object Ast {
   type Key = Identifier
-  type Tac = Assignment | Temporary
   type Parameter = (Types, Identifier) | Types
   type Statements = Block | Declarations | Assignments | Return
   type Declarator = Identifier | FunctionDeclarator
@@ -73,7 +73,8 @@ object Ast {
   type Multiplicatives = Multiplicative | Unaries
   type Unaries = Unary | Postfix
   type Postfix = Application | Primary
-  type Primary = Identifier | Constant | StringLiteral | LazyExpressions | Temporary
+  type Constants = Identifier | Constant | StringLiteral
+  type Primary = Constants | LazyExpressions | Temporary
 }
 
 case class Temporary(rvalue: Assignments) extends Ast {

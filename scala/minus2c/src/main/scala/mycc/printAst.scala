@@ -76,14 +76,14 @@ object printAst {
       case t: Temporary =>
         getId(t)
       case x =>
-        throw UnexpectedAstNode(x.toString)
+        throw UnexpectedAstNode(s"expression: ${x.toString}")
     }
   }
 
   private def getId(t: Temporary): String = s"_${t.hashCode}".take(7)
 
   private def getUnary(op: Operand, v: String): String =
-    s"${op.symbol}$v"
+    s"${op.symbol} $v"
 
   private def getBinary(op: Operand, l: String, r: String): String =
     s"$l ${op.symbol} $r"
