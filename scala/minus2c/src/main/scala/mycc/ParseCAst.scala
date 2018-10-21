@@ -37,110 +37,110 @@ class parseCAst private {
   private var context: Context = Bindings.withSeen(Bindings.extractFrom(Std.declarations))
   private val identPool = new mutable.AnyRefMap[String, Identifier]()
 
-  private def goal: Parse[(Context, Goal)] =
+  private lazy val goal: Parse[(Context, Goal)] =
     translationUnit ->> { goal => context -> goal }
 
-  private def translationUnit: Parse[Goal] =
+  private lazy val translationUnit: Parse[Goal] =
     externalDeclarationList |
     externalDeclaration
     
-  private def externalDeclaration: Parse[List[Declarations]] =
+  private lazy val externalDeclaration: Parse[List[Declarations]] =
     functionDefinition |
     declarationsAndAssignments
 
-  private def declarationsAndAssignments: Parse[List[Declarations]] =
+  private lazy val declarationsAndAssignments: Parse[List[Declarations]] =
     variableDeclaration |
     functionDefinition |
-    declarationSpecifier.E
+    declarationSpecifier .E
 
-  private def declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
+  private lazy val declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
     declarationSpecifierList |
-    declarationSpecifier.L
+    declarationSpecifier .L
 
-  private def declarationSpecifier: Parse[DeclarationSpecifiers] =
+  private lazy val declarationSpecifier: Parse[DeclarationSpecifiers] =
     `type` |
     storage
 
-  private def declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
+  private lazy val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
     declarationSpecifiers ->> reduceDeclarationSpecifiers
 
-  private def jumpStatement: Parse[List[Statements]] =
-    `return`.L
+  private lazy val jumpStatement: Parse[List[Statements]] =
+    `return` .L
 
-  private def expressionsStatement: Parse[Expressions] =
+  private lazy val expressionsStatement: Parse[Expressions] =
     empty |
     expressions
 
-  private def expressions: Parse[Expressions] =
+  private lazy val expressions: Parse[Expressions] =
     expressionList |
     assignmentsAsExpressions
 
-  private def assignmentsAsExpressions: Parse[Expressions] =
-    assignments.L
+  private lazy val assignmentsAsExpressions: Parse[Expressions] =
+    assignments .L
 
-  private def assignments: Parse[Assignments] =
-    assignment ->> existsInScope(_.lvalue) |
+  private lazy val assignments: Parse[Assignments] =
+    assignment !! existsInScope(_.lvalue) |
     equalities
 
-  private def equalities: Parse[Equalities] =
+  private lazy val equalities: Parse[Equalities] =
     equality |
     relationals
 
-  private def relationals: Parse[Relationals] =
+  private lazy val relationals: Parse[Relationals] =
     relational |
     additives
 
-  private def additives: Parse[Additives] =
+  private lazy val additives: Parse[Additives] =
     additive |
     multiplicatives
 
-  private def multiplicatives: Parse[Multiplicatives] =
+  private lazy val multiplicatives: Parse[Multiplicatives] =
     multiplicative |
     unaries
 
-  private def unaries: Parse[Unaries] =
+  private lazy val unaries: Parse[Unaries] =
     unary |
     postfix
 
-  private def postfix: Parse[Postfix] =
+  private lazy val postfix: Parse[Postfix] =
     application |
     primary
 
-  private def primary: Parse[Primary] =
+  private lazy val primary: Parse[Primary] =
     identifierInScope |
     (constant |
       (lazyExpressions |
         stringLiteral))
 
-  private def identifierInScope: Parse[Identifier] = 
-    identifier ->> existsInScope(identity)
+  private lazy val identifierInScope: Parse[Identifier] = 
+    identifier !! existsInScope(identity)
 
-  private def initDeclarators: Parse[List[InitDeclarator]] =
+  private lazy val initDeclarators: Parse[List[InitDeclarator]] =
     initDeclaratorList |
-    initDeclarator.L
+    initDeclarator .L
 
-  private def initDeclarator: Parse[InitDeclarator] =
+  private lazy val initDeclarator: Parse[InitDeclarator] =
     declarator |
     assignment 
 
-  private def declarator: Parse[InitDeclarator] =
+  private lazy val declarator: Parse[InitDeclarator] =
     identifier |
     functionDeclarator
 
-  private def types: Parse[Types] =
+  private lazy val types: Parse[Types] =
     `type` ->> { _.id }
 
-  private def parameters: Parse[List[Parameter]] =
+  private lazy val parameters: Parse[List[Parameter]] =
     parameterList |
-    parameter.L
+    parameter .L
 
-  private def parameter: Parse[Parameter] =
+  private lazy val parameter: Parse[Parameter] =
     typesAndIdentifier |
     (types |
       identifier ->> { int -> })
 
-  private def compoundStatements: Parse[List[Statements]] =
-    block.L |
+  private lazy val compoundStatements: Parse[List[Statements]] =
+    block .L |
     multiList |
     declarationsAndAssignments |
     expressionsStatement |
@@ -367,13 +367,10 @@ class parseCAst private {
     Some(declaration)
   }
 
-  private def existsInScope[A](get: A => Identifier): A => A =
-    id =>
-      get.andThen {
-        ident =>
-          if (!context.scope(ident).isDefined) {
-            throw SemanticError(s"Identifier '${ident.id}' is undefined")
-          }
-          id
-      }(id)
+  private def existsInScope[A](get: A => Identifier): A => Unit =
+    get.andThen { ident =>
+      if (!context.scope(ident).isDefined) {
+        throw SemanticError(s"Identifier '${ident.id}' is undefined")
+      }
+    }
 }
