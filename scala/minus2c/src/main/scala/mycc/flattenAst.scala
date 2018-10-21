@@ -190,6 +190,10 @@ class flattenAst private (var context: Context) {
       }
   }
 
+  //(7 == a == b == 4 + a) => t1:[4 + a] => t2:[b == t1] => t3:[7 == t2] => t3
+
+  // (1 + 2) => [2, 1] => [t(1)]
+
   private def extractNC[A](e: Expressions)(f: (List[Assignments], Stack) => A): A = {
     val (args, repush, stack) =
       e.map[Stack, List[Stack]](tryReduce)
@@ -213,7 +217,8 @@ class flattenAst private (var context: Context) {
             (args1 ++ args2, repush1 ++ repush2, stack1 ++ stack2)
           }
         )
-    f(args, repush ++ stack)
+    val end: Stack = repush ++ stack
+    f(args, end)
   }
 
   private def isPrimary(assignments: Assignments): Boolean = assignments match {

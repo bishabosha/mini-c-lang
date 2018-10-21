@@ -358,3 +358,31 @@ int main(void) {
     int a;
     foo(a = 4);
 }
+
+int foo(int);
+int main(void) {
+    int a;
+    int b;
+    int c;
+    foo(7 == a == b == 4 + c);
+}
+
+int foo(int);
+int main(void) {
+    int a;
+    int b;
+    foo(7 == a == b);
+}
+
+int foo(int);
+int main(void) {
+    int a;
+    int b;
+    foo(7 == a + 1);
+}
+
+int foo(int);
+int main(void) {
+    int a;
+    foo(7 == a);
+}

@@ -8,6 +8,7 @@
     [x] binary expression of constants
     [ ] fold reduced constants through binary expression
     [ ] fold unary operator of constant
+[ ] add func args to bindings in scope
 [ ] bindings cursor
 [ ] return is tail
 [ ] interpret
