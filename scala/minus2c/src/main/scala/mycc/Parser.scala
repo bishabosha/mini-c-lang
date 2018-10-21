@@ -10,7 +10,7 @@ object Parser {
     val debug: java.lang.Boolean = aStrings.length != 0 && "-d" == aStrings(0)
     MyCCLib.set_debug(debug)
     MyCCLib.init_SymbTable()
-    println("--C COMPILER")
+    // println("--C COMPILER")
     MyCCLib.yyparse()
     val tree: Option[Value] = Option(MyCCLib.get_ans)
 

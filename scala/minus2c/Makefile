@@ -5,9 +5,15 @@ CC = ${GRAAL_CC}
 LINK = ${LLVM_LINK}
 GRAAL_CC = /usr/local/opt/llvm@6/bin/clang -I/usr/local/include -I/Library/Java/JavaVirtualMachines/graalvm-ce-1.0.0-rc7/Contents/Home/jre/languages/llvm -resource-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk -O0 -emit-llvm
 LLVM_LINK = /usr/local/opt/llvm@6/bin/llvm-link
-TARGET = mycclib
+TARGET = src/main/resources/mycclib
 
 all:  ${TARGET}
+
+pkg: ${TARGET}
+	sbt package
+
+run:
+	cat testfile | scala -cp /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.10/jars/dotty-library_0.10-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-0.10/classes/ target/scala-0.10/dotty-simple_0.10-0.1.0.jar
 
 boot: clean rm
 
@@ -26,8 +32,8 @@ rm_logs:
 %.bc:
 	${CC} -g -c $*.c
 
-mycclib: C.tab.c lex.yy.c ${OBJS}
-	${LINK} -o mycclib ${OBJS} 
+${TARGET}: C.tab.c lex.yy.c ${OBJS}
+	${LINK} -o ${TARGET} ${OBJS}
 
 lex.yy.c: C.flex
 	flex C.flex

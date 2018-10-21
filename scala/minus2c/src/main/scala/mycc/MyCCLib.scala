@@ -6,8 +6,8 @@ import org.graalvm.polyglot._
 
 object MyCCLib {
   private val polyglot = Context.newBuilder().allowAllAccess(true).build
-  private val file = new File("mycclib")
-  private val source = Source.newBuilder("llvm", file).build
+  
+  private val source = Source.newBuilder("llvm", getClass.getResource("/mycclib")).build
   private val myCCLib = polyglot.eval(source)
 
   def init_SymbTable(): Unit = myCCLib.getMember("init_SymbTable").executeVoid()

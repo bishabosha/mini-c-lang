@@ -464,3 +464,17 @@ int main(void) {
     int c;
     foo(7 + a + b + 4 + c);
 }
+
+int main(void) {
+    int a, c;
+    int foo(int a, int b, int c) {
+        int bar(void) {
+            int bax(int b, int c, int d) {
+                return b + c / d % 1 >= a - d;
+            }
+            return bax(a + 2 / 4 == 1, b % 3 + 4, 1+ -2 / a);
+        }
+        return bar();
+    }
+    return foo(a - 3 + c / a, c <= a - 1 * 2);
+}
