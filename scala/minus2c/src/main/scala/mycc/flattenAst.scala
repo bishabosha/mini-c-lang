@@ -34,50 +34,50 @@ class flattenAst private (var context: Context) {
   private lazy val goal: FlattenO[Source, (Context, Goal)] =
     declarationsList ->> { goal => context -> goal }
 
-  private lazy val declarations: Flatten[Statements] = 
-    function |
-    declaration |
-    assignments
-
-  private lazy val statements: Flatten[Statements] =
-    block .L |
-    declarations |
-    jumpStatements
-
   private lazy val declarationsList: FlattenO[Source, Goal] = 
     identity >>- declarations
 
-  private val statementList: FlattenO[List[Statements], List[Statements]] =
-    identity >>- statements
+  private lazy val declarations: Flatten[Statements] = 
+    function .L |
+    declaration .L |
+    assignments
 
   private lazy val assignments: FlattenO[Statements, Stack] =
     assignmentsImpl .R
 
   private lazy val assignmentsImpl: FlattenO[Statements, Stack] =
     assignmentsRoot |
-    constants .E
+    constant .E
 
   private lazy val tryReduce: FlattenO[Assignments, Stack] =
     assignmentsRoot |
-    (constants ->> Temporary) .L
+    (constant ->> Temporary) .L
 
   private lazy val jumpStatements: Flatten[Statements] =
     jumpStatementsImpl .R
 
   private lazy val arg: FlattenO[Assignments, Assignments] =
-    nodes |
+    node |
     ex
 
   private lazy val ex: FlattenO[Assignments, Primary] =
-    constants |
-    exAssign
+    constant |
+    assignment ->> { _.lvalue }
 
-  private val function: Flatten[Statements] = {
-    case Function(i, body) => Function(i, statementList(body)) :: Nil
+  private val statementList: FlattenO[List[Statements], List[Statements]] =
+    identity >>- statements
+
+  private lazy val statements: Flatten[Statements] =
+    block .L |
+    declarations |
+    jumpStatements
+
+  private val function: FlattenO[Statements, Function] = {
+    case Function(i, body) => Function(i, statementList(body))
   }
 
-  private val declaration: Flatten[Statements] = {
-    case d: Declaration => d :: Nil
+  private val declaration: FlattenO[Statements, Declaration] = {
+    case d: Declaration => d
   }
 
   private val block: FlattenO[Statements, Block] = {
@@ -227,11 +227,11 @@ class flattenAst private (var context: Context) {
     case _ => false
   }
 
-  private val exAssign: FlattenO[Assignments, Primary] = {
-    case a: Assignment => a.lvalue
+  private val assignment: FlattenO[Assignments, Assignment] = {
+    case a: Assignment => a
   }
 
-  private val constants: FlattenO[Statements, Primary] = {
+  private val constant: FlattenO[Statements, Primary] = {
     case c @ (
       _: Identifier
     | _: Constant
@@ -240,7 +240,7 @@ class flattenAst private (var context: Context) {
     ) => c
   }
 
-  private val nodes: FlattenO[Statements, Assignments] = {
+  private val node: FlattenO[Statements, Assignments] = {
     case n @ (
       _: Equality
     | _: Relational

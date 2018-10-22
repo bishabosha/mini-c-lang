@@ -5,10 +5,10 @@ import mycc.exception._
 import mycc.CAst._
 
 object Parser {
-
-  def main(aStrings: Array[String]): Unit = {
-    val debug: java.lang.Boolean = aStrings.length != 0 && "-d" == aStrings(0)
-    val time = aStrings.length != 0 && "-t" == aStrings(0)
+  def main(args: Array[String]): Unit = {
+    val debug: java.lang.Boolean = args.contains("-d")
+    val time = args.contains("-t")
+    val interpret = args.contains("-i")
     var old = 0L
     var newtim = 0L
     if (time) {
@@ -51,7 +51,9 @@ object Parser {
           println(s"PRINTING_CODE: ${newtim - old}ms")
           old = newtim
         }
-        interpretAst(context2, astFlattened)
+        if (interpret) {
+          interpretAst(context2, astFlattened)
+        }
         if (time) {
           newtim = System.currentTimeMillis
           println(s"INTERPRETING: ${newtim - old}ms")

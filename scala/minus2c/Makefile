@@ -8,17 +8,21 @@ LLVM_LINK = /usr/local/opt/llvm@6/bin/llvm-link
 TARGET = src/main/resources/mycclib
 CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.10/jars/dotty-library_0.10-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-0.10/classes/
 JAR = target/scala-0.10/dotty-simple_0.10-0.1.0.jar
+PARSER = cat testfile | scala -cp ${CP} ${JAR}
 
 all:  ${TARGET}
 
 pkg: ${TARGET}
 	sbt package
 
+parse:
+	${PARSER} 
+
 run:
-	cat testfile | scala -cp ${CP} ${JAR}
+	${PARSER} -i > test.out
 
 timed:
-	cat testfile | scala -cp ${CP} ${JAR} -t
+	${PARSER} -t -i
 
 boot: clean rm
 

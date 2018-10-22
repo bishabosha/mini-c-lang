@@ -9,6 +9,9 @@
     [ ] fold reduced constants through binary expression
     [ ] fold unary operator of constant
 [ ] add func args to bindings in scope
+[ ] fix -(-(-1))
+    [ ] remove dropping constants from lazy expressions
+[ ] specialised form of CAst to reduce match time
 [ ] bindings cursor
 [ ] return is tail
 [ ] interpret
