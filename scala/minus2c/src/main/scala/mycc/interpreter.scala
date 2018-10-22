@@ -39,13 +39,14 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
 
   private def evalProgram: Int = {
     cursor.current.local(main) match {
-      case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid))) if cursor.current.definition(main).isDefined =>
-        println("RUNNING:")
-        nodes.foldLeft(None: Option[Int]){ (code, statement) =>
-          code.orElse(topLevelStatement(statement))
-        } getOrElse {
-          throw SemanticError("Program does not terminate")
-        }
+      case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid)))
+        if cursor.current.definition(main).isDefined =>
+          println("interpreting:")
+          nodes.foldLeft(None: Option[Int]){ (code, statement) =>
+            code.orElse(topLevelStatement(statement))
+          } getOrElse {
+            throw SemanticError("Program does not terminate")
+          }
       case _ =>
         throw SemanticError("function definition for `int main(void)` not found.")
     }
@@ -59,15 +60,15 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
         }
       }
     case Declaration(_, _, id: Identifier) =>
-      cursor += (id -> Constant(random.nextInt))
+      addRandom(id)
       None
     case _ : Declaration =>
       None
     case Assignment(id, value) =>
-      cursor += (id -> evalToConstant(expr(value)))
+      addValue(id, value)
       None
     case t @ Temporary(value) =>
-      cursor += (t -> evalToConstant(expr(value)))
+      addValue(t, value)
       None
     case _ => None
   }
@@ -80,15 +81,15 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
   private def evalStatement(node: Ast): Option[Int] = {
     node match {
       case Declaration(_, _, id: Identifier) =>
-        cursor += (id -> Constant(random.nextInt))
+        addRandom(id)
         None
       case _: Declaration =>
         None
       case Assignment(id, value) =>
-        cursor += (id -> evalToConstant(expr(value)))
+        addValue(id, value)
         None
       case t @ Temporary(value) =>
-        cursor += (t -> evalToConstant(expr(value)))
+        addValue(t, value)
         None
       case _: Function =>
         None
@@ -102,7 +103,19 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  private def evalToConstant(o: Option[Int]): Constant = {
+  private def addValue(k: Key | Temporary, v: Assignments): Unit = {
+    addConstant(k, evalAsConstant(expr(v)))
+  }
+
+  private def addRandom(k: Key | Temporary): Unit = {
+     addConstant(k, Constant(random.nextInt))
+  }
+
+  private def addConstant(k: Key | Temporary, c: Constant): Unit = {
+     cursor += (k -> c)
+  }
+
+  private def evalAsConstant(o: Option[Int]): Constant = {
     o.map{Constant}.getOrElse{throw UnimplementedError("expression does not yield constant")}
   }
 
@@ -111,29 +124,15 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
       case Application(i, args) =>
         None
       case Equality(op, l, r) =>
-        for {
-          lv <- expr(l)
-          rv <- expr(r)
-        } yield op.op(lv, rv)
+        binary(op, l, r)
       case Relational(op, l, r) =>
-        for {
-          lv <- expr(l)
-          rv <- expr(r)
-        } yield op.op(lv, rv)
+        binary(op, l, r)
       case Additive(op, l, r) =>
-        for {
-          lv <- expr(l)
-          rv <- expr(r)
-        } yield op.op(lv, rv)
+        binary(op, l, r)
       case Multiplicative(op, l, r) =>
-        for {
-          lv <- expr(l)
-          rv <- expr(r)
-        } yield op.op(lv, rv)
+        binary(op, l, r)
       case Unary(op, v) =>
-        for {
-          uv <- expr(v)
-        } yield op.op(uv)
+        unary(op, v)
       case Constant(v) =>
         Some(v)
       case StringLiteral(str) =>
@@ -147,53 +146,16 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  // private def getId(t: Temporary): String = s"_${t.hashCode}".take(6)
+  def unary(op: UnaryOp, v: Assignments): Option[Int] = {
+    for {
+      uv <- expr(v)
+    } yield op.op(uv)
+  }
 
-  // private def getUnary(op: Operand, v: String): String =
-  //   s"${op.symbol} $v"
-
-  // private def getBinary(op: Operand, l: String, r: String): String =
-  //   s"$l ${op.symbol} $r"
-
-  // private def getArgList(a: ArgList): String = a match {
-  //   case LVoid => "(void)"
-  //   case LAny => "()"
-  //   case LParam(params) =>
-  //     params.view.map {
-  //       case t: Types => s"$t"
-  //       case (t: Types, _ @ Identifier(i)) => s"$t $i"
-  //     }.mkString("(", ", ", ")")
-  // }
-
-  // private def fn(context: Context, name: String, b: List[Statements], level: Int): String = {
-  //   var lvl: String = getLevel(level)
-  //   var res = s"$lvl$name: {$endl"
-  //   if (!b.isEmpty)
-  //     res + astNode(context, b, inc(level)) + s"$lvl}$endl"
-  //   else
-  //     res + s"}$endl"
-  // }
-
-  // private def block(context: Context, b: List[Statements], level: Int): String = {
-  //   var lvl: String = getLevel(level)
-  //   if (b.isEmpty) {
-  //     s"$lvl{}$endl"
-  //   } else {
-  //     s"$lvl{$endl${astNode(context, b, inc(level))}$lvl}$endl"      
-  //   }
-  // }
-
-  // private def inc(level: Int) = level + 2
-
-  // private def storageToString(s: StorageTypes) = s match {
-  //   case StorageTypes.auto => ""
-  //   case _ => s"$s "
-  // }
-
-  // private def getLevel(l: Int): String = " " * l
-
-  // private def getRoot(temporary: Temporary): Assignments = temporary.rvalue match {
-  //   case t: Temporary => getRoot(t)
-  //   case x => x 
-  // }
+  def binary(op: BinaryOp, l: Assignments, r: Assignments): Option[Int] = {
+    for {
+      lv <- expr(l)
+      rv <- expr(r)
+    } yield op.op(lv, rv)
+  }
 }

@@ -42,7 +42,7 @@ enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Oper
 
 enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with UnaryOp(op) {
   case NOT      extends UnaryOperators(_ == 0, "!")
-  case POSTIVE  extends UnaryOperators(identity, "+")
+  case POSITIVE  extends UnaryOperators(identity, "+")
   case NEGATIVE extends UnaryOperators(_ * -1, "-")
 }
 

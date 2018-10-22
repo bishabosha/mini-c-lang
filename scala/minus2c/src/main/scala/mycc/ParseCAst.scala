@@ -216,7 +216,7 @@ class parseCAst private {
   }
 
   private val unary: Parse[Unary] = {
-    case UnaryNode("+", unary) => Unary(POSTIVE, unaries(unary))
+    case UnaryNode("+", unary) => Unary(POSITIVE, unaries(unary))
     case UnaryNode("-", unary) => Unary(NEGATIVE, unaries(unary))
     case UnaryNode("!", unary) => Unary(NOT, unaries(unary))
   }

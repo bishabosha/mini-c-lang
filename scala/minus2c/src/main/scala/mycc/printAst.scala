@@ -16,7 +16,7 @@ object printAst {
 
   private val endl = System.lineSeparator
 
-  def apply(context: Context, nodes: List[Ast]): Unit = print(astNode(context, nodes, 0))
+  def apply(context: Context, nodes: List[Ast]): Unit = print(astNode(context, nodes, inc(0)))
 
   private def astNode(context: Context, nodes: List[Ast], level: Int): String = {
     (for (node <- nodes.view) yield astNode(context, node, level)).mkString

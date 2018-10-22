@@ -44,7 +44,7 @@ object Parser {
           println(s"CONVERTING_TO_NORMAL: ${newtim - old}ms")
           old = newtim
         }
-        println("CODE:")
+        println("code:")
         printAst(context2, astFlattened)
         if (time) {
           newtim = System.currentTimeMillis
