@@ -12,6 +12,11 @@
 [ ] fix -(-(-1))
     [ ] remove dropping constants from lazy expressions
 [ ] specialised form of CAst to reduce match time
+[ ] a-normal form return can have expression not variable
+[ ] check that variable declarations are not removed in normal form
+[ ] enforce that func can only be applied if in scope
+[ ] replace secondary assignments with temporary
+    [ ] count assignments
 [ ] bindings cursor
 [ ] return is tail
 [ ] interpret

@@ -32,10 +32,16 @@ object Parser {
           println(s"LEXING_TIME: ${newtim - old}ms")
           old = newtim
         }
-        val (context, ast) = parseAst(MyCCLib.astToScala(t))
+        val cast = MyCCLib.astToScala(t)
         if (time) {
           newtim = System.currentTimeMillis
           println(s"IMPORTING_TO_SCALA: ${newtim - old}ms")
+          old = newtim
+        }
+        val (context, ast) = parseAst(cast)
+        if (time) {
+          newtim = System.currentTimeMillis
+          println(s"PARSE_CAST: ${newtim - old}ms")
           old = newtim
         }
         val (context2, astFlattened) = flattenAst(context, ast)
