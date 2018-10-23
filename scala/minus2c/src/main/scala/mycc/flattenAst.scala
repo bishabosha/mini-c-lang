@@ -113,7 +113,7 @@ class flattenAst private (var context: Context) {
         throw SemanticError("Application of non function type")
     }
 
-  private def canApply(p: Assignments): Boolean = p match {
+  private val canApply: FlattenO[Assignments, Boolean] = {
     case _: Application | _: Identifier => true
     case _ => false
   }
