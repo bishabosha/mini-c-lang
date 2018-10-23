@@ -11,6 +11,8 @@
 [ ] add func args to bindings in scope
 [ ] fix -(-(-1))
     [ ] remove dropping constants from lazy expressions
+    [ ] foldexpr f where f.type = (a: Acc) => O
+    [ ] then change extract expr algorithm to have generic Acc
 [ ] specialised form of CAst to reduce match time
 [ ] a-normal form return can have expression not variable
 [ ] check that variable declarations are not removed in normal form
