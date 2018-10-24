@@ -46,11 +46,11 @@ class flattenAst private (var context: Context) {
     assignmentsImpl .R
 
   private lazy val assignmentsImpl: FlattenO[Statements, Stack] =
-    assignmentsRoot |
+    assignmentsWithEffects |
     constant .E
 
   private lazy val tryReduce: FlattenO[Assignments, Stack] =
-    assignmentsRoot |
+    assignmentsWithEffects |
     (constant ->> Temporary) .L
 
   private lazy val jumpStatements: Flatten[Statements] =
@@ -64,8 +64,14 @@ class flattenAst private (var context: Context) {
     constant |
     assignment ->> { _.lvalue }
 
-  private val statementList: FlattenO[List[Statements], List[Statements]] =
+  private lazy val statementList: FlattenO[List[Statements], List[Statements]] =
     identity >>- statements
+
+  private lazy val expressions: FlattenO[Expressions, Stack] =
+    expressionsImpl .R
+
+  private lazy val expressionsImpl: FlattenO[Expressions, Stack] =
+    identity >>- tryReduce
 
   private lazy val statements: Flatten[Statements] =
     block .L |
@@ -85,30 +91,41 @@ class flattenAst private (var context: Context) {
   }
 
   private val jumpStatementsImpl: Flatten[Statements] = {
-    case Return(v) => foldExpressionsN(v) { args =>
-      Return(args.lastOption.toList)
-    }
+    case Return(v) => foldArguments(v) { mapReturn }
   }
 
-  private val assignmentsRoot: FlattenO[Statements, Stack] = {
-    case Assignment(i, v) => extractAssignment(i, v)
-    case Equality(op, l, r) => extractBinary(Equality.apply, op, l, r)
-    case Relational(op, l, r) => extractBinary(Relational.apply, op, l, r)
-    case Additive(op, l, r) => extractBinary(Additive.apply, op, l, r)
-    case Multiplicative(op, l, r) => extractBinary(Multiplicative.apply, op, l, r)
-    case Unary(op, v) => extractUnary(Unary.apply, op, v)
-    case Application(p, e) => extractApplication(p, e)
-    case LazyExpressions(e) => extractExpressions(e)
+  private def mapReturn
+    ( args: List[Assignments],
+      stack: Stack
+    ): List[Statements] =
+      (args.lastOption, stack) match {
+        case (Some(Temporary(c)), _ :: (rest: Stack)) =>
+          Return(c :: Nil) :: rest
+        case (Some(a), _) =>
+          Return(a :: Nil) :: stack
+        case _ =>
+          Return(Nil) :: stack
+      }
+
+  private val assignmentsWithEffects: FlattenO[Statements, Stack] = {
+    case Assignment(i, v) => assignment(i, v)
+    case Equality(op, l, r) => binary(Equality, op, l, r)
+    case Relational(op, l, r) => binary(Relational, op, l, r)
+    case Additive(op, l, r) => binary(Additive, op, l, r)
+    case Multiplicative(op, l, r) => binary(Multiplicative, op, l, r)
+    case Unary(op, v) => unary(Unary, op, v)
+    case Application(p, e) => application(p, e)
+    case LazyExpressions(e) => expressions(e)
   }
 
-  private def extractApplication(p: Postfix, e: Expressions): Stack = p match {
+  private def application(p: Postfix, e: Expressions): Stack = p match {
       case a: Application =>
-        extractApplicationA(a, e)
+        applicationA(a, e)
       case i: Identifier =>
-        extractApplicationP(i, e)
+        applicationP(i, e)
       case LazyExpressions(l)
         if l.lastOption.forall(canApply) =>
-          extractApplicationE(l, e)
+          applicationE(l, e)
       case _ =>
         throw SemanticError("Application of non function type")
     }
@@ -118,109 +135,104 @@ class flattenAst private (var context: Context) {
     case _ => false
   }
 
-  private def extractApplicationA(a2: Application, e: Expressions): Stack = {
-    extractApplicationE(List(a2), e)
+  private def applicationA(a2: Application, e: Expressions): Stack = {
+    applicationE(List(a2), e)
   }
 
-  private def extractApplicationE(lazyExpressions: Expressions, args: Expressions): Stack = {
-    foldExpressions(lazyExpressions) { (e, stack) =>
-      extractApplicationP(ex(e.last), args) ++ stack
+  private def applicationE(lazyExpressions: Expressions, args: Expressions): Stack = {
+    foldArguments(lazyExpressions) { (e, stack) =>
+      applicationP(ex(e.last), args) ++ stack
     }
   }
 
-  private def extractApplicationP(p: Primary, e: Expressions): Stack =
-    foldExpressionsT(e) { Application(p, _) }
+  private def applicationP(p: Primary, e: Expressions): Stack =
+    foldArgumentsNT(e) { Application(p, _) }
 
-  private def extractAssignment(id: Identifier, v: Assignments): Stack =
-    foldExpressions(List(v)) { foldAssignment(id) }
+  private def assignment(id: Identifier, v: Assignments): Stack =
+    foldArguments(List(v)) { mapAssignment(id) }
 
-  private def extractExpressions(e: Expressions): Stack =
-    foldExpressions(e) { (_, stack) => stack }
+  private def mapAssignment
+    ( id: Identifier)
+    ( args: List[Assignments],
+      stack: Stack
+    ): Stack =
+      (args, stack) match {
+        case ((a @ Temporary(t)) :: _, _ :: (rest: Stack)) =>
+          Assignment(id, t) :: rest
+        case (a :: _, _) =>
+          Assignment(id, a) :: stack
+        case _ =>
+          stack
+      }
 
-  private def foldAssignment(id: Identifier)(
-    args: List[Assignments],
-    stack: Stack
-  ): Stack = args match {
-    case (a @ Temporary(t)) :: _ => stack match {
-      case (_: Temporary) :: rest => Assignment(id, t) :: rest
-      case _ => Assignment(id, a) :: stack
+  private def unary[Op <: UnaryOp, A >: Primary]
+    ( f: (Op, A) => Assignments,
+      o: Op, v: Assignments
+    ): Stack =
+      foldArgumentsNT(List(v)) { mapUnary(f, o) }
+
+  private def binary[Op <: BinaryOp, A >: Primary, B >: Primary]
+    ( f: (Op, A, B) => Assignments,
+      o: Op,
+      l: Assignments,
+      r: Assignments
+    ): Stack =
+      foldArgumentsNT(List(l, r)) { mapBinary(f, o) }
+
+  private def foldArgumentsN[O >: StackVar]
+    (e: Expressions)
+    (f: (List[Assignments]) => O): List[O] =
+      foldArguments(e) { f(_) :: _ }
+
+  private def foldArgumentsNT
+    (e: Expressions)
+    (f: (List[Assignments]) => Assignments): Stack =
+      foldArgumentsN(e) { Temporary.compose(f) }
+
+  private def mapUnary[Op <: UnaryOp, A >: Primary, O >: Assignments]
+    ( f: (Op, A) => O,
+      o: Op
+    ): PartialFunction[List[Assignments], O] = {
+      case Constant(a) :: _ =>
+        Constant(o.op(a))
+      case a :: _ =>
+        f(o, a.asInstanceOf[A])
     }
-    case (a: Assignments) :: _ => Assignment(id, a) :: stack
-    case _ => stack
-  }
 
-  private def extractUnary[Op <: UnaryOp, A >: Primary](
-    f: (Op, A) => Assignments,
-    operand: Op, v: Assignments
-  ): Stack = foldExpressionsT(List(v)) { unaryArgs(f, operand) }
-
-  private def extractBinary[Op <: BinaryOp, A >: Primary, B >: Primary](
-    f: (Op, A, B) => Assignments,
-    operand: Op,
-    l: Assignments,
-    r: Assignments
-  ): Stack = foldExpressionsT(List(l, r)) { binaryArgs(f, operand) }
-
-  private def foldExpressionsN[O >: StackVar](e: Expressions)(
-    f: (List[Assignments]) => O
-  ): List[O] = foldExpressions(e) { (args, stack) => f(args) :: stack }
-
-  private def foldExpressionsT(e: Expressions)(
-    f: (List[Assignments]) => Assignments
-  ): Stack = foldExpressions(e) { (args, stack) => Temporary(f(args)) :: stack }
-
-  private def unaryArgs[Op <: UnaryOp, A >: Primary, O >: Assignments](
-    f: (Op, A) => O,
-    operand: Op
-  ): PartialFunction[List[Assignments], O] = {
-    case a :: _ =>
-      a match {
-        case c @ Constant(cInner) =>
-          Constant(operand.op(cInner))
-        case _ =>
-          f(operand, a.asInstanceOf[A])
-      }
-  }
-
-  private def binaryArgs[Op <: BinaryOp, A >: Primary, B >: Primary](
-    f: (Op, A, B) => Assignments,
-    operand: Op
-  ): PartialFunction[List[Assignments], Assignments] = {
-    case a :: b :: _ =>
-      a match {
-        case lc @ Constant(lcInner) => b match {
-          case Constant(rcInner) => Constant(operand.op(lcInner, rcInner))
-          case _ => f(operand, lc, b.asInstanceOf[B])
-        }
-        case _ =>
-          f(operand, a.asInstanceOf[A], b.asInstanceOf[B])
-      }
-  }
+  private def mapBinary[Op <: BinaryOp, A >: Primary, B >: Primary]
+    ( f: (Op, A, B) => Assignments,
+      o: Op
+    ): PartialFunction[List[Assignments], Assignments] = {
+      case Constant(a) :: Constant(b) :: _ =>
+        Constant(o.op(a, b))
+      case a :: b :: _ =>
+        f(o, a.asInstanceOf[A], b.asInstanceOf[B])
+    }
   
-  private type Acc = (List[Assignments], Stack, Stack)
 
-  private def foldExpressions[A](e: Expressions)(f: (List[Assignments], Stack) => A): A =
-    applyArgsAndStack(f) {
-      e.map(tryReduce).foldLeft(Nil, Nil, Nil) { extractArgs }
+  private def foldArguments[A]
+    (ex: Expressions)
+    (fn: (List[Assignments], Stack) => A): A = {
+      val (args, repush, stack) =
+        ex.map(tryReduce)
+          .foldLeft(Nil, Nil, Nil) { mapArguments }
+      fn(args, repush ++ stack)
     }
 
-  private def applyArgsAndStack[A](f: (List[Assignments], Stack) => A)(acc: => Acc): A = acc match {
-    case (args, repush, stack) => f(args, repush ++ stack)
-  }
+  private type StackAcc = (List[Assignments], Stack, Stack)
 
-  private def extractArgs(acc: Acc, argStack: Stack): Acc = acc match {
-    case (args, repush, stack) =>
-      argStack match {
-        case Temporary(c) :: (rest: Stack) if isPrimary(c) =>
-          (args :+ c, repush, rest ++ stack)
-        case (a @ Assignment(id, _)) :: (rest: Stack) =>
-          (args :+ id, a :: repush, rest ++ stack)
-        case s :: (rest: Stack) =>
-          (args :+ arg(s), s :: repush, rest ++ stack)
-        case Nil =>
-          acc
-      }
-  }
+  private def mapArguments(acc: StackAcc, argStack: Stack): StackAcc =
+    acc match {
+      case (args, repush, stack) =>
+        argStack match {
+          case Temporary(c) :: (rest: Stack) if isPrimary(c) =>
+            (args :+ c, repush, rest ++ stack)
+          case s :: (rest: Stack) =>
+            (args :+ arg(s), s :: repush, rest ++ stack)
+          case Nil =>
+            acc
+        }
+    }
 
   private def isPrimary(assignments: Assignments): Boolean = assignments match {
     case _: Constant | _: Identifier | _: StringLiteral => true

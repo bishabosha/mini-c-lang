@@ -19,7 +19,7 @@ parse:
 	${PARSER} 
 
 run:
-	${PARSER} -i > test.out
+	${PARSER} -i
 
 timed:
 	${PARSER} -t -i
