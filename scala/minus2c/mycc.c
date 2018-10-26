@@ -130,7 +130,7 @@ void print_TokenInt(TokenInt *token) { printf("%d\n", token->value); }
 void print_singleton(Ast *ast) { printf("%s\n", named(ast)); }
 
 extern int yydebug;
-extern Ast *yyparse(void);
+extern int yyparse(void);
 extern Ast *ans;
 extern void init_SymbTable(void);
 

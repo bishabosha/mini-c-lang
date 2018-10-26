@@ -184,20 +184,10 @@ compound_statement
     ;
 
 compound_statement_inner
-    : statement_list                            { $$ = $1; }
-    | declaration_list                          { $$ = $1; }
-    | declaration_list compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
-    | statement_list   compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
-    ;
-
-declaration_list
-    : declaration                   { $$ = $1; }
-    | declaration_list declaration  { $$ = BinaryNode_new(';', $1, $2); }
-    ;
-
-statement_list
-    : statement                 { $$ = $1; }
-    | statement_list statement  { $$ = BinaryNode_new(';', $1, $2); }
+    : statement                            { $$ = $1; }
+    | declaration                          { $$ = $1; }
+    | declaration compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
+    | statement   compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
     ;
 
 expression_statement
@@ -222,13 +212,8 @@ jump_statement
     ;
 
 translation_unit
-    : external_declaration                  { $$ = $1; }
-    | translation_unit external_declaration { $$ = BinaryNode_new('E', $1, $2); }
-    ;
-
-external_declaration
-    : function_definition { $$ = $1; }
-    | declaration         { $$ = $1; }
+    : declaration                  { $$ = $1; }
+    | translation_unit declaration { $$ = BinaryNode_new('E', $1, $2); }
     ;
 
 function_definition
