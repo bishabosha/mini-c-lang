@@ -14,17 +14,21 @@ object MyCCLib {
   def set_debug(value: java.lang.Boolean): Unit = myCCLib.getMember("set_debug").executeVoid(value)
   def get_ans: Value = myCCLib.getMember("get_ans").execute()
   def print_ast(ast: Value): Unit = myCCLib.getMember("print_ast").executeVoid(ast)
-  def get_SymbTable_inst: SymbTable = myCCLib.getMember("get_SymbTable_inst").execute().as(classOf[SymbTable])
   def accept_ast_visitor: Value = myCCLib.getMember("accept_ast_visitor")
   def accept_ast: Value = myCCLib.getMember("accept_ast")
   def sendValue(value: Any): Value = polyglot.asValue(value)
 
-  def astToScala(ast: Value): CAst = {
+  def astToScala(ast: Value): (CAst, Map[String, Identifier]) = {
     myCCLib.getMember("Ast_to_Scala").executeVoid(ast)
-    myCCLib.getMember("get_deque")
+    (myCCLib.getMember("get_deque")
            .execute()
            .as(classOf[java.util.ArrayDeque[CAst]])
-           .pop
+           .pop, {
+             val symbTable = myCCLib.getMember("get_SymbTable_inst").execute().as(classOf[SymbTable])
+             val symbols = symbTable.export
+             symbTable.clear()
+             symbols
+           })
   }
 
   def close(): Unit = polyglot.close()

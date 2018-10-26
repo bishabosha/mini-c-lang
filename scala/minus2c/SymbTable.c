@@ -7,10 +7,9 @@
 #include <string.h>
 
 static void *SymbTable_inst;
-static Ast *(*SymbTable_get)(const void *);
-static void (*SymbTable_put)(const void *, Ast *);
-
-static Ast *current;
+static void *(*SymbTable_get)(const void *);
+static void (*SymbTable_put)(const void *);
+Ast *get(const char *s);
 
 Ast *int_token, *void_token, *function_token, *return_token, *break_token,
     *continue_token, *empty_token, *extern_token, *auto_token, *empty_block_token;
@@ -33,18 +32,18 @@ void init_SymbTable(void) {
 }
 
 Ast *get_identifier(const char *s) {
-  current = SymbTable_get(polyglot_from_string(s, "UTF-8"));
-
-  if (polyglot_is_null(current)) {
-    char *lexeme = (char *)malloc(1 + strlen(s));
-    strcpy(lexeme, s);
-
-    Ast *new = TokenString_new(IDENTIFIER, lexeme);
-    current = new;
-    SymbTable_put(polyglot_from_string(s, "UTF-8"), current);
+  if (polyglot_is_null(SymbTable_get(polyglot_from_string(s, "UTF-8")))) {
+    SymbTable_put(polyglot_from_string(s, "UTF-8"));
+    return get(s);
+  } else {
+    return get(s);
   }
+}
 
-  return (Ast *)current;
+Ast *get(const char *s) {
+  char *lexeme = (char *)malloc(1 + strlen(s));
+  strcpy(lexeme, s);
+  return TokenString_new(IDENTIFIER, lexeme);
 }
 
 void *get_SymbTable_inst() { return SymbTable_inst; }

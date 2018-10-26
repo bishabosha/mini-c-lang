@@ -14,9 +14,6 @@ object flattenAst extends Stage {
   private type StackVar = Temporary | Assignment
   private type Stack = List[StackVar]
 
-  override def apply(source: Source): (Context, Goal) =
-    flattenAst(Bindings.Empty, source)
-
   def apply(context: Context, source: Source): (Context, Goal) =
     new flattenAst(context).goal(source)
 

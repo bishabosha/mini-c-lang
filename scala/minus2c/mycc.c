@@ -4,6 +4,7 @@
 #include <polyglot.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 char *named(Ast *ast) {
@@ -209,22 +210,27 @@ void BinaryNode_to_Scala(BinaryNode *node) {
   Ast_to_Scala(node->a1);
   ArrayDeque_push(mycc_CAst$BinaryNode(JAVA_STRING(named(&node->ast)),
                                        ArrayDeque_pop(), ArrayDeque_pop()));
+  free(node);
 }
 
 void UnaryNode_to_Scala(UnaryNode *node) {
   Ast_to_Scala(node->a1);
   ArrayDeque_push(
       mycc_CAst$UnaryNode(JAVA_STRING(named(&node->ast)), ArrayDeque_pop()));
+  free(node);
 }
 
 void TokenString_to_Scala(TokenString *token) {
   ArrayDeque_push(mycc_CAst$TokenString(JAVA_STRING(named(&token->ast)),
                                         JAVA_STRING(token->lexeme)));
+  free(token->lexeme);
+  free(token);
 }
 
 void TokenInt_to_Scala(TokenInt *token) {
   ArrayDeque_push(
       mycc_CAst$TokenInt(JAVA_STRING(named(&token->ast)), token->value));
+  free(token);
 }
 
 void Singleton_to_Scala(Ast *ast) {
