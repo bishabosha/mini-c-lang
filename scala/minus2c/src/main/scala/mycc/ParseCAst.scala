@@ -17,7 +17,14 @@ import scala.collection.mutable
 
 object Std {
   val declarations = List[Declaration](
-    Declaration(extern, void, FunctionDeclarator(Identifier("print_int"), LParam(Vector((int, Identifier("value"))))))
+    Declaration(
+      extern,
+      void,
+      FunctionDeclarator(
+        Identifier("print_int"),
+        LParam(Vector((int, Identifier("value"))))
+      )
+    )
   )
 }
 
@@ -38,7 +45,7 @@ class parseCAst private {
   private val identPool = new mutable.AnyRefMap[String, Identifier]()
 
   private lazy val goal: Parse[(Context, Goal)] =
-    translationUnit ->> { goal => context -> goal }
+    translationUnit ->> { context -> _ }
 
   private lazy val translationUnit: Parse[Goal] =
     externalDeclarationList |
@@ -295,36 +302,44 @@ class parseCAst private {
       (types(typeSpecifier), identifier(ident))
   }
 
-  private def functionDef(declarators: Source, bodyOp: Option[Source]): List[Declarations] = declarators match {
-    case BinaryNode("d", types, declarator) =>
-      yieldDefinition(declarationSpecifiersSpecific(types), bodyOp) { functionDeclarator(declarator) }
-    case declarator =>
-      yieldDefinition((auto, int), bodyOp) { functionDeclarator(declarator) }
-  }
+  private def functionDef
+    (declarators: Source, bodyOp: Option[Source]): List[Declarations] =
+      declarators match {
+        case BinaryNode("d", types, declarator) =>
+          yieldDefinition(
+            declarationSpecifiersSpecific(types),
+            bodyOp
+          ) { functionDeclarator(declarator) }
+        case declarator =>
+          yieldDefinition(
+            (auto, int),
+            bodyOp
+          ) { functionDeclarator(declarator) }
+      }
 
-  private def yieldDefinition(
-    declarators: (StorageTypes, Types),
-    bodyOp: Option[Source]
-  ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
-    case f @ FunctionDeclarator(i, args) =>
-      declareInScope(i, declarators._1, declarators._2, f).toList
-        .:+[Declarations, List[Declarations]] {
-          val bodyParsed =
-            for (b <- bodyOp) yield {
-              stacked {
-                args match {
-                  case LParam(l) => declareParamsInScope(l)
-                  case _ =>
+  private def yieldDefinition
+    ( declarators: (StorageTypes, Types),
+      bodyOp: Option[Source]
+    ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
+      case f @ FunctionDeclarator(i, args) =>
+        declareInScope(i, declarators._1, declarators._2, f).toList
+          .:+[Declarations, List[Declarations]] {
+            val bodyParsed =
+              for (b <- bodyOp) yield {
+                stacked {
+                  args match {
+                    case LParam(l) => declareParamsInScope(l)
+                    case _ =>
+                  }
+                  compoundStatements(b)
                 }
-                compoundStatements(b)
               }
+            if (declarators._2 != void) tailYieldsValue(bodyParsed)
+            define {
+              Function(i, bodyParsed.getOrElse { Nil })
             }
-          if (declarators._2 != void) tailYieldsValue(bodyParsed)
-          define {
-            Function(i, bodyParsed.getOrElse { Nil })
           }
-        }
-  }    
+    }
 
   private def stacked[A](parser: => A): A = {
     context = context.stack
@@ -343,34 +358,34 @@ class parseCAst private {
     }
   }
 
-  private def declareInScope(
-    identifier: Identifier,
-    storage: StorageTypes,
-    types: Types,
-    declarator: Declarator
-  ): Option[Declaration] = {
-    for (Declaration(s, t, existing) <- context.local(identifier)) existing match {
-      case _: Identifier => declarator match {
-        case _: FunctionDeclarator =>
-          throw new SemanticError(s"Redefinition of '${identifier.id}' as a function type.")
-        case _ =>
-          throw new SemanticError(s"Redefinition of '${identifier.id}'.")
+  private def declareInScope
+    ( identifier: Identifier,
+      storage: StorageTypes,
+      types: Types,
+      declarator: Declarator
+    ): Option[Declaration] = {
+      for (Declaration(s, t, existing) <- context.local(identifier)) existing match {
+        case _: Identifier => declarator match {
+          case _: FunctionDeclarator =>
+            throw new SemanticError(s"Redefinition of '${identifier.id}' as a function type.")
+          case _ =>
+            throw new SemanticError(s"Redefinition of '${identifier.id}'.")
+        }
+        case _: FunctionDeclarator => declarator match {
+          case f: FunctionDeclarator =>
+            if (existing == f && s == storage && t == types) {
+              return None
+            } else {
+              throw new SemanticError(s"Redefinition of function '${identifier.id}' with incompatible types.")
+            }
+          case _ =>
+            throw new SemanticError(s"Redefinition of function '${identifier.id}' to variable.")
+        }
       }
-      case _: FunctionDeclarator => declarator match {
-        case f: FunctionDeclarator =>
-          if (existing == f && s == storage && t == types) {
-            return None
-          } else {
-            throw new SemanticError(s"Redefinition of function '${identifier.id}' with incompatible types.")
-          }
-        case _ =>
-          throw new SemanticError(s"Redefinition of function '${identifier.id}' to variable.")
-      }
+      val declaration = Declaration(storage, types, declarator)
+      context = context + (identifier -> declaration)
+      Some(declaration)
     }
-    val declaration = Declaration(storage, types, declarator)
-    context = context + (identifier -> declaration)
-    Some(declaration)
-  }
 
   private def define(f: => Function): Function = {
     val definition = f
@@ -385,29 +400,32 @@ class parseCAst private {
       }
     }
 
-  private def tailYieldsValue(statements: Option[List[Statements]]): Unit =
+  private def tailYieldsValue(statements: Option[List[Statements]]): Unit = {
     statements match {
       case Some(body) if body.lastOption.forall(_.isInstanceOf[Return]) =>
       case _ =>
         throw SemanticError("Tail of function does not return a value.")
     }
-
-  private def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) = {
-    val (storages, types) =
-        declarationSpecifiers.partition(_.isInstanceOf[Storage])
-        
-    val storage: StorageTypes = storages match {
-      case Nil => auto
-      case (s: Storage) :: Nil => s.id
-      case _ => throw SemanticError("More than one storage class may not be specified.")
-    }
-
-    val returnType: Types = types match {
-      case Nil => int // warning implicit return type 'int'
-      case (t: Type) :: Nil => t.id
-      case _ => throw SemanticError("Invalid combination of type specifiers.")
-    }
-
-    (storage, returnType)
   }
+
+  private def reduceDeclarationSpecifiers
+    (declarationSpecifiers: List[DeclarationSpecifiers])
+    : (StorageTypes, Types) = {
+      val (storages, types) =
+          declarationSpecifiers.partition(_.isInstanceOf[Storage])
+        
+      val storage: StorageTypes = storages match {
+        case Nil => auto
+        case (s: Storage) :: Nil => s.id
+        case _ => throw SemanticError("More than one storage class may not be specified.")
+      }
+
+      val returnType: Types = types match {
+        case Nil => int // warning implicit return type 'int'
+        case (t: Type) :: Nil => t.id
+        case _ => throw SemanticError("Invalid combination of type specifiers.")
+      }
+
+      (storage, returnType)
+    }
 }
