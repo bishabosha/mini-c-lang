@@ -22,9 +22,7 @@ object Parser {
       println(s"GRAAL_CONTEXT_STARTUP: ${newtim - old}ms")
       old = newtim
     }
-    MyCCLib.yyparse()
-    val tree: Option[Value] = Option(MyCCLib.get_ans)
-    for (t <- tree.filter(!_.isNull)) {
+    for (t <- MyCCLib.getAst) {
       try {
         if (time) {
           newtim = System.currentTimeMillis

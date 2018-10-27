@@ -130,13 +130,16 @@ void print_TokenInt(TokenInt *token) { printf("%d\n", token->value); }
 void print_singleton(Ast *ast) { printf("%s\n", named(ast)); }
 
 extern int yydebug;
-extern int yyparse(void);
-extern Ast *ans;
+extern int yyparse(Ast **);
 extern void init_SymbTable(void);
 
 void set_debug(bool debug) { yydebug = debug ? 1 : 0; }
 
-Ast *get_ans() { return polyglot_from_ast(ans); }
+Ast *get_ast() {
+  Ast *ast = NULL;
+  yyparse(&ast);
+  return polyglot_from_ast(ast);
+}
 
 static bool mycc_CAst = false;
 static void *(*mycc_CAst$Singleton)(void *);
