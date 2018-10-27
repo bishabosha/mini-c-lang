@@ -52,7 +52,7 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  private def topLevelStatement(node: Ast): Option[Int] = node match {
+  private def topLevelStatement(node: Statements): Option[Int] = node match {
     case Function(id, body) if id == main =>
       stacked {
         body.foldLeft(None: Option[Int]){ (code, statement) =>
@@ -78,7 +78,7 @@ class interpretAst(var cursor: Cursor, nodes: Goal) {
     f
   }
 
-  private def evalStatement(node: Ast): Option[Int] = {
+  private def evalStatement(node: Statements): Option[Int] = {
     node match {
       case Declaration(_, _, id: Identifier) =>
         addRandom(id)

@@ -55,8 +55,6 @@ enum ArgList {
   case LParam(list: Vector[Parameter])
 }
 
-sealed trait Ast
-
 object Ast {
   type Key = Identifier
   type Parameter = (Types, Identifier) | Types
@@ -77,7 +75,7 @@ object Ast {
   type Primary = Constants | LazyExpressions | Temporary
 }
 
-case class Temporary(rvalue: Assignments) extends Ast {
+case class Temporary(rvalue: Assignments) {
   override def hashCode() = System.identityHashCode(this)
   override def equals(that: Any): Boolean =
     that match {
@@ -86,21 +84,21 @@ case class Temporary(rvalue: Assignments) extends Ast {
   }
 }
 
-case class Identifier(id: String) extends Ast
+case class Identifier(id: String)
 case class FunctionDeclarator(id: Identifier, args: ArgList)
-case class Constant(value: Int) extends Ast
-case class StringLiteral(value: String) extends Ast
-case class Type(id: Types) extends Ast
-case class Storage(id: StorageTypes) extends Ast
-case class Return(value: Expressions) extends Ast
-case class Application(Operand: Postfix, args: Expressions) extends Ast
-case class LazyExpressions(value: Expressions) extends Ast
-case class Unary(op: UnaryOperators, value: Unaries) extends Ast
-case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries) extends Ast
-case class Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives) extends Ast
-case class Relational(op: RelationalOperators, left: Relationals, right: Additives) extends Ast
-case class Equality(op: EqualityOperators, left: Equalities, right: Relationals) extends Ast
-case class Assignment(lvalue: Identifier, rvalue: Assignments) extends Ast
-case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator) extends Ast
-case class Function(id: Identifier, body: List[Statements]) extends Ast
-case class Block(inner: List[Statements]) extends Ast
+case class Constant(value: Int)
+case class StringLiteral(value: String)
+case class Type(id: Types)
+case class Storage(id: StorageTypes)
+case class Return(value: Expressions)
+case class Application(Operand: Postfix, args: Expressions)
+case class LazyExpressions(value: Expressions)
+case class Unary(op: UnaryOperators, value: Unaries)
+case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries)
+case class Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives)
+case class Relational(op: RelationalOperators, left: Relationals, right: Additives)
+case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
+case class Assignment(lvalue: Identifier, rvalue: Assignments)
+case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
+case class Function(id: Identifier, body: List[Statements])
+case class Block(inner: List[Statements])

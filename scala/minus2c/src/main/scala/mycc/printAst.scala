@@ -16,14 +16,14 @@ object printAst {
 
   private val endl = System.lineSeparator
 
-  def apply(context: Context, nodes: List[Ast]): Unit = print(astNode(context, nodes, inc(0)))
+  def apply(context: Context, nodes: List[Statements]): Unit = print(astNode(context, nodes, inc(0)))
 
-  private def astNode(context: Context, nodes: List[Ast], level: Int): String = {
+  private def astNode(context: Context, nodes: List[Statements], level: Int): String = {
     (for (node <- nodes.view) yield astNode(context, node, level)).mkString
   }
 
-  private def astNode(context: Context, node: Ast, level: Int): String = {
-    def getIt(value: Ast): String = astNode(context, value, level);
+  private def astNode(context: Context, node: Statements, level: Int): String = {
+    def getIt(value: Statements): String = astNode(context, value, level);
     def exp(value: Assignments): String = expr(context, value, level);
     var lvl = getLevel(level)
     node match {
