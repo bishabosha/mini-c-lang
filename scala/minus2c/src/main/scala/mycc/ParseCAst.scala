@@ -33,16 +33,15 @@ object parseCAst extends Stage {
   type Context  = Bindings
   type Goal     = List[Declarations]
 
-  override def apply(source: Source): (Context, Goal) = new parseCAst().goal(source)
+  def apply(source: Source, identPool: Map[String, Identifier]): (Context, Goal) = new parseCAst(identPool).goal(source)
 }
 
-class parseCAst private {
+class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
   private var context: Context = Bindings.withSeen(Bindings.extractFrom(Std.declarations))
-  private val identPool = new mutable.AnyRefMap[String, Identifier]()
 
   private lazy val goal: Parse[(Context, Goal)] =
     translationUnit ->> { context -> _ }
@@ -234,7 +233,7 @@ class parseCAst private {
   }
 
   private val identifier: Parse[Identifier] = {
-    case TokenString("id", id) => identPool.getOrElseUpdate(id, Identifier(id))
+    case TokenString("id", id) => identPool(id)
   }
 
   private val constant: Parse[Constant] = {

@@ -4,8 +4,17 @@
 #define YYDEBUG 1
 extern Ast *int_token, *void_token, *function_token, *return_token, *break_token, *continue_token,
     *empty_token, *extern_token, *auto_token, *empty_block_token, *lasttok;
-Ast *ans;
+
+extern Ast **ast;
+extern int yylex (void *);
+extern int yyerror(Ast**, char *);
 %}
+
+%code requires {#include "ast.h"}
+
+%define api.pure full
+
+%parse-param {Ast **ast}
 
 %token IDENTIFIER CONSTANT STRING_LITERAL
 %token LE_OP GE_OP EQ_OP NE_OP
@@ -21,7 +30,7 @@ Ast *ans;
 %start goal
 %%
 
-goal    :  translation_unit { ans = $$ = $1;}
+goal    :  translation_unit { *ast = $$ = $1; }
         ;
 
 primary_expression
@@ -184,20 +193,10 @@ compound_statement
     ;
 
 compound_statement_inner
-    : statement_list                            { $$ = $1; }
-    | declaration_list                          { $$ = $1; }
-    | declaration_list compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
-    | statement_list   compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
-    ;
-
-declaration_list
-    : declaration                   { $$ = $1; }
-    | declaration_list declaration  { $$ = BinaryNode_new(';', $1, $2); }
-    ;
-
-statement_list
-    : statement                 { $$ = $1; }
-    | statement_list statement  { $$ = BinaryNode_new(';', $1, $2); }
+    : statement                            { $$ = $1; }
+    | declaration                          { $$ = $1; }
+    | declaration compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
+    | statement   compound_statement_inner { $$ = BinaryNode_new(';', $1, $2); }
     ;
 
 expression_statement
@@ -222,13 +221,8 @@ jump_statement
     ;
 
 translation_unit
-    : external_declaration                  { $$ = $1; }
-    | translation_unit external_declaration { $$ = BinaryNode_new('E', $1, $2); }
-    ;
-
-external_declaration
-    : function_definition { $$ = $1; }
-    | declaration         { $$ = $1; }
+    : declaration                  { $$ = $1; }
+    | translation_unit declaration { $$ = BinaryNode_new('E', $1, $2); }
     ;
 
 function_definition
@@ -243,9 +237,10 @@ function_definition
 extern char yytext[];
 extern int column;
 
-int yyerror(char *s)
+int yyerror(Ast** ast, char *s)
 {
     fflush(stdout);
     printf("\n%*s\n%*s\n", column, "^", column, s);
+    return 0;
 }
 

@@ -22,23 +22,20 @@ object Parser {
       println(s"GRAAL_CONTEXT_STARTUP: ${newtim - old}ms")
       old = newtim
     }
-    MyCCLib.yyparse()
-    val tree: Option[Value] = Option(MyCCLib.get_ans)
-    for (t <- tree.filter(!_.isNull)) {
-      // MyCCLib.print_ast(t)
+    for (t <- MyCCLib.getAst) {
       try {
         if (time) {
           newtim = System.currentTimeMillis
           println(s"LEXING_TIME: ${newtim - old}ms")
           old = newtim
         }
-        val cast = MyCCLib.astToScala(t)
+        val (cast, identPool) = MyCCLib.astToScala(t)
         if (time) {
           newtim = System.currentTimeMillis
           println(s"IMPORTING_TO_SCALA: ${newtim - old}ms")
           old = newtim
         }
-        val (context, ast) = parseAst(cast)
+        val (context, ast) = parseAst(cast, identPool)
         if (time) {
           newtim = System.currentTimeMillis
           println(s"PARSE_CAST: ${newtim - old}ms")

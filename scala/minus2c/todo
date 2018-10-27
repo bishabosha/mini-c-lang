@@ -23,3 +23,5 @@
 [x] interpret
 [ ] tac
 [ ] run tac
+[ ] possible solution to global stack in mycc is to have a map that for
+    each build process can allot a new bucket.
