@@ -25,3 +25,5 @@
 [ ] run tac
 [ ] possible solution to global stack in mycc is to have a map that for
     each build process can allot a new bucket.
+[ ] use node to make --C build server and replace main in Parser.scala
+    [ ] or try to send C callbacks to scala

@@ -32,15 +32,15 @@ object interpretAst {
   }
 }
 
-class interpretAst(var cursor: Cursor, nodes: Goal) {
+class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
   val main = Identifier("main")
 
   private def evalProgram: Int = {
-    cursor.current.local(main) match {
+    topLevel.local(main) match {
       case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid)))
-        if cursor.current.definition(main).isDefined =>
+        if topLevel.definition(main).isDefined =>
           println("interpreting:")
           nodes.foldLeft(None: Option[Int]){ (code, statement) =>
             code.orElse(topLevelStatement(statement))
