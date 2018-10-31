@@ -35,7 +35,7 @@ object Parser {
           println(s"IMPORTING_TO_SCALA: ${newtim - old}ms")
           old = newtim
         }
-        val (context, ast) = parseAst(cast, identPool)
+        val (context, ast) = parseCAst(cast, identPool)
         if (time) {
           newtim = System.currentTimeMillis
           println(s"PARSE_CAST: ${newtim - old}ms")
@@ -44,7 +44,7 @@ object Parser {
         val (context2, astFlattened) = flattenAst(context, ast)
         if (time) {
           newtim = System.currentTimeMillis
-          println(s"CONVERTING_TO_NORMAL: ${newtim - old}ms")
+          println(s"AST_TO_NORMAL: ${newtim - old}ms")
           old = newtim
         }
         println("code:")
@@ -52,6 +52,19 @@ object Parser {
         if (time) {
           newtim = System.currentTimeMillis
           println(s"PRINTING_CODE: ${newtim - old}ms")
+          old = newtim
+        }
+        val (context3, tac) = normalToTac(context2, astFlattened)
+        if (time) {
+          newtim = System.currentTimeMillis
+          println(s"NORMAL_TO_TAC: ${newtim - old}ms")
+          old = newtim
+        }
+        println("TAC:")
+        printAst(context3, tac)
+        if (time) {
+          newtim = System.currentTimeMillis
+          println(s"PRINTING_TAC: ${newtim - old}ms")
           old = newtim
         }
         if (interpret) {

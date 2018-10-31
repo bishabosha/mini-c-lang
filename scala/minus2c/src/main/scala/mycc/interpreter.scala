@@ -15,17 +15,6 @@ import interpretAst._
 import scala.util.Random
 
 object interpretAst {
-  case class Cursor(stack: List[Cursor], values: Map[Key | Temporary, Constant], current: Bindings) {
-    def +(pair: (Key | Temporary, Constant)): Cursor = Cursor(stack, values + pair, current)
-
-    def value(key: Key | Temporary): Option[Int] =
-      (this :: stack)
-        .view
-        .map(_.values.get(key))
-        .collectFirst { case Some(o) => o.value }
-
-    def next: Option[Cursor] = current.children.headOption.map { Cursor(this :: stack, Map(), _) }
-  }
 
   def apply(context: Context, nodes: Goal): Unit = {
     println(s"exit code: ${new interpretAst(Cursor(Nil, Map(), context), nodes).evalProgram}")

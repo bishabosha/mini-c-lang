@@ -353,3 +353,11 @@ int main(void) {
     int a;
     return 0;
 }
+
+int main(void) {
+    1, 2;
+    int a = 3 + 4 == 2, b = ---1 % 3;
+    a = a == 56;
+    int c;
+    return (3 == 2, c, a + c);
+}

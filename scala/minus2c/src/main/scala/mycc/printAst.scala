@@ -9,14 +9,14 @@ import EqualityOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
 import ArgList._
-import parseCAst._
+import normalToTac._
 import exception._
 
 object printAst {
 
   private val endl = System.lineSeparator
 
-  def apply(context: Context, nodes: List[Statements]): Unit = print(astNode(context, nodes, inc(0)))
+  def apply(context: Bindings, nodes: List[Statements]): Unit = print(astNode(context, nodes, inc(0)))
 
   private def astNode(context: Context, nodes: List[Statements], level: Int): String = {
     (for (node <- nodes.view) yield astNode(context, node, level)).mkString
