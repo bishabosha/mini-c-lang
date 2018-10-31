@@ -9,7 +9,6 @@ import EqualityOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
 import ArgList._
-import normalToTac._
 import exception._
 
 object printAst {
@@ -18,11 +17,11 @@ object printAst {
 
   def apply(context: Bindings, nodes: List[Statements]): Unit = print(astNode(context, nodes, inc(0)))
 
-  private def astNode(context: Context, nodes: List[Statements], level: Int): String = {
+  private def astNode(context: Bindings, nodes: List[Statements], level: Int): String = {
     (for (node <- nodes.view) yield astNode(context, node, level)).mkString
   }
 
-  private def astNode(context: Context, node: Statements, level: Int): String = {
+  private def astNode(context: Bindings, node: Statements, level: Int): String = {
     def getIt(value: Statements): String = astNode(context, value, level);
     def exp(value: Assignments): String = expr(context, value, level);
     var lvl = getLevel(level)
@@ -49,7 +48,7 @@ object printAst {
     }
   }
 
-  private def expr(context: Context, node: Assignments, level: Int): String = {
+  private def expr(context: Bindings, node: Assignments, level: Int): String = {
     def getIt(value: Assignments): String = expr(context, value, level)
     node match {
       case Application(i, args) =>
@@ -96,7 +95,7 @@ object printAst {
       }.mkString("(", ", ", ")")
   }
 
-  private def fn(context: Context, name: String, b: List[Statements], level: Int): String = {
+  private def fn(context: Bindings, name: String, b: List[Statements], level: Int): String = {
     var lvl: String = getLevel(level)
     var res = s"$lvl$name: {$endl"
     if (!b.isEmpty)
@@ -105,7 +104,7 @@ object printAst {
       res + s"}$endl"
   }
 
-  private def block(context: Context, b: List[Statements], level: Int): String = {
+  private def block(context: Bindings, b: List[Statements], level: Int): String = {
     var lvl: String = getLevel(level)
     if (b.isEmpty) {
       s"$lvl{}$endl"

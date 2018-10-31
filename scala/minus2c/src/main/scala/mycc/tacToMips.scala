@@ -2,19 +2,20 @@ package mycc
 
 import Ast._
 import ArgList._
-import astToNormal._
 import exception._
+import tacToMips._
+import MIPS._
 
-object normalToTac extends Stage {
-  type Source   = astToNormal.Goal
-  type Context  = astToNormal.Context
-  type Goal     = List[Statements]
+object tacToMips extends Stage {
+  type Source   = normalToTac.Goal
+  type Context  = normalToTac.Context
+  type Goal     = List[Assembler]
 
   def apply(context: Context, nodes: Source): (Context, Goal) =
-    new normalToTac(Cursor(Nil, Map(), context), nodes).goal
+    new tacToMips(Cursor(Nil, Map(), context), nodes).goal
 }
 
-class normalToTac private (var cursor: Cursor, nodes: Goal) {
+class tacToMips private (var cursor: Cursor, nodes: normalToTac.Goal) {
   val topLevel: Bindings = cursor.current
   val main = Identifier("main")
 
@@ -35,16 +36,11 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  private def topLevelStatement(node: Statements): Option[Statements] = node match {
+  private def topLevelStatement(node: Statements): Option[Assembler] = node match {
     case Function(id, body) if id == main =>
-      stacked {
-        val validated = body.foldLeft(Nil: List[Statements]){ (code, statement) =>
-         evalStatement(statement).map(_ :: code).getOrElse{code}
-        }.reverse
-        Some(Function(id, validated))
-      }
+      None
     case d : Declaration =>
-      Some(d)
+      None
     case _ => None
   }
 
@@ -53,16 +49,16 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
     f
   }
 
-  private def evalStatement(node: Statements): Option[Statements] = {
+  private def evalStatement(node: Statements): Option[Assembler] = {
     node match {
       case d: Declaration =>
-        Some(d)
+        None
       case t @ Temporary(inner) if isAtomic(inner) =>
-        Some(t)
+        None
       case a @ Assignment(_, inner) if isAtomic(inner) =>
-        Some(a)
+        None
       case r @ Return(inner :: Nil) if isAtomic(inner) =>
-        Some(r)
+        None
       case _ => None
     }
   }

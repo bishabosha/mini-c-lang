@@ -5,6 +5,7 @@ import MIPS._
 object MIPS {
   type Register = Results | Arguments | Temporaries | SavedValues | Trap | Misc
   type Addresses = OffsetAddress | Identifier
+  type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoUnary | PsudeoBinary | Label
 }
 
 enum Results {

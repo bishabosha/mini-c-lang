@@ -4,9 +4,9 @@ import Ast._
 import mycc.exception._
 import PartialFunctionConversions._
 import EqualityOperators._
-import flattenAst._
+import astToNormal._
 
-object flattenAst extends Stage {
+object astToNormal extends Stage {
   type Source   = parseCAst.Goal
   type Context  = parseCAst.Context
   type Goal     = List[Statements]
@@ -15,14 +15,14 @@ object flattenAst extends Stage {
   private type Stack = List[StackVar]
 
   def apply(context: Context, source: Source): (Context, Goal) =
-    new flattenAst(context).goal(source)
+    new astToNormal(context).goal(source)
 
   private def identity[A]: PartialFunction[A, A] = {
     case x => x
   }
 }
 
-class flattenAst private (var context: Context) {
+class astToNormal private (var context: Context) {
 
   private type FlattenO[T, O] = PartialFunction[T, O]
   private type FlattenL[T, O] = FlattenO[T, List[O]]

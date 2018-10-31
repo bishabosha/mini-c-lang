@@ -9,7 +9,7 @@ import EqualityOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
 import ArgList._
-import flattenAst._
+import astToNormal._
 import exception._
 import interpretAst._
 import scala.util.Random

@@ -17,13 +17,17 @@
 [-] bindings cursor
     [x] forwards
     [ ] backwards
-[ ] specialised form of CAst to reduce match time
-[ ] enforce that func can only be applied if in scope
-[ ] variables to be assigned at most once
 [x] interpret
 [ ] tac
+    [ ] Normal form of function application using recursion
+        [ ] Return multiple lists from `parseCAst.statements` - One for each scope
+        [ ] Add environment field to block and function
+        [ ] Definition of func should be in scope for applications,
+            [ ] whole block must be examined first (bearing in mind forward declarations) 
+    [ ] variables to be assigned at most once?
 [ ] run tac
 [ ] possible solution to global stack in mycc is to have a map that for
     each build process can allot a new bucket.
 [ ] use node to make --C build server and replace main in Parser.scala
     [ ] or try to send C callbacks to scala
+[ ] specialised form of CAst to reduce match time

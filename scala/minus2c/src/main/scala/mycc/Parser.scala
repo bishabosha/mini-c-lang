@@ -41,7 +41,7 @@ object Parser {
           println(s"PARSE_CAST: ${newtim - old}ms")
           old = newtim
         }
-        val (context2, astFlattened) = flattenAst(context, ast)
+        val (context2, astFlattened) = astToNormal(context, ast)
         if (time) {
           newtim = System.currentTimeMillis
           println(s"AST_TO_NORMAL: ${newtim - old}ms")
@@ -53,6 +53,14 @@ object Parser {
           newtim = System.currentTimeMillis
           println(s"PRINTING_CODE: ${newtim - old}ms")
           old = newtim
+        }
+        if (interpret) {
+          interpretAst(context2, astFlattened)
+          if (time) {
+            newtim = System.currentTimeMillis
+            println(s"INTERPRETING NORMAL: ${newtim - old}ms")
+            old = newtim
+          }
         }
         val (context3, tac) = normalToTac(context2, astFlattened)
         if (time) {
@@ -67,15 +75,16 @@ object Parser {
           println(s"PRINTING_TAC: ${newtim - old}ms")
           old = newtim
         }
-        if (interpret) {
-          interpretAst(context2, astFlattened)
-        }
+        val (context4, mips) = tacToMips(context3, tac)
         if (time) {
           newtim = System.currentTimeMillis
-          println(s"INTERPRETING: ${newtim - old}ms")
+          println(s"TAC_TO_MIPS: ${newtim - old}ms")
           old = newtim
         }
-
+        println("MIPS:")
+        for (_ <- mips) {
+          println
+        }
       } catch {
         case e: (SemanticError | UnexpectedAstNode | UnimplementedError) =>
           Console.err.println(s"[ERROR] $e")
