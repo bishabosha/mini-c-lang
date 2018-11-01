@@ -82,9 +82,7 @@ object Parser {
           old = newtim
         }
         println("MIPS:")
-        for (_ <- mips) {
-          println
-        }
+        printMips(context4, mips)
       } catch {
         case e: (SemanticError | UnexpectedAstNode | UnimplementedError) =>
           Console.err.println(s"[ERROR] $e")

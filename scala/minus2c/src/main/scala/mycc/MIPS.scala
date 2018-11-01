@@ -5,68 +5,68 @@ import MIPS._
 object MIPS {
   type Register = Results | Arguments | Temporaries | SavedValues | Trap | Misc
   type Addresses = OffsetAddress | Identifier
-  type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoUnary | PsudeoBinary | Label
+  type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero | PseudoUnary | Label
 }
 
 enum Results {
-  case $v0, $v1
+  case V0, V1
 }
 
 enum Arguments {
-  case $a0, $a1, $a2, $a3
+  case A0, A1, A2, A3
 }
 
 enum Temporaries {
-  case $t0, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9
+  case T0, T1, T2, T3, T4, T5, T6, T7, T8, T9
 }
 
 enum SavedValues {
-  case $s0, $s1, $s2, $s3, $s4, $s5, $s6, $s7, $s8
+  case S0, S1, S2, S3, S4, S5, S6, S7, S8
 }
 
 enum Trap {
-  case $k0, $k1
+  case K0, K1
 }
 
 enum Misc {
-  case zero, $sp, $gp, $fp, $ra
+  case Zero, Sp, Gp, Fp, Ra
 }
 
 enum ZeroAddr {
-  case syscall
+  case Syscall
 }
 
 enum OneAddr {
-  case jal(dest: Identifier)
-  case jr(dest: Register)
-  case j(dest: Identifier)
+  case Jal(dest: Identifier)
+  case Jr(dest: Register)
+  case J(dest: Identifier)
 }
 
 enum TwoAddr {
-  case move(dest: Register, source: Register)
-  case li(dest: Register, source: Constant)
-  case lw(dest: Register, source: Addresses)
-  case la(dest: Register, source: Addresses)
-  case sw(source: Register, dest: Addresses)
+  case Move(dest: Register, source: Register)
+  case Li(dest: Register, source: Constant)
+  case Lw(dest: Register, source: Addresses)
+  case La(dest: Register, source: Addresses)
+  case Sw(source: Register, dest: Addresses)
 }
 
 enum ThreeAddr {
-  case addi(dest: Register, l: Register, r: Constant)
-  case add(dest: Register, l: Register, r: Register)
-  case sub(dest: Register, l: Register, r: Register)
-  case mul(dest: Register, l: Register, r: Register)
-  case beq(l: Register, r: Register, breakTo: Identifier)
+  case Addi(dest: Register, l: Register, r: Constant)
+  case Add(dest: Register, l: Register, r: Register)
+  case Sub(dest: Register, l: Register, r: Register)
+  case Mul(dest: Register, l: Register, r: Register)
+  case Beq(l: Register, r: Register, breakTo: Identifier)
 }
 
 case class Label(id: Identifier)
 case class OffsetAddress(address: Register, offset: Constant)
 
-enum PseudoUnary {
-  case text, data
+enum PseudoZero {
+  case Text, Data
 }
 
-enum PsudeoBinary {
-  case word(size: Constant)
-  case globl(name: String)
-  case asciiz(value: String)
+enum PseudoUnary {
+  case Word(size: Int)
+  case Globl(name: Identifier)
+  case Asciiz(value: String)
 }

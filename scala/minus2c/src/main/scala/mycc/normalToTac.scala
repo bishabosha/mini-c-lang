@@ -23,11 +23,7 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
       case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid)))
         if topLevel.definition(main).isDefined =>
           val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
-            topLevelStatement(statement)
-              .map(_::code)
-              .getOrElse {
-                throw UnimplementedError("Program has unimplemented features")
-              }
+            topLevelStatement(statement) ++ code
           }.reverse
           (topLevel, code) // TODO: replace topLevel with context.current once stacked pops off frame
       case _ =>
@@ -35,35 +31,34 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  private def topLevelStatement(node: Statements): Option[Statements] = node match {
+  private def topLevelStatement(node: Statements): Goal = node match {
     case Function(id, body) if id == main =>
       stacked {
         val validated = body.foldLeft(Nil: List[Statements]){ (code, statement) =>
-         evalStatement(statement).map(_ :: code).getOrElse{code}
+         evalStatement(statement) ++ code
         }.reverse
-        Some(Function(id, validated))
+        List(Function(id, validated))
       }
-    case d : Declaration =>
-      Some(d)
-    case _ => None
+    case _ => Nil
   }
 
-  private def stacked[O](f: => Option[O]): Option[O] = {
+  private def stacked[O](f: => List[O]): List[O] = {
     cursor = cursor.next.getOrElse { throw new IllegalStateException("no child") }
     f
   }
 
-  private def evalStatement(node: Statements): Option[Statements] = {
+  private def evalStatement(node: Statements): Goal = {
     node match {
       case d: Declaration =>
-        Some(d)
+        List(d)
       case t @ Temporary(inner) if isAtomic(inner) =>
-        Some(t)
+        List(t)
       case a @ Assignment(_, inner) if isAtomic(inner) =>
-        Some(a)
+        List(a)
       case r @ Return(inner :: Nil) if isAtomic(inner) =>
-        Some(r)
-      case _ => None
+        List(r)
+      case _ =>
+        List()
     }
   }
 

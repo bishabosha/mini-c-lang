@@ -63,7 +63,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def stacked(f: => Option[Int]): Option[Int] = {
-    cursor = cursor.next.getOrElse { throw new IllegalStateException("no child") }
+    cursor = cursor.next.getOrElse {
+      throw new IllegalStateException("no child")
+    }
     f
   }
 
@@ -105,7 +107,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def evalAsConstant(o: Option[Int]): Constant = {
-    o.map{Constant}.getOrElse{throw UnimplementedError("expression does not yield constant")}
+    o.map(Constant).getOrElse {
+      throw UnimplementedError("expression does not yield constant")
+    }
   }
 
   private def expr(node: Assignments): Option[Int] = {
@@ -135,16 +139,14 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  def unary(op: UnaryOp, v: Assignments): Option[Int] = {
+  def unary(op: UnaryOp, v: Assignments): Option[Int] =
     for {
       uv <- expr(v)
     } yield op.op(uv)
-  }
 
-  def binary(op: BinaryOp, l: Assignments, r: Assignments): Option[Int] = {
+  def binary(op: BinaryOp, l: Assignments, r: Assignments): Option[Int] =
     for {
       lv <- expr(l)
       rv <- expr(r)
     } yield op.op(lv, rv)
-  }
 }
