@@ -55,7 +55,7 @@ object tacToMips extends Stage {
       topLevel.local(main) match {
         case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid)))
           if topLevel.definition(main).isDefined =>
-            foldCode(context, Nil, tac)(topLevelStatements)(appendData)
+            foldCode(context, tac)(topLevelStatements)(appendData)
         case _ =>
           throw SemanticError(
             "function definition for `int main(void)` not found.")
@@ -64,32 +64,22 @@ object tacToMips extends Stage {
 
   private def topLevelStatements
     ( context: Context,
-      code: Goal,
       tac: Source
     ): MipsAcc = tac match {
-      case Function(id, body) :: stack =>
-        foldCode(context, Nil, body)(evalStatements){ (context,code,rest) =>
-          (context, Label(id) :: code.reverse, rest ++ stack)
-        }
+      case Function(id, body) :: rest =>
+        evalFunction(context, id, body, rest)
       case _ => (context, Nil, Nil)
     }
 
   private def evalStatements
     ( context: Context,
-      code: Goal,
       tac: Source
     ): MipsAcc = {
       tac match {
-        case Assignment(_, inner) :: rest => // please keep track of which temps contain vars
-          evalExpr(context, None, inner, Nil, rest)
-        case Temporary(inner) :: rest =>
-          evalExpr(context, None, inner, Nil, rest)
-        // case t @ Temporary(inner) if isAtomic(inner) =>
-        //   Nil
-        // case Assignment(id, inner) if isAtomic(inner) =>
-        //   Nil
-        // case r @ Return(inner :: Nil) if isAtomic(inner) =>
-        //   Nil
+        case Assignment(id, inner) :: rest =>
+          evalExpr(context, id, inner, None, Nil, rest)
+        case (t @ Temporary(inner)) :: rest =>
+          evalExpr(context, t, inner, None, Nil, rest)
         case _ :: rest => (context, Nil, rest) // yield rest, consume 1
         case Nil => (context, Nil, Nil) // yield none, consume 0
       }
@@ -97,46 +87,73 @@ object tacToMips extends Stage {
 
   private def evalExpr
     ( context: Context,
+      variable: Identifier | Temporary,
+      value: Statements,
       dest: Option[Register],
-      expr: Statements,
       stack: Stack,
-      tac: Source
+      rest: Source
     ): MipsAcc = {
-      (expr, dest) match {
+      (value, dest) match {
         case (c: Constant, None) =>
-          val advanced = context.advanceTemporary
-          val mips = Li(advanced.temporary, c)
-          (advanced, List(mips), tac)
-        case (Additive(op, _, _), None) => op match { // need to pass in stack of already generated code to reuse registers for binary op
-          case PLUS =>
-            (context, Nil, tac)
-          case MINUS =>
-            (context, Nil, tac)
-        }
+          evalConstant(context, variable, c, rest)
+        case (Additive(op, _, _), None) =>
+          evalAdditive(context, op, rest)
         case _ =>
-          (context, Nil, tac)
+          (context, Nil, rest)
       }
     }
 
+  private def evalFunction
+    ( context: Context,
+      id: Identifier,
+      body: Source,
+      rest: Source
+    ): MipsAcc =
+      foldCode(context, body)(evalStatements) { (context,code) =>
+        (context, Label(id) :: code.reverse, rest)
+      }
+
+  private def evalConstant
+    ( context: Context,
+      variable: Identifier | Temporary,
+      c: Constant,
+      rest: Source
+    ): MipsAcc = {
+      val advanced = context.advanceTemporary
+      val statement = Li(advanced.temporary, c)
+      (advanced, List(statement), rest)
+    }
+
+  private def evalAdditive
+    ( context: Context,
+      op: AdditiveOperators,
+      rest: Source
+    ): MipsAcc = op match { // need to pass in stack of already generated code to reuse registers for binary op
+      case PLUS =>
+        (context, Nil, rest)
+      case MINUS =>
+        (context, Nil, rest)
+    }
+
   private def foldCode[O]
-    ( acc: MipsAcc )
-    ( f: MipsAcc => MipsAcc )
-    ( finisher: MipsAcc => O
+    ( acc: (Context, Source) )
+    ( f: (Context, Source) => MipsAcc )
+    ( finisher: (Context, Goal) => O
     ) : O = {
-      var (contextAcc, codeAcc, restAcc) = acc
+      var (contextAcc, restAcc) = acc
+      var codeAcc: Goal = Nil
       while (!restAcc.isEmpty) {
-        val (context, code, rest) = f(contextAcc, codeAcc, restAcc)
+        val (context, code, rest) = f(contextAcc, restAcc)
         codeAcc = code ++ codeAcc
         restAcc = rest
         contextAcc = context
       }
-      finisher(contextAcc, codeAcc, restAcc)
+      finisher(contextAcc, codeAcc)
     }
   
   private def appendData
     ( context: Context,
-      code: Goal,
-      tac: Source
+      code: Goal
     ): (Context, Goal) = {
       val dataFinal: Goal =
         if (context.data.isEmpty)

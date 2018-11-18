@@ -20,10 +20,12 @@
 [x] interpret
 [ ] tac
     [ ] Normal form of function application using recursion
-        [ ] Return multiple lists from `parseCAst.statements` - One for each scope
+        [ ] Return multiple lists from `parseCAst.statements` - One for each
+            scope
         [ ] Add environment field to block and function
         [ ] Definition of func should be in scope for applications,
-            [ ] whole block must be examined first (bearing in mind forward declarations) 
+            [ ] whole block must be examined first (bearing in mind forward
+                declarations) 
     [ ] variables to be assigned at most once?
 [ ] run tac
 [ ] possible solution to global stack in mycc is to have a map that for
@@ -33,3 +35,5 @@
 [ ] specialised form of CAst to reduce match time
 [ ] bitset for used temp registers
 [ ] Type check as an interpreter step
+[ ] Need to encode in the current frame an id for each variable or temporary
+    so that its current register can be recorded
