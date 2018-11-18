@@ -4,7 +4,7 @@ GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
 BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
-GRAAL_CC = clang -I/Library/Java/JavaVirtualMachines/graalvm-ce-1.0.0-rc8/Contents/Home/jre/languages/llvm -O1 -emit-llvm
+GRAAL_CC = clang -I/Library/Java/JavaVirtualMachines/graalvm-ce-1.0.0-rc9/Contents/Home/jre/languages/llvm -O1 -emit-llvm
 LLVM_LINK = /usr/local/opt/llvm/bin/llvm-link
 TARGET = src/main/resources/mycclib
 CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.10/jars/dotty-library_0.10-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-0.10/classes/
@@ -17,13 +17,16 @@ pkg: ${TARGET}
 	sbt package
 
 parse:
-	${PARSER} 
+	${PARSER} -n -m -t
 
 run:
 	${PARSER} -i
 
+mips:
+	${PARSER} -m
+
 timed:
-	${PARSER} -t -i
+	${PARSER} -time -n -m -t
 
 boot: clean rm
 

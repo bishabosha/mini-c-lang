@@ -1,9 +1,5 @@
-int foo(int a, int b) {
-    return a + b;
-}
-
 int main(void) {
-    int a = 25;
-    int b = 30;
-    return foo(a, b);
+    int a = 3;
+    int b = 4;
+    return a + b;
 }

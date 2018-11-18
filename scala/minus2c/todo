@@ -31,3 +31,5 @@
 [ ] use node to make --C build server and replace main in Parser.scala
     [ ] or try to send C callbacks to scala
 [ ] specialised form of CAst to reduce match time
+[ ] bitset for used temp registers
+[ ] Type check as an interpreter step

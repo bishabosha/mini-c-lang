@@ -149,7 +149,7 @@ class astToNormal private (var context: Context) {
     foldArguments(List(v)) { mapAssignment(id) }
 
   private def mapAssignment
-    ( id: Identifier)
+    ( id: Identifier )
     ( args: List[Assignments],
       stack: Stack
     ): Stack =
@@ -177,13 +177,15 @@ class astToNormal private (var context: Context) {
       foldArgumentsNT(List(l, r)) { mapBinary(f, o) }
 
   private def foldArgumentsN[O >: StackVar]
-    (e: Expressions)
-    (f: (List[Assignments]) => O): List[O] =
+    ( e: Expressions )
+    ( f: (List[Assignments] ) => O
+    ): List[O] =
       foldArguments(e) { f(_) :: _ }
 
   private def foldArgumentsNT
-    (e: Expressions)
-    (f: (List[Assignments]) => Assignments): Stack =
+    ( e: Expressions )
+    ( f: (List[Assignments]) => Assignments
+    ): Stack =
       foldArgumentsN(e) { Temporary.compose(f) }
 
   private def mapUnary[Op <: UnaryOp, A >: Primary, O >: Assignments]
@@ -208,8 +210,9 @@ class astToNormal private (var context: Context) {
   
 
   private def foldArguments[A]
-    (ex: Expressions)
-    (fn: (List[Assignments], Stack) => A): A = {
+    ( ex: Expressions )
+    ( fn: (List[Assignments], Stack) => A
+    ): A = {
       val (args, repush, stack) =
         ex.map(tryReduce)
           .foldLeft(Nil, Nil, Nil) { mapArguments }
