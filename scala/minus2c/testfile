@@ -3,6 +3,5 @@ int main(void) {
     int a = 3 + 4 == 2, b = ---1 % 3;
     a = a == 56;
     int c;
-    c = c = a + b;
-    return c;
+    return (3 == 2, c, a + c);
 }

@@ -59,6 +59,10 @@ object printMips {
           twoAddr(move,indent)(_.dest,_.source)
         case add: Add =>
           threeAddr(add,indent)(_.dest,_.l,_.r)
+        case mul: Mul =>
+          threeAddr(mul,indent)(_.dest,_.l,_.r)
+        case div: Div =>
+          threeAddr(div,indent)(_.dest,_.l,_.r)
         case seq: Seq =>
           threeAddr(seq,indent)(_.dest,_.l,_.r)
         case _ => s"${indent}???$endl"
@@ -71,7 +75,7 @@ object printMips {
       r: O => Register | Constant
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
-      s"${indent}$name\t${registers(d(a))}\t${regOrConst(r(a))}$endl"
+      s"${indent}$name ${registers(d(a))}, ${regOrConst(r(a))}$endl"
     }
 
   def threeAddr[O]
@@ -82,7 +86,7 @@ object printMips {
       r: O => Register | Constant
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
-      s"${indent}$name\t${registers(d(a))}\t${registers(l(a))}\t${regOrConst(r(a))}$endl"
+      s"${indent}$name ${registers(d(a))}, ${registers(l(a))}, ${regOrConst(r(a))}$endl"
     }
 
   private def regOrConst(v: Any): String = v match {

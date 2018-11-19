@@ -26,9 +26,9 @@ class interpretAst private (var cursor: Cursor[Constant], nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
   private def evalProgram: Int = {
-    topLevel.local(main) match {
-      case Some(`mainFunc`)
-        if topLevel.definition(main).isDefined =>
+    topLevel.local(Std.mainIdentifier) match {
+      case Some(Std.`mainFunc`)
+        if topLevel.definition(Std.mainIdentifier).isDefined =>
           println("interpreting:")
           nodes.foldLeft(None: Option[Int]){ (code, statement) =>
             code.orElse(topLevelStatement(statement))
@@ -41,7 +41,7 @@ class interpretAst private (var cursor: Cursor[Constant], nodes: Goal) {
   }
 
   private def topLevelStatement(node: Statements): Option[Int] = node match {
-    case Function(id, body) if id == main =>
+    case Function(id, body) if id == Std.mainIdentifier =>
       stacked {
         body.foldLeft(None: Option[Int]){ (code, statement) =>
           code.orElse(evalStatement(statement))

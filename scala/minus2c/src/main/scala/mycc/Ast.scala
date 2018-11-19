@@ -8,7 +8,7 @@ import AdditiveOperators._
 import MultiplicativeOperators._
 
 enum Types {
-  case int, void, function
+  case Cint, Cvoid, Cfunction
 }
 
 import scala.language.implicitConversions
@@ -47,7 +47,7 @@ enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with
 }
 
 enum StorageTypes {
-  case auto, extern
+  case Auto, Extern
 }
 
 enum ArgList {

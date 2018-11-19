@@ -9,7 +9,23 @@ package object mycc {
   import scala.language.implicitConversions
   implicit def bool2Int(b: Boolean): Int = if (b) 1 else 0
 
-
-  val main = Identifier("main")
-  val mainFunc = Declaration(auto, int, FunctionDeclarator(main, LVoid))
+  object Std {
+    val mainIdentifier = Identifier("main")
+    val mainFunc =
+    Declaration(
+      Auto,
+      Cint,
+      FunctionDeclarator(mainIdentifier, LVoid)
+    )
+    val declarations = List[Declaration](
+      Declaration(
+        Extern,
+        Cvoid,
+        FunctionDeclarator(
+          Identifier("print_int"),
+          LParam(Vector(Cint -> Identifier("value")))
+        )
+      )
+    )
+  }
 }

@@ -4,6 +4,8 @@ import Ast._
 import ArgList._
 import astToNormal._
 import exception._
+import StorageTypes._
+import Types._
 
 object normalToTac extends Stage {
   type Source   = astToNormal.Goal
@@ -16,12 +18,11 @@ object normalToTac extends Stage {
 
 class normalToTac private (var cursor: Cursor[Nothing], nodes: Goal) {
   val topLevel: Bindings = cursor.current
-  val main = Identifier("main")
 
   private def goal: (Context, Goal) = {
-    topLevel.local(main) match {
-      case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid)))
-        if topLevel.definition(main).isDefined =>
+    topLevel.local(Std.mainIdentifier) match {
+      case Some(Std.`mainFunc`)
+        if topLevel.definition(Std.mainIdentifier).isDefined =>
           val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
             topLevelStatement(statement) ++ code
           }.reverse
@@ -35,7 +36,7 @@ class normalToTac private (var cursor: Cursor[Nothing], nodes: Goal) {
   }
 
   private def topLevelStatement(node: Statements): Goal = node match {
-    case Function(id, body) if id == main =>
+    case Function(id, body) if id == Std.mainIdentifier =>
       stacked {
         val validated = body
           .foldLeft(Nil: List[Statements]){ (code, statement) =>

@@ -38,9 +38,9 @@ object printAst {
         case Declaration(storage, types, declarator) =>
           declarator match {
             case Identifier(id) =>
-              s"$lvl${storageToString(storage)}$types $id;$endl"
+              s"$lvl${storageToString(storage)}${typesToString(types)} $id;$endl"
             case FunctionDeclarator(Identifier(id), args) =>
-              s"$lvl${storageToString(storage)}$types $id${getArgList(args)};$endl"
+              s"$lvl${storageToString(storage)}${typesToString(types)} $id${getArgList(args)};$endl"
           }
         case Assignment(Identifier(id), value) =>
           s"$lvl$id = ${exp(value)};$endl"
@@ -138,8 +138,14 @@ object printAst {
   private def inc(level: Int) = level + 2
 
   private def storageToString(s: StorageTypes) = s match {
-    case StorageTypes.auto => ""
+    case Auto => ""
     case _ => s"$s "
+  }
+
+  private def typesToString(s: Types) = s match {
+    case Cint => "int"
+    case Cvoid => "void"
+    case Cfunction => "function"
   }
 
   private def getLevel(l: Int): String = " " * l

@@ -15,19 +15,6 @@ import PartialFunctionConversions._
 import parseCAst._
 import scala.collection.mutable
 
-object Std {
-  val declarations = List[Declaration](
-    Declaration(
-      extern,
-      void,
-      FunctionDeclarator(
-        Identifier("print_int"),
-        LParam(Vector((int, Identifier("value"))))
-      )
-    )
-  )
-}
-
 object parseCAst extends Stage {
   type Source   = CAst
   type Context  = Bindings
@@ -143,7 +130,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private lazy val parameter: Parse[Parameter] =
     typesAndIdentifier |
     (types |
-      identifier ->> { int -> })
+      identifier ->> { Cint -> })
 
   private lazy val compoundStatements: Parse[List[Statements]] =
     block .L |
@@ -272,14 +259,14 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val storage: Parse[Storage] = {
-    case Singleton("extern") => Storage(extern)
-    case Singleton("auto") => Storage(auto)
+    case Singleton("extern") => Storage(Extern)
+    case Singleton("auto") => Storage(Auto)
   }
 
   private val `type`: Parse[Type] = {
-    case Singleton("int") => Type(int)
-    case Singleton("function") => Type(function)
-    case Singleton("void") => Type(void)
+    case Singleton("int") => Type(Cint)
+    case Singleton("function") => Type(Cfunction)
+    case Singleton("void") => Type(Cvoid)
   }
 
   private val functionDeclarator: Parse[FunctionDeclarator] = {
@@ -311,7 +298,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
           ) { functionDeclarator(declarator) }
         case declarator =>
           yieldDefinition(
-            (auto, int),
+            (Auto, Cint),
             bodyOp
           ) { functionDeclarator(declarator) }
       }
@@ -333,7 +320,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                   compoundStatements(b)
                 }
               }
-            if (declarators._2 != void) tailYieldsValue(bodyParsed)
+            if (declarators._2 != Cvoid) tailYieldsValue(bodyParsed)
             define {
               Function(i, bodyParsed.getOrElse { Nil })
             }
@@ -351,7 +338,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     for (p <- args) {
       p match {
         case (t: Types, i: Identifier) =>
-          declareInScope(i, auto, t, i)
+          declareInScope(i, Auto, t, i)
         case _ =>
       }
     }
@@ -414,13 +401,13 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
           declarationSpecifiers.partition(_.isInstanceOf[Storage])
         
       val storage: StorageTypes = storages match {
-        case Nil => auto
+        case Nil => Auto
         case (s: Storage) :: Nil => s.id
         case _ => throw SemanticError("More than one storage class may not be specified.")
       }
 
       val returnType: Types = types match {
-        case Nil => int // warning implicit return type 'int'
+        case Nil => Cint // warning implicit return type 'int'
         case (t: Type) :: Nil => t.id
         case _ => throw SemanticError("Invalid combination of type specifiers.")
       }
