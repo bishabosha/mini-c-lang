@@ -17,7 +17,7 @@ pkg: ${TARGET}
 	sbt package
 
 parse:
-	${PARSER} -n -m -t
+	${PARSER} -n -m -t -sep
 
 run:
 	${PARSER} -i
@@ -32,7 +32,7 @@ mips:
 	${PARSER} -m
 
 timed:
-	${PARSER} -time -n -m -t
+	${PARSER} -time -n -m -t -sep
 
 boot: clean rm
 

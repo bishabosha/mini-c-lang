@@ -48,15 +48,13 @@ enum TwoAddr {
   case Lw(dest: Register, source: Addresses)
   case La(dest: Register, source: Addresses)
   case Sw(source: Register, dest: Addresses)
+  case Not(dest: Register, r: Register | Constant)
+  case Neg(dest: Register, r: Register | Constant)
 }
 
 enum ThreeAddr {
-  case Addi(dest: Register, l: Register, r: Constant)
-  case Addiu(dest: Register, l: Register, r: Constant)
   case Add(dest: Register, l: Register, r: Register | Constant)
-  case Addu(dest: Register, l: Register, r: Register | Constant)
   case Sub(dest: Register, l: Register, r: Register | Constant)
-  case Subu(dest: Register, l: Register, r: Register | Constant)
   case Mul(dest: Register, l: Register, r: Register | Constant)
   case Div(dest: Register, l: Register, r: Register | Constant)
   case Rem(dest: Register, l: Register, r: Register | Constant)

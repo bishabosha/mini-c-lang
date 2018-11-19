@@ -12,6 +12,7 @@ object Parser {
     val doPrintNormal = args.contains("-n")
     val doPrintMips = args.contains("-m")
     val doPrintTac = args.contains("-t")
+    val doSeparate = args.contains("-sep")
     var old = 0L
     var newtim = 0L
     if (doTime) {
@@ -51,7 +52,9 @@ object Parser {
           old = newtim
         }
         if (doPrintNormal) {
-          println("code:")
+          if (doSeparate) {
+            println("code:")
+          }          
           printAst(context2, astFlattened)
           if (doTime) {
             newtim = System.currentTimeMillis
@@ -74,7 +77,9 @@ object Parser {
           old = newtim
         }
         if (doPrintTac) {
-          println("TAC:")
+          if (doSeparate) {
+            println("TAC:")
+          }
           printAst(context3, tac)
           if (doTime) {
             newtim = System.currentTimeMillis
@@ -89,7 +94,9 @@ object Parser {
           old = newtim
         }
         if (doPrintMips) {
-          println("MIPS:")
+          if (doSeparate) {
+            println("MIPS:")
+          }
           printMips(context4, mips)
           if (doTime) {
             newtim = System.currentTimeMillis

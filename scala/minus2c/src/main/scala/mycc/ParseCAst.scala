@@ -221,8 +221,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     case BinaryNode("%", left, right) => Multiplicative(MODULUS, multiplicatives(left), unaries(right))
   }
 
-  private val unary: Parse[Unary] = {
-    case UnaryNode("+", unary) => Unary(POSITIVE, unaries(unary))
+  private val unary: Parse[Unaries] = {
+    case UnaryNode("+", unary) => unaries(unary)
     case UnaryNode("-", unary) => Unary(NEGATIVE, unaries(unary))
     case UnaryNode("!", unary) => Unary(NOT, unaries(unary))
   }
