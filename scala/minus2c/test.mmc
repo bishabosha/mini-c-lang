@@ -361,3 +361,21 @@ int main(void) {
     int c;
     return (3 == 2, c, a + c);
 }
+
+int main(void) {
+    int a = 0, b = 0;
+    int c;
+    return (c = a + 1 / b);
+}
+
+int main(void) {
+    int a = 0, b = 0;
+    int c = (b = a + 1 / b);
+    return c;
+}
+
+int main(void) {
+    int a = 0, b = 0;
+    int c;
+    return (c = 2 + b / a,c = b = a + 1 / b);
+}

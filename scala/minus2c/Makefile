@@ -22,6 +22,12 @@ parse:
 run:
 	${PARSER} -i
 
+tac:
+	${PARSER} -t
+
+normal:
+	${PARSER} -n
+
 mips:
 	${PARSER} -m
 

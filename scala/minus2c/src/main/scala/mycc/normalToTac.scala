@@ -14,7 +14,7 @@ object normalToTac extends Stage {
     new normalToTac(Cursor(Nil, Map(), context), nodes).goal
 }
 
-class normalToTac private (var cursor: Cursor, nodes: Goal) {
+class normalToTac private (var cursor: Cursor[Nothing], nodes: Goal) {
   val topLevel: Bindings = cursor.current
   val main = Identifier("main")
 
@@ -25,25 +25,31 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
           val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
             topLevelStatement(statement) ++ code
           }.reverse
-          (topLevel, code) // TODO: replace topLevel with context.current once stacked pops off frame
+          (topLevel, code)
+          // TODO: replace topLevel with context.current once stacked pops off
+          // frame
       case _ =>
-        throw SemanticError("function definition for `int main(void)` not found.")
+        throw SemanticError(
+          "function definition for `int main(void)` not found.")
     }
   }
 
   private def topLevelStatement(node: Statements): Goal = node match {
     case Function(id, body) if id == main =>
       stacked {
-        val validated = body.foldLeft(Nil: List[Statements]){ (code, statement) =>
-         evalStatement(statement) ++ code
-        }.reverse
+        val validated = body
+          .foldLeft(Nil: List[Statements]){ (code, statement) =>
+            evalStatement(statement) ++ code
+          }.reverse
         List(Function(id, validated))
       }
     case _ => Nil
   }
 
   private def stacked[O](f: => List[O]): List[O] = {
-    cursor = cursor.next.getOrElse { throw new IllegalStateException("no child") }
+    cursor = cursor.next.getOrElse {
+      throw new IllegalStateException("no child")
+    }
     f
   }
 

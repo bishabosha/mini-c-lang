@@ -14,6 +14,7 @@ import tacToMips._
 import PseudoZero._
 import PseudoUnary._
 import TwoAddr._
+import ThreeAddr._
 import exception._
 
 object printMips {
@@ -48,15 +49,54 @@ object printMips {
           s"$i:$endl"
         case Word(w) =>
           s"$indent.word $w$endl"
-        case Li(reg, Constant(c)) =>
-          s"${indent}li ${registers(reg)} $c$endl"
+        case li: Li =>
+          twoAddr(li,indent)(_.dest,_.source)
+        case add: Add =>
+          threeAddr(add,indent)(_.dest,_.l,_.r)
+        case seq: Seq =>
+          threeAddr(seq,indent)(_.dest,_.l,_.r)
+        case move: Move =>
+          twoAddr(move,indent)(_.dest,_.source)
         case _ => s"${indent}???$endl"
       }
     }
 
-  private def registers(reg: Register): String = reg match {
+  def twoAddr[O]
+    ( a: O, indent: String)
+    ( d: O => Register,
+      r: O => Register | Constant
+    ): String = {
+      val name = a.getClass.getSimpleName.toLowerCase
+      s"${indent}$name ${registers(d(a))} ${regOrConst(r(a))}$endl"
+    }
+
+  def threeAddr[O]
+    ( a: O,
+      indent: String )
+    ( d: O => Register,
+      l: O => Register,
+      r: O => Register | Constant
+    ): String = {
+      val name = a.getClass.getSimpleName.toLowerCase
+      s"${indent}$name ${registers(d(a))} ${registers(l(a))} ${regOrConst(r(a))}$endl"
+    }
+
+  private def regOrConst(v: Any): String = v match {
+    case Constant(c) => c.toString
+    case _ => registers(v.asInstanceOf[Register])
+  }
+
+  private def registers(reg: Enum): String = reg match {
     case t: Temporaries =>
-      val num = Temporaries.enumValueNamed(t.toString).enumTag
-      s"$$t$num"
+      printEnum(Temporaries.enumValueNamed, t, "$t")
+    case s: SavedValues =>
+      printEnum(SavedValues.enumValueNamed, s, "$s")
+    case _ =>
+      "$?_"
+  }
+
+  def printEnum[E](e: Map[String,Enum], t: E, code: String) = {
+    val num = e(t.toString).enumTag
+      s"$code$num"
   }
 }

@@ -68,7 +68,7 @@ class astToNormal private (var context: Context) {
     expressionsImpl .R
 
   private lazy val expressionsImpl: FlattenO[Expressions, Stack] =
-    identity >>- tryReduce
+    identity >>- (tryReduce .R)
 
   private lazy val statements: Flatten[Statements] =
     block .L |

@@ -21,14 +21,13 @@ object interpretAst {
   }
 }
 
-class interpretAst private (var cursor: Cursor, nodes: Goal) {
+class interpretAst private (var cursor: Cursor[Constant], nodes: Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
-  val main = Identifier("main")
 
   private def evalProgram: Int = {
     topLevel.local(main) match {
-      case Some(Declaration(auto, int, FunctionDeclarator(`main`, LVoid)))
+      case Some(`mainFunc`)
         if topLevel.definition(main).isDefined =>
           println("interpreting:")
           nodes.foldLeft(None: Option[Int]){ (code, statement) =>
@@ -131,9 +130,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
       case StringLiteral(str) =>
         None
       case i: Identifier =>
-        cursor.value(i)
+        cursor.value(i).map(_.value)
       case t: Temporary =>
-        cursor.value(t)
+        cursor.value(t).map(_.value)
       case x =>
         throw UnexpectedAstNode(s"expression: ${x.toString}")
     }

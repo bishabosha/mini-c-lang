@@ -16,7 +16,7 @@ object printAst {
   private val endl = System.lineSeparator
 
   def apply(context: Bindings, nodes: List[Statements]): Unit =
-    print(astNode(context, nodes, inc(0)))
+    print(astNode(context, nodes, 0))
 
   private def astNode
     ( context: Bindings,
@@ -90,7 +90,7 @@ object printAst {
       }
     }
 
-  private def getId(t: Temporary): String = s"_${t.hashCode}".take(6)
+  private def getId(t: Temporary): String = ("_" + t.hashCode).take(6)
 
   private def getUnary(op: Operand, v: String): String =
     s"${op.symbol} $v"

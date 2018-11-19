@@ -52,10 +52,21 @@ enum TwoAddr {
 
 enum ThreeAddr {
   case Addi(dest: Register, l: Register, r: Constant)
-  case Add(dest: Register, l: Register, r: Register)
-  case Sub(dest: Register, l: Register, r: Register)
-  case Mul(dest: Register, l: Register, r: Register)
+  case Addiu(dest: Register, l: Register, r: Constant)
+  case Add(dest: Register, l: Register, r: Register | Constant)
+  case Addu(dest: Register, l: Register, r: Register | Constant)
+  case Sub(dest: Register, l: Register, r: Register | Constant)
+  case Subu(dest: Register, l: Register, r: Register | Constant)
+  case Mul(dest: Register, l: Register, r: Register | Constant)
+  case Div(dest: Register, l: Register, r: Register | Constant)
+  case Rem(dest: Register, l: Register, r: Register | Constant)
   case Beq(l: Register, r: Register, breakTo: Identifier)
+  case Seq(dest: Register, l: Register, r: Register | Constant)
+  case Sne(dest: Register, l: Register, r: Register | Constant)
+  case Slt(dest: Register, l: Register, r: Register | Constant)
+  case Sle(dest: Register, l: Register, r: Register | Constant)
+  case Sgt(dest: Register, l: Register, r: Register | Constant)
+  case Sge(dest: Register, l: Register, r: Register | Constant)
 }
 
 case class Label(id: Identifier)
