@@ -19,9 +19,13 @@ object interpretAst {
   def apply(context: Context, nodes: Goal): Unit = {
     println(s"exit code: ${new interpretAst(Cursor(Nil, Map(), context), nodes).evalProgram}")
   }
+
+  case class IdentKey(key: Key | Temporary) extends Cursor.Key {
+    type Value = Constant
+  }
 }
 
-class interpretAst private (var cursor: Cursor[Constant], nodes: Goal) {
+class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
 
@@ -102,7 +106,7 @@ class interpretAst private (var cursor: Cursor[Constant], nodes: Goal) {
   }
 
   private def addConstant(k: Key | Temporary, c: Constant): Unit = {
-     cursor += (k -> c)
+     cursor += (IdentKey(k), c)
   }
 
   private def evalAsConstant(o: Option[Int]): Constant = {
@@ -130,9 +134,9 @@ class interpretAst private (var cursor: Cursor[Constant], nodes: Goal) {
       case StringLiteral(str) =>
         None
       case i: Identifier =>
-        cursor.value(i).map(_.value)
+        cursor.value(IdentKey(i)).map(_.value)
       case t: Temporary =>
-        cursor.value(t).map(_.value)
+        cursor.value(IdentKey(t)).map(_.value)
       case x =>
         throw UnexpectedAstNode(s"expression: ${x.toString}")
     }

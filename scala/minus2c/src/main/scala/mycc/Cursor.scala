@@ -2,20 +2,26 @@ package mycc
 
 import Ast._
 
-case class Cursor[Values](
-  stack: List[Cursor[Values]],
-  values: Map[Key | Temporary, Values],
+object Cursor {
+  trait Key { type Value }
+}
+
+import Cursor._
+
+case class Cursor(
+  stack: List[Cursor],
+  values: Map[Cursor.Key, Any],
   current: Bindings
 ) {
-  def +(pair: (Key | Temporary, Values)): Cursor[Values] =
-    Cursor(stack, values + pair, current)
+  def +(key: Cursor.Key, value: key.Value): Cursor =
+    Cursor(stack, values + (key -> value), current)
 
-  def value(key: Key | Temporary): Option[Values] =
+  def value(key: Cursor.Key): Option[key.Value] =
     (this :: stack)
       .view
       .map(_.values.get(key))
-      .collectFirst { case Some(o) => o }
+      .collectFirst { case Some(o) => o.asInstanceOf[key.Value] }
 
-  def next: Option[Cursor[Values]] =
+  def next: Option[Cursor] =
     current.children.headOption.map { Cursor(this :: stack, Map(), _) }
 }

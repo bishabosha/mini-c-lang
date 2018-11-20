@@ -7,7 +7,7 @@ package object mycc {
   import ArgList._
 
   import scala.language.implicitConversions
-  implicit def bool2Int(b: Boolean): Int = if (b) 1 else 0
+  implicit def bool2Int(b: Boolean): Int = if b then 1 else 0
 
   object Std {
     val mainIdentifier = Identifier("main")

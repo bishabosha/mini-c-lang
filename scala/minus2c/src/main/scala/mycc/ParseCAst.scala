@@ -320,7 +320,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                   compoundStatements(b)
                 }
               }
-            if (declarators._2 != Cvoid) tailYieldsValue(bodyParsed)
+            if declarators._2 != Cvoid then tailYieldsValue(bodyParsed)
             define {
               Function(i, bodyParsed.getOrElse { Nil })
             }

@@ -16,7 +16,7 @@ object normalToTac extends Stage {
     new normalToTac(Cursor(Nil, Map(), context), nodes).goal
 }
 
-class normalToTac private (var cursor: Cursor[Nothing], nodes: Goal) {
+class normalToTac private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
   private def goal: (Context, Goal) = {

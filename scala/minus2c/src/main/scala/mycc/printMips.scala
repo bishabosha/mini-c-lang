@@ -72,7 +72,7 @@ object printMips {
   def twoAddr[O]
     ( a: O, indent: String)
     ( d: O => Register,
-      r: O => Register | Constant
+      r: O => Src
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
       s"${indent}$name ${registers(d(a))}, ${regOrConst(r(a))}$endl"
@@ -83,7 +83,7 @@ object printMips {
       indent: String )
     ( d: O => Register,
       l: O => Register,
-      r: O => Register | Constant
+      r: O => Src
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
       s"${indent}$name ${registers(d(a))}, ${registers(l(a))}, ${regOrConst(r(a))}$endl"

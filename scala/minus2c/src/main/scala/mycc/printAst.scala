@@ -116,7 +116,7 @@ object printAst {
     ): String = {
       var lvl: String = getLevel(level)
       var res = s"$lvl$name: {$endl"
-      if (!b.isEmpty)
+      if !b.isEmpty then
         res + astNode(context, b, inc(level)) + s"$lvl}$endl"
       else
         res + s"}$endl"
@@ -128,11 +128,10 @@ object printAst {
       level: Int
     ): String = {
       var lvl: String = getLevel(level)
-      if (b.isEmpty) {
+      if b.isEmpty then
         s"$lvl{}$endl"
-      } else {
-        s"$lvl{$endl${astNode(context, b, inc(level))}$lvl}$endl"      
-      }
+      else
+        s"$lvl{$endl${astNode(context, b, inc(level))}$lvl}$endl"
     }
 
   private def inc(level: Int) = level + 2

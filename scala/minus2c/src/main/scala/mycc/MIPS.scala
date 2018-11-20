@@ -3,6 +3,7 @@ package mycc
 import MIPS._
 
 object MIPS {
+  type Src = Register | Constant
   type Register = Results | Arguments | Temporaries | SavedValues | Trap | Misc
   type Addresses = OffsetAddress | Identifier
   type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero | PseudoUnary | Label
@@ -48,23 +49,23 @@ enum TwoAddr {
   case Lw(dest: Register, source: Addresses)
   case La(dest: Register, source: Addresses)
   case Sw(source: Register, dest: Addresses)
-  case Not(dest: Register, r: Register | Constant)
-  case Neg(dest: Register, r: Register | Constant)
+  case Not(dest: Register, r: Src)
+  case Neg(dest: Register, r: Src)
 }
 
 enum ThreeAddr {
   case Beq(l: Register, r: Register, breakTo: Identifier)
-  case Add(dest: Register, l: Register, r: Register | Constant)
-  case Sub(dest: Register, l: Register, r: Register | Constant)
-  case Mul(dest: Register, l: Register, r: Register | Constant)
-  case Div(dest: Register, l: Register, r: Register | Constant)
-  case Rem(dest: Register, l: Register, r: Register | Constant)
-  case Seq(dest: Register, l: Register, r: Register | Constant)
-  case Sne(dest: Register, l: Register, r: Register | Constant)
-  case Slt(dest: Register, l: Register, r: Register | Constant)
-  case Sle(dest: Register, l: Register, r: Register | Constant)
-  case Sgt(dest: Register, l: Register, r: Register | Constant)
-  case Sge(dest: Register, l: Register, r: Register | Constant)
+  case Add(dest: Register, l: Register, r: Src)
+  case Sub(dest: Register, l: Register, r: Src)
+  case Mul(dest: Register, l: Register, r: Src)
+  case Div(dest: Register, l: Register, r: Src)
+  case Rem(dest: Register, l: Register, r: Src)
+  case Seq(dest: Register, l: Register, r: Src)
+  case Sne(dest: Register, l: Register, r: Src)
+  case Slt(dest: Register, l: Register, r: Src)
+  case Sle(dest: Register, l: Register, r: Src)
+  case Sgt(dest: Register, l: Register, r: Src)
+  case Sge(dest: Register, l: Register, r: Src)
 }
 
 case class Label(id: Identifier)
@@ -79,27 +80,3 @@ enum PseudoUnary {
   case Globl(name: Identifier)
   case Asciiz(value: String)
 }
-
-object RegisterPattern {
-
-    object Registers {
-      def unapply(node: Any): Registers = new Registers(node)
-    }
-
-    class Registers(node: Any) {
-      def get: Register = node.asInstanceOf[Register]
-      def isEmpty = node match {
-        case _ @ (
-          _: Results
-        | _: Arguments
-        | _: Temporaries
-        | _: SavedValues
-        | _: Trap
-        | _: Misc
-        ) =>
-          false
-        case _ =>
-          true
-      }
-    }
-  }
