@@ -1,10 +1,11 @@
-val dottyVersion = "0.10.0-RC1"
+// val dottyVersion = "0.10.0-RC1"
+val dottyVersion = dottyLatestNightlyBuild.get
 val graalvmVersion = "1.0.0-rc9"
 
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "dotty-simple",
+    name := "minus2c",
     version := "0.1.0",
 
     scalaVersion := dottyVersion,

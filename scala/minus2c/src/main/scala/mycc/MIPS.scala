@@ -53,12 +53,12 @@ enum TwoAddr {
 }
 
 enum ThreeAddr {
+  case Beq(l: Register, r: Register, breakTo: Identifier)
   case Add(dest: Register, l: Register, r: Register | Constant)
   case Sub(dest: Register, l: Register, r: Register | Constant)
   case Mul(dest: Register, l: Register, r: Register | Constant)
   case Div(dest: Register, l: Register, r: Register | Constant)
   case Rem(dest: Register, l: Register, r: Register | Constant)
-  case Beq(l: Register, r: Register, breakTo: Identifier)
   case Seq(dest: Register, l: Register, r: Register | Constant)
   case Sne(dest: Register, l: Register, r: Register | Constant)
   case Slt(dest: Register, l: Register, r: Register | Constant)
@@ -79,3 +79,27 @@ enum PseudoUnary {
   case Globl(name: Identifier)
   case Asciiz(value: String)
 }
+
+object RegisterPattern {
+
+    object Registers {
+      def unapply(node: Any): Registers = new Registers(node)
+    }
+
+    class Registers(node: Any) {
+      def get: Register = node.asInstanceOf[Register]
+      def isEmpty = node match {
+        case _ @ (
+          _: Results
+        | _: Arguments
+        | _: Temporaries
+        | _: SavedValues
+        | _: Trap
+        | _: Misc
+        ) =>
+          false
+        case _ =>
+          true
+      }
+    }
+  }

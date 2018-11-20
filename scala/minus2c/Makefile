@@ -2,14 +2,15 @@ OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc mycc.bc
 SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mycc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
+DOTTY_VERSION = 0.11
 BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
 GRAAL_CC = clang -I/Library/Java/JavaVirtualMachines/graalvm-ce-1.0.0-rc9/Contents/Home/jre/languages/llvm -O1 -emit-llvm
 LLVM_LINK = /usr/local/opt/llvm/bin/llvm-link
 TARGET = src/main/resources/mycclib
-CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.10/jars/dotty-library_0.10-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-0.10/classes/
-JAR = target/scala-0.10/dotty-simple_0.10-0.1.0.jar
-PARSER = cat testfile | scala -cp ${CP} ${JAR}
+CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.10/jars/dotty-library_0.10-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-0.10/classes/:
+JAR = target/scala-${DOTTY_VERSION}/minus2c_${DOTTY_VERSION}-0.1.0.jar
+PARSER = cat testfile | dotr -cp ${CP}:${JAR} mycc.Parser
 
 all:  ${TARGET}
 
