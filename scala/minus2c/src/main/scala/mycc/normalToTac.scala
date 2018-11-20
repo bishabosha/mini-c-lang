@@ -13,16 +13,16 @@ object normalToTac extends Stage {
   type Goal     = List[Statements]
 
   def apply(context: Context, nodes: Source): (Context, Goal) =
-    new normalToTac(Cursor(Nil, Map(), context), nodes).goal
+    new normalToTac(Cursor.Empty.withBindings(context), nodes).goal
 }
 
 class normalToTac private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
   private def goal: (Context, Goal) = {
-    topLevel.local(Std.mainIdentifier) match {
+    local(Std.mainIdentifier,topLevel) match {
       case Some(Std.`mainFunc`)
-        if topLevel.definition(Std.mainIdentifier).isDefined =>
+        if definition(Std.mainIdentifier,topLevel).isDefined =>
           val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
             topLevelStatement(statement) ++ code
           }.reverse

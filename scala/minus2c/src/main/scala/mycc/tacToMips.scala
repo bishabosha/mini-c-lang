@@ -29,17 +29,21 @@ object tacToMips extends Stage {
   private type MipsAcc = (Context, Goal, Source)
   private type Stack = List[Assembler]
 
-  private type MipsFor[Op] =
-    PartialFunction[Op,(Register,Register,Src) => ThreeAddr]
+  private type BinaryArgs = (Register,Register,Src) => ThreeAddr
+  private type UnaryArgs = (Register,Src) => TwoAddr
 
-  private type MipsForUnary[Op] =
-    PartialFunction[Op,(Register,Src) => TwoAddr]
+  private type MipsFor[Op] = Op match {
+    case MultiplicativeOperators => PartialFunction[Op,BinaryArgs]
+    case AdditiveOperators => PartialFunction[Op,BinaryArgs]
+    case RelationalOperators => PartialFunction[Op,BinaryArgs]
+    case EqualityOperators => PartialFunction[Op,BinaryArgs]
+    case UnaryOperators => PartialFunction[Op,UnaryArgs]
+  }
 
-  def apply(context: normalToTac.Context, tac: Source): (Context, Goal) =
-    goal(MipsContext(Nil, Cursor(Nil, Map(), context), None, Set()), tac)
-
-  case class RegisterKey(key: Key | Temporary) extends Cursor.Key {
-    type Value = Register
+  def apply(context: normalToTac.Context, tac: Source): (Context, Goal) = {
+    val cursor = Cursor.Empty.withBindings(context)
+    val mipsContext = MipsContext(Nil, cursor, None, Set())
+    goal(mipsContext, tac)
   }
 
   case class MipsContext
@@ -51,7 +55,7 @@ object tacToMips extends Stage {
     ) {
       def advanceTemporary: MipsContext = {
         val temp = _temporary.map { t =>
-          if (t.enumTag == Temporaries.enumValue.size) {
+          if t.enumTag == Temporaries.enumValue.size then {
             throw SemanticError("Too many temporaries!")
           }
           Temporaries.enumValue(t.enumTag + 1)
@@ -64,7 +68,7 @@ object tacToMips extends Stage {
       def advanceSaved: (SavedValues, MipsContext) = {
         val savedValues = SavedValues.enumValues.toSet
         val newSet = savedValues &~ saved
-        if (newSet.isEmpty) {
+        if newSet.isEmpty then {
           throw SemanticError("Too many saved variables!")
         }
         val consumed = newSet.head
@@ -73,8 +77,10 @@ object tacToMips extends Stage {
 
       def temporary: Temporaries = _temporary.getOrElse { T0 }
 
-      def +(key: Key | Temporary, value: Register): MipsContext =
-        MipsContext(stack, cursor + (RegisterKey(key), value), _temporary, saved)
+      def +(key: Identifier | Temporary, value: Register): MipsContext = {
+        val updated = cursor + (RegisterKey(key), value)
+        MipsContext(stack, updated, _temporary, saved)
+      }
 
       def next: Option[MipsContext] = cursor.next.map {
         MipsContext(this :: stack, _, None, Set())
@@ -86,9 +92,9 @@ object tacToMips extends Stage {
       tac: normalToTac.Goal
     ): (Context, Goal) = {
       val topLevel = context.cursor.current
-      topLevel.local(Std.mainIdentifier) match {
+      local(Std.mainIdentifier, topLevel) match {
         case Some(Std.`mainFunc`)
-          if topLevel.definition(Std.mainIdentifier).isDefined =>
+          if definition(Std.mainIdentifier,topLevel).isDefined =>
             val (contextFinal, goal) =
               foldCode(context.next.get,tac)(topLevelStatements)(identity(_,_))
             (contextFinal, predef ++ goal)
@@ -118,9 +124,9 @@ object tacToMips extends Stage {
       }
 
   private def defineLocals(context: Context): Context =
-    context.cursor.current.seen.foldLeft(context) { (c, kv) =>
+    locals(context.cursor.current).foldLeft(context) { (c, kv) =>
       kv match {
-        case (i: Identifier, Declaration(_, _, _: Identifier)) => 
+        case Declaration(_, _, i: Identifier) => 
           val (register, advanced) = c.advanceSaved
           advanced + (i, register)
         case _ =>
@@ -215,17 +221,14 @@ object tacToMips extends Stage {
     ): MipsAcc = {
       val (dContext: MipsContext, dest: Register) =
         getRegisterOrTemporary(context,lvalue)
-
       val (lContext, lreg: Register, code, lRest) =
         getLeftBinaryVar(dContext)(larg)(rest)
-        
       val rreg: Src = rarg match {
         case r @ (_: Identifier | _: Temporary) =>
           getRegisterStrict(lContext, r)
         case c: Constant =>
           c
       }
-
       var statement: Goal = List(f(dest, lreg, rreg))
       (lContext, statement ++ code, lRest)
     }
@@ -270,7 +273,7 @@ object tacToMips extends Stage {
     case MODULUS => Rem
   }
 
-  private val unary: MipsForUnary[UnaryOperators] = {
+  private val unary: MipsFor[UnaryOperators] = {
     case NOT => Not
     case NEGATIVE => Neg
   }
@@ -320,7 +323,8 @@ object tacToMips extends Stage {
     ): Register =
       context.cursor.value(RegisterKey(lvalue))
         .getOrElse {
-          throw UnexpectedAstNode(s"unknown variable ${showLValue(lvalue)}")
+          val lStr = showLValue(lvalue)
+          throw UnexpectedAstNode(s"unknown variable $lStr")
         }
 
   private def showLValue(lvalue: Identifier | Temporary): String =

@@ -56,7 +56,6 @@ enum ArgList {
 }
 
 object Ast {
-  type Key = Identifier
   type Parameter = (Types, Identifier) | Types
   type Statements = Block | Declarations | Assignments | Return
   type Declarator = Identifier | FunctionDeclarator

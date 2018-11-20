@@ -15,90 +15,90 @@ object Parser {
     val doSeparate = args.contains("-sep")
     var old = 0L
     var newtim = 0L
-    if (doTime) {
+    if doTime then {
       old = System.currentTimeMillis
       println("START: N/A")
     }
     MyCCLib.set_debug(debug)
     MyCCLib.init_SymbTable()
-    if (doTime) {
+    if doTime then {
       newtim = System.currentTimeMillis
       println(s"GRAAL_CONTEXT_STARTUP: ${newtim - old}ms")
       old = newtim
     }
     for (t <- MyCCLib.getAst) {
       try {
-        if (doTime) {
+        if doTime then {
           newtim = System.currentTimeMillis
           println(s"LEXING_TIME: ${newtim - old}ms")
           old = newtim
         }
         val (cast, identPool) = MyCCLib.astToScala(t)
-        if (doTime) {
+        if doTime then {
           newtim = System.currentTimeMillis
           println(s"IMPORTING_TO_SCALA: ${newtim - old}ms")
           old = newtim
         }
         val (context, ast) = parseCAst(cast, identPool)
-        if (doTime) {
+        if doTime then {
           newtim = System.currentTimeMillis
           println(s"PARSE_CAST: ${newtim - old}ms")
           old = newtim
         }
         val (context2, astFlattened) = astToNormal(context, ast)
-        if (doTime) {
+        if doTime then {
           newtim = System.currentTimeMillis
           println(s"AST_TO_NORMAL: ${newtim - old}ms")
           old = newtim
         }
-        if (doPrintNormal) {
-          if (doSeparate) {
+        if doPrintNormal then {
+          if doSeparate then {
             println("code:")
           }          
           printAst(context2, astFlattened)
-          if (doTime) {
+          if doTime then {
             newtim = System.currentTimeMillis
             println(s"PRINTING_CODE: ${newtim - old}ms")
             old = newtim
           }
         }
-        if (doInterpret) {
+        if doInterpret then {
           interpretAst(context2, astFlattened)
-          if (doTime) {
+          if doTime then {
             newtim = System.currentTimeMillis
             println(s"INTERPRETING NORMAL: ${newtim - old}ms")
             old = newtim
           }
         }
         val (context3, tac) = normalToTac(context2, astFlattened)
-        if (doTime) {
+        if doTime then {
           newtim = System.currentTimeMillis
           println(s"NORMAL_TO_TAC: ${newtim - old}ms")
           old = newtim
         }
-        if (doPrintTac) {
-          if (doSeparate) {
+        if doPrintTac then {
+          if doSeparate then {
             println("TAC:")
           }
           printAst(context3, tac)
-          if (doTime) {
+          if doTime then {
             newtim = System.currentTimeMillis
             println(s"PRINTING_TAC: ${newtim - old}ms")
             old = newtim
           }
         }
         val (context4, mips) = tacToMips(context3, tac)
-        if (doTime) {
+        if doTime then {
           newtim = System.currentTimeMillis
           println(s"TAC_TO_MIPS: ${newtim - old}ms")
           old = newtim
         }
-        if (doPrintMips) {
-          if (doSeparate) {
+        if doPrintMips then {
+          if doSeparate then {
             println("MIPS:")
           }
           printMips(context4, mips)
-          if (doTime) {
+          if doTime then {
             newtim = System.currentTimeMillis
             println(s"PRINT_MIPS: ${newtim - old}ms")
             old = newtim

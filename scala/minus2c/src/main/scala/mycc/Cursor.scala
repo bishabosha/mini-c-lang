@@ -1,27 +1,20 @@
 package mycc
 
-import Ast._
-
-object Cursor {
-  trait Key { type Value }
-}
-
 import Cursor._
 
-case class Cursor(
-  stack: List[Cursor],
-  values: Map[Cursor.Key, Any],
-  current: Bindings
-) {
-  def +(key: Cursor.Key, value: key.Value): Cursor =
-    Cursor(stack, values + (key -> value), current)
+object Cursor {
+  val Empty = new Cursor(Nil, Bindings.Empty)
+}
 
-  def value(key: Cursor.Key): Option[key.Value] =
-    (this :: stack)
-      .view
-      .map(_.values.get(key))
-      .collectFirst { case Some(o) => o.asInstanceOf[key.Value] }
+class Cursor private (stack: List[Cursor], val current: Bindings) {
+  def +(key: Bindings.Key, value: key.Value): Cursor =
+    new Cursor(stack, current + (key, value))
+
+  def value(key: Bindings.Key): Option[key.Value] =
+    current.genSearch(key)
 
   def next: Option[Cursor] =
-    current.children.headOption.map { Cursor(this :: stack, Map(), _) }
+    current.firstChild.map { new Cursor(this :: stack, _) }
+
+  def withBindings(bindings: Bindings) = new Cursor(stack, bindings)
 }

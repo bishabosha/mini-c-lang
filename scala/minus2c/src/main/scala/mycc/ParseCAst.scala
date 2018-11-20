@@ -28,7 +28,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
-  private var context: Context = Bindings.withSeen(Bindings.extractFrom(Std.declarations))
+  private var context: Context = Bindings.withSeen(extractDeclarations(Std.declarations))
 
   private lazy val goal: Parse[(Context, Goal)] =
     translationUnit ->> { context -> _ }
@@ -328,7 +328,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     }
 
   private def stacked[A](parser: => A): A = {
-    context = context.stack
+    context = context.stacked
     val result = parser
     context = context.popOrElse { Bindings.Empty }
     result
@@ -350,7 +350,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       types: Types,
       declarator: Declarator
     ): Option[Declaration] = {
-      for (Declaration(s, t, existing) <- context.local(identifier)) existing match {
+      for (Declaration(s, t, existing) <- local(identifier,context)) existing match {
         case _: Identifier => declarator match {
           case _: FunctionDeclarator =>
             throw new SemanticError(s"Redefinition of '${identifier.id}' as a function type.")
@@ -359,7 +359,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
         }
         case _: FunctionDeclarator => declarator match {
           case f: FunctionDeclarator =>
-            if (existing == f && s == storage && t == types) {
+            if existing == f && s == storage && t == types then {
               return None
             } else {
               throw new SemanticError(s"Redefinition of function '${identifier.id}' with incompatible types.")
@@ -369,19 +369,19 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
         }
       }
       val declaration = Declaration(storage, types, declarator)
-      context = context + (identifier -> declaration)
+      context = declareIn(identifier, declaration, context)
       Some(declaration)
     }
 
   private def define(f: => Function): Function = {
     val definition = f
-    context = context.define(definition.id -> definition)
+    context = defineIn(definition.id, definition, context)
     definition
   }
 
   private def existsInScope[A](get: A => Identifier): A => Unit =
     get.andThen { ident =>
-      if (!context.scope(ident).isDefined) {
+      if !scope(ident,context).isDefined then {
         throw SemanticError(s"Identifier '${ident.id}' is undefined")
       }
     }

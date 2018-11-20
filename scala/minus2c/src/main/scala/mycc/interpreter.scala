@@ -17,10 +17,12 @@ import scala.util.Random
 object interpretAst {
 
   def apply(context: Context, nodes: Goal): Unit = {
-    println(s"exit code: ${new interpretAst(Cursor(Nil, Map(), context), nodes).evalProgram}")
+    val cursor = Cursor.Empty.withBindings(context)
+    val exitCode = new interpretAst(cursor, nodes).evalProgram
+    println(s"exit code: $exitCode")
   }
 
-  case class IdentKey(key: Key | Temporary) extends Cursor.Key {
+  case class IdentKey(key: Identifier | Temporary) extends Bindings.Key {
     type Value = Constant
   }
 }
@@ -30,9 +32,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
   private def evalProgram: Int = {
-    topLevel.local(Std.mainIdentifier) match {
+    local(Std.mainIdentifier,topLevel) match {
       case Some(Std.`mainFunc`)
-        if topLevel.definition(Std.mainIdentifier).isDefined =>
+        if definition(Std.mainIdentifier, topLevel).isDefined =>
           println("interpreting:")
           nodes.foldLeft(None: Option[Int]){ (code, statement) =>
             code.orElse(topLevelStatement(statement))
@@ -97,15 +99,15 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  private def addValue(k: Key | Temporary, v: Assignments): Unit = {
+  private def addValue(k: Identifier | Temporary, v: Assignments): Unit = {
     addConstant(k, evalAsConstant(expr(v)))
   }
 
-  private def addRandom(k: Key | Temporary): Unit = {
+  private def addRandom(k: Identifier | Temporary): Unit = {
      addConstant(k, Constant(random.nextInt))
   }
 
-  private def addConstant(k: Key | Temporary, c: Constant): Unit = {
+  private def addConstant(k: Identifier | Temporary, c: Constant): Unit = {
      cursor += (IdentKey(k), c)
   }
 
