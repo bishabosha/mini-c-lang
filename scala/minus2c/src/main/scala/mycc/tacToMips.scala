@@ -8,6 +8,9 @@ import PseudoZero._
 import PseudoUnary._
 import MIPS._
 import Temporaries._
+import Misc._
+import Results._
+import OneAddr._
 import TwoAddr._
 import ThreeAddr._
 import AdditiveOperators._
@@ -17,6 +20,7 @@ import MultiplicativeOperators._
 import UnaryOperators._
 import StorageTypes._
 import Types._
+import PartialFunctionConversions._
 import scala.collection.mutable
 
 object tacToMips extends Stage {
@@ -26,7 +30,7 @@ object tacToMips extends Stage {
 
   private val predef = List(Globl(Std.mainIdentifier), Text): Goal
 
-  private type MipsAcc = (Context, Goal, Source)
+  private type MipsAcc = (Source, Context, Goal)
   private type Stack = List[Assembler]
 
   private type BinaryArgs = (Register,Register,Src) => ThreeAddr
@@ -96,7 +100,7 @@ object tacToMips extends Stage {
         case Some(Std.`mainFunc`)
           if definition(Std.mainIdentifier,topLevel).isDefined =>
             val (contextFinal, goal) =
-              foldCode(context.next.get,tac)(topLevelStatements)(identity(_,_))
+              foldCode(topLevelStatements)(context.next.get,tac)(identity(_,_))
             (contextFinal, predef ++ goal)
         case _ =>
           throw SemanticError(
@@ -109,18 +113,18 @@ object tacToMips extends Stage {
       tac: Source
     ): MipsAcc = tac match {
       case Function(id, body) :: rest =>
-        evalFunction(context, id, body, rest)
-      case _ => (context, Nil, Nil)
+        evalFunction(context,rest)(id, body)
+      case _ => (Nil, context, Nil)
     }
 
   private def evalFunction
     ( context: Context,
-      id: Identifier,
+      tac: Source )
+    ( id: Identifier,
       body: Source,
-      rest: Source
     ): MipsAcc =
-      foldCode(defineLocals(context),body)(evalStatements) {
-        (context,code) => (context,Label(id) :: code.reverse,rest)
+      foldCode(evalStatements)(defineLocals(context),body) {
+        (context,code) => (tac, context, Label(id) :: code.reverse)
       }
 
   private def defineLocals(context: Context): Context =
@@ -139,116 +143,67 @@ object tacToMips extends Stage {
       tac: Source
     ): MipsAcc = tac match {
       case Assignment(id, inner) :: rest =>
-        assignExpr(context, id, inner, rest)
-      case (t @ Temporary(inner)) :: rest =>
-        assignExpr(context, t, inner, rest)
-      case _ :: rest => (context, Nil, rest) // yield rest, consume 1
-      case Nil => (context, Nil, Nil) // yield none, consume 0
+        rest *:
+          assignExpr(getRegisterElse(assignTemporary)(context,id),inner)
+      case (temp @ Temporary(inner)) :: rest =>
+        rest *:
+          assignExpr(getRegisterElse(assignTemporary)(context,temp),inner)
+      case Return(List(expr: Assignments, _: _*)) :: rest =>
+        val (tContext: Context, code: Goal) =
+          assignExpr((context, V0),expr)
+        rest *: (tContext, Jr(Ra) :: code)
+      case _ :: rest => rest *: (context, Nil) // yield rest, consume 1
+      case Nil => Nil *: (context, Nil) // yield none
     }
 
+  import AssignmentsPattern._
   private def assignExpr
-    ( context: Context,
-      lvalue: Identifier | Temporary,
-      value: Statements,
-      rest: Source
-    ): MipsAcc = value match {
-      case c: Constant =>
-        assignOpUnaryConstant(context)(lvalue,c)(rest)(Li)
-      case v @ (_: Identifier | _: Temporary) =>
-        assignOpUnary(context)(lvalue,v)(rest)(Move)
-      case Additive(op,
-        l @ (_: Identifier | _: Temporary | _: Constant),
-        r @ (_: Identifier | _: Temporary | _: Constant)
-      ) =>
-        assignOpBinary(context)(lvalue,l,r)(rest)(additive(op))
-      case Equality(op,
-        l @ (_: Identifier | _: Temporary | _: Constant),
-        r @ (_: Identifier | _: Temporary | _: Constant)
-      ) =>
-        assignOpBinary(context)(lvalue,l,r)(rest)(equality(op))
-      case Relational(op,
-        l @ (_: Identifier | _: Temporary | _: Constant),
-        r @ (_: Identifier | _: Temporary | _: Constant)
-      ) =>
-        assignOpBinary(context)(lvalue,l,r)(rest)(relational(op))
-      case Multiplicative(op,
-        l @ (_: Identifier | _: Temporary | _: Constant),
-        r @ (_: Identifier | _: Temporary | _: Constant)
-      ) =>
-        assignOpBinary(context)(lvalue,l,r)(rest)(multiplicative(op))
-      case Unary(op,
-        r @ (_: Identifier | _: Temporary)
-      ) =>
-        assignOpUnary(context)(lvalue,r)(rest)(unary(op))
-      case _ =>
-        (context, Nil, rest)
-    }
-
-  private def assignOpUnaryConstant
-    ( context: Context )
-    ( lvalue: Identifier | Temporary,
-      c: Constant )
-    ( rest: Source )
-    ( f: (Register, Constant) => TwoAddr
-    ): MipsAcc = {
-        val (dContext: MipsContext, dest: Register) =
-          getRegisterOrTemporary(context,lvalue)
-        val statement = f(dest, c)
-        (dContext, List(statement), rest)
-      }
-
-  private def assignOpUnary
-    ( context: Context )
-    ( lvalue: Identifier | Temporary,
-      rarg: Identifier | Temporary )
-    ( rest: Source )
-    ( f: (Register, Register) => TwoAddr
-    ): MipsAcc = {
-        val (dContext: MipsContext, dest: Register) =
-          getRegisterOrTemporary(context,lvalue)
-        val rreg = getRegisterStrict(dContext,rarg)
-        val statement = f(dest,rreg)
-        (dContext, List(statement), rest)
-      }
-
-  private def assignOpBinary
-    ( context: Context )
-    ( lvalue: Identifier | Temporary,
-      larg: Identifier | Temporary | Constant,
-      rarg: Identifier | Temporary | Constant )
-    ( rest: Source )
-    ( f: (Register, Register, Src) => ThreeAddr
-    ): MipsAcc = {
-      val (dContext: MipsContext, dest: Register) =
-        getRegisterOrTemporary(context,lvalue)
-      val (lContext, lreg: Register, code, lRest) =
-        getLeftBinaryVar(dContext)(larg)(rest)
-      val rreg: Src = rarg match {
-        case r @ (_: Identifier | _: Temporary) =>
-          getRegisterStrict(lContext, r)
+    ( contextDest: (Context, Register), 
+      value: Statements
+    ): (Context, Goal) = {
+      val (context: Context, dest: Register) = contextDest
+      value match {
         case c: Constant =>
-          c
+          (context,List(Li(dest,c)))
+        case v @ (_: Identifier | _: Temporary) =>
+          val src = getRegister(context,v)
+          (context,List(Move(dest,src)))
+        case Unary(op, r @ (_: Identifier | _: Temporary)) =>
+          val src = getRegister(context,r)
+          (context,List(unary(op)(dest,src)))
+        case Binary(op,
+          l @ (_: Identifier | _: Temporary | _: Constant),
+          r @ (_: Identifier | _: Temporary | _: Constant)
+        ) =>
+          val rarg: Src = r match {
+            case r @ (_: Identifier | _: Temporary) =>
+              getRegister(context, r)
+            case c: Constant =>
+              c
+          }
+          l match {
+            case variable @ (_: Identifier | _: Temporary) =>
+              val lreg = getRegister(context, variable)
+              val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
+              (context, List(result))
+            case c: Constant =>
+              val temp = Temporary(c)
+              val (tContext, treg: Register) = assignTemporary(context, temp)
+              val loadTemp: Assembler = Li(treg,c)
+              val result: Assembler = binaryOperators(op)(dest, treg, rarg)
+              (tContext, List(loadTemp, result))
+          }          
+        case _ =>
+          (context, Nil)
       }
-      var statement: Goal = List(f(dest, lreg, rreg))
-      (lContext, statement ++ code, lRest)
     }
 
-  private def getLeftBinaryVar
-    ( context: Context )
-    ( larg: Identifier | Temporary | Constant)
-    ( rest: Source
-    ): (Context, Register, Goal, Source) =
-      larg match {
-        case l @ (_: Identifier | _: Temporary) =>
-          val lreg = getRegisterStrict(context,l)
-          (context, lreg, Nil, rest)
-        case l: Constant =>
-          val tempL = Temporary(l)
-          val (tempContext,code,tempRest) =
-            assignOpUnaryConstant(context)(tempL,l)(rest)(Li)
-          val lreg = getRegisterStrict(tempContext,tempL)
-          (tempContext, lreg, code, rest)
-      }
+  private def binaryOperators(op: BinaryOp): BinaryArgs = op match {
+    case ad: AdditiveOperators => additive(ad)
+    case mu: MultiplicativeOperators => multiplicative(mu)
+    case re: RelationalOperators => relational(re)
+    case eq: EqualityOperators => equality(eq)
+  }
 
   private val additive: MipsFor[AdditiveOperators] = {
     case PLUS => Add
@@ -279,14 +234,16 @@ object tacToMips extends Stage {
   }
 
   private def foldCode[O]
-    ( acc: (Context, Source) )
     ( f: (Context, Source) => MipsAcc )
+    ( context: Context,
+      rest: Source )
     ( finisher: (Context, Goal) => O
     ): O = {
-      var (contextAcc, restAcc) = acc
+      var contextAcc = context
+      var restAcc = rest
       var codeAcc: Goal = Nil
       while (!restAcc.isEmpty) {
-        val (context, code, rest) = f(contextAcc, restAcc)
+        val (rest, context, code) = f(contextAcc, restAcc)
         codeAcc = code ++ codeAcc
         restAcc = rest
         contextAcc = context
@@ -295,19 +252,26 @@ object tacToMips extends Stage {
     }
 
   private def compose(l: Goal, r: MipsAcc): MipsAcc = {
-    var (contextR, codeR, restR) = r
-    (contextR, codeR ++ l, restR)
+    var (contextR, restR, codeR) = r
+    (contextR, restR, codeR ++ l)
   }
-  
-  private def getRegisterOrTemporary
+
+  private def getRegisterElse
+    ( f: (Context, Identifier | Temporary) => (Context, Register) )
     ( context: Context,
       lvalue: Identifier | Temporary
     ): (Context, Register) =
       context.cursor.value(RegisterKey(lvalue))
         .map((context,_))
         .getOrElse {
-          assignTemporary(context,lvalue)
+          f(context,lvalue)
         }
+
+  private def getRegister
+    ( context: Context,
+      lvalue: Identifier | Temporary
+    ): Register =
+      context.cursor.value(RegisterKey(lvalue)).getOrElse(unexpected(lvalue))
   
   private def assignTemporary
     ( context: Context,
@@ -317,15 +281,10 @@ object tacToMips extends Stage {
       (advanced + (lvalue, advanced.temporary), advanced.temporary)
     }
 
-  private def getRegisterStrict
-    ( context: Context,
-      lvalue: Identifier | Temporary
-    ): Register =
-      context.cursor.value(RegisterKey(lvalue))
-        .getOrElse {
-          val lStr = showLValue(lvalue)
-          throw UnexpectedAstNode(s"unknown variable $lStr")
-        }
+  private def unexpected(lvalue: Identifier | Temporary): Nothing = {
+    val lStr = showLValue(lvalue)
+    throw UnexpectedAstNode(s"unknown variable $lStr")
+  }
 
   private def showLValue(lvalue: Identifier | Temporary): String =
     lvalue match {

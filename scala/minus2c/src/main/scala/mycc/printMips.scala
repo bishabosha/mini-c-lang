@@ -11,8 +11,10 @@ import UnaryOperators._
 import ArgList._
 import MIPS._
 import tacToMips._
+import Misc._
 import PseudoZero._
 import PseudoUnary._
+import OneAddr._
 import TwoAddr._
 import ThreeAddr._
 import exception._
@@ -49,6 +51,8 @@ object printMips {
           s"$i:$endl"
         case Word(w) =>
           s"$indent.word $w$endl"
+        case jr: Jr =>
+          oneAddr(jr,indent)(_.dest)
         case li: Li =>
           twoAddr(li,indent)(_.dest,_.source)
         case neg: Neg =>
@@ -67,6 +71,14 @@ object printMips {
           threeAddr(seq,indent)(_.dest,_.l,_.r)
         case _ => s"${indent}???$endl"
       }
+    }
+
+  def oneAddr[O]
+    ( a: O, indent: String)
+    ( r: O => Src,
+    ): String = {
+      val name = a.getClass.getSimpleName.toLowerCase
+      s"${indent}$name ${regOrConst(r(a))}$endl"
     }
 
   def twoAddr[O]
@@ -99,6 +111,10 @@ object printMips {
       printEnum(Temporaries.enumValueNamed, t, "$t")
     case s: SavedValues =>
       printEnum(SavedValues.enumValueNamed, s, "$s")
+    case r: Results =>
+      printEnum(Results.enumValueNamed, r, "$v")
+    case Ra =>
+      "$ra"
     case _ =>
       "$?_"
   }

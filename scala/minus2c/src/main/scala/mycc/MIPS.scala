@@ -80,3 +80,36 @@ enum PseudoUnary {
   case Globl(name: Identifier)
   case Asciiz(value: String)
 }
+
+object AssignmentsPattern {
+  import Ast._
+  class Binary
+    ( op: BinaryOp,
+      l: Assignments,
+      r: Assignments
+    ) extends Product {
+      def _1 = op
+      def _2 = l
+      def _3 = r
+
+      // Not used by pattern matching: Product is only used as a marker trait.
+      def canEqual(that: Any): Boolean = ???
+      def productArity: Int = ???
+      def productElement(n: Int): Any = ???
+    }
+
+  object Binary {
+    def unapply
+      ( node: Multiplicative | Additive | Relational | Equality
+      ): Binary = node match {
+        case Multiplicative(op,l,r) =>
+          new Binary(op,l,r)
+        case Additive(op,l,r) =>
+          new Binary(op,l,r)
+        case Relational(op,l,r) =>
+          new Binary(op,l,r)
+        case Equality(op,l,r) =>
+          new Binary(op,l,r)
+      }
+  }
+}
