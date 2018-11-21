@@ -38,9 +38,9 @@ enum ZeroAddr {
 }
 
 enum OneAddr {
-  case Jal(dest: Identifier)
+  case Jal(dest: Label)
   case Jr(dest: Register)
-  case J(dest: Identifier)
+  case J(dest: Label)
 }
 
 enum TwoAddr {
@@ -79,6 +79,7 @@ enum PseudoUnary {
   case Word(size: Int)
   case Globl(name: Identifier)
   case Asciiz(value: String)
+  case Comment(msg: String)
 }
 
 object AssignmentsPattern {

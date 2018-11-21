@@ -14,6 +14,7 @@ import tacToMips._
 import Misc._
 import PseudoZero._
 import PseudoUnary._
+import ZeroAddr._
 import OneAddr._
 import TwoAddr._
 import ThreeAddr._
@@ -43,6 +44,8 @@ object printMips {
       node match {
         case Text =>
           s"$indent.text$endl"
+        case Comment(msg) =>
+          s"# $msg$endl"
         case Data =>
           s"$indent.data$endl"
         case Globl(Identifier(id)) =>
@@ -51,6 +54,10 @@ object printMips {
           s"$i:$endl"
         case Word(w) =>
           s"$indent.word $w$endl"
+        case Syscall =>
+          s"${indent}syscall$endl"
+        case jal: Jal =>
+          oneAddr(jal,indent)(_.dest)
         case jr: Jr =>
           oneAddr(jr,indent)(_.dest)
         case li: Li =>
@@ -63,19 +70,29 @@ object printMips {
           twoAddr(move,indent)(_.dest,_.source)
         case add: Add =>
           threeAddr(add,indent)(_.dest,_.l,_.r)
+        case sub: Sub =>
+          threeAddr(sub,indent)(_.dest,_.l,_.r)
         case mul: Mul =>
           threeAddr(mul,indent)(_.dest,_.l,_.r)
         case div: Div =>
           threeAddr(div,indent)(_.dest,_.l,_.r)
         case seq: Seq =>
           threeAddr(seq,indent)(_.dest,_.l,_.r)
+        case sle: Sle =>
+          threeAddr(sle,indent)(_.dest,_.l,_.r)
+        case slt: Slt =>
+          threeAddr(slt,indent)(_.dest,_.l,_.r)
+        case sgt: Sgt =>
+          threeAddr(sgt,indent)(_.dest,_.l,_.r)
+        case sge: Sge =>
+          threeAddr(sge,indent)(_.dest,_.l,_.r)
         case _ => s"${indent}???$endl"
       }
     }
 
   def oneAddr[O]
     ( a: O, indent: String)
-    ( r: O => Src,
+    ( r: O => Src | Label,
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
       s"${indent}$name ${regOrConst(r(a))}$endl"
@@ -103,6 +120,7 @@ object printMips {
 
   private def regOrConst(v: Any): String = v match {
     case Constant(c) => c.toString
+    case Label(Identifier(i)) => i
     case _ => registers(v.asInstanceOf[Register])
   }
 
@@ -113,6 +131,8 @@ object printMips {
       printEnum(SavedValues.enumValueNamed, s, "$s")
     case r: Results =>
       printEnum(Results.enumValueNamed, r, "$v")
+    case a: Arguments =>
+      printEnum(Arguments.enumValueNamed, a, "$a")
     case Ra =>
       "$ra"
     case _ =>

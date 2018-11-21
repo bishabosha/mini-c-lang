@@ -225,7 +225,7 @@ class astToNormal private (var context: Context) {
     acc match {
       case (args, repush, stack) =>
         argStack match {
-          case Temporary(c) :: (rest: Stack) if isPrimary(c) =>
+          case Temporary(c @ Primary()) :: (rest: Stack) =>
             (args :+ c, repush, rest ++ stack)
           case s :: (rest: Stack) =>
             (args :+ arg(s), s :: repush, rest ++ stack)
@@ -234,9 +234,8 @@ class astToNormal private (var context: Context) {
         }
     }
 
-  private def isPrimary(assignments: Assignments): Boolean = assignments match {
-    case _: Constant | _: Identifier | _: StringLiteral => true
-    case _ => false
+  object Primary {
+    def unapply(foo: Constant | Identifier | StringLiteral): Boolean = true
   }
 
   private val assignment: FlattenO[Assignments, Assignment] = {

@@ -36,13 +36,13 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def topLevelStatement(node: Statements): Goal = node match {
-    case Function(id, body) if id == Std.mainIdentifier =>
+    case Function(Std.`mainIdentifier`, body) =>
       stacked {
         val validated = body
           .foldLeft(Nil: List[Statements]){ (code, statement) =>
             evalStatement(statement) ++ code
           }.reverse
-        List(Function(id, validated))
+        List(Function(Std.mainIdentifier, validated))
       }
     case _ => Nil
   }
@@ -55,38 +55,18 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def evalStatement(node: Statements): Goal = {
+    import Atomic._
     node match {
       case d: Declaration =>
         List(d)
-      case t @ Temporary(inner) if isAtomic(inner) =>
+      case t @ Temporary(Atomic()) =>
         List(t)
-      case a @ Assignment(_, inner) if isAtomic(inner) =>
+      case a @ Assignment(_, Atomic()) =>
         List(a)
-      case r @ Return(inner :: Nil) if isAtomic(inner) =>
+      case r @ Return(Atomic() :: Nil) =>
         List(r)
       case _ =>
         List()
-    }
-  }
-
-  private def isAtomic(node: Assignments): Boolean = {
-    node match {
-      case v @ (
-        _: Equality
-      | _: Relational
-      | _: Additive
-      | _: Multiplicative
-      | _: Unary
-      | _: Constant
-      | _: StringLiteral
-      | _: Identifier
-      | _: Relational
-      ) =>
-        true
-      case Temporary(t) if isAtomic(t) =>
-        true
-      case _ =>
-        false
     }
   }
 }

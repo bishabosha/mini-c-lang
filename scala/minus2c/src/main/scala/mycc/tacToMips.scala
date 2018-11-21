@@ -9,7 +9,9 @@ import PseudoUnary._
 import MIPS._
 import Temporaries._
 import Misc._
+import Arguments._
 import Results._
+import ZeroAddr._
 import OneAddr._
 import TwoAddr._
 import ThreeAddr._
@@ -27,6 +29,20 @@ object tacToMips extends Stage {
   type Source   = normalToTac.Goal
   type Context  = MipsContext
   type Goal     = List[Assembler]
+
+  private val exitWithArg = Constant(17)
+  private val zero = Constant(0)
+
+  private val actualMainIdent = Identifier("_main_")
+
+  private val pseudoMain: Goal = List(
+    Label(Std.mainIdentifier),
+    Jal(Label(actualMainIdent)),
+    Move(A0,V0),
+    Li(V0,exitWithArg),
+    Syscall,
+    Comment("17: exit with argument"),
+  )
 
   private val predef = List(Globl(Std.mainIdentifier), Text): Goal
 
@@ -89,6 +105,9 @@ object tacToMips extends Stage {
       def next: Option[MipsContext] = cursor.next.map {
         MipsContext(this :: stack, _, None, Set())
       }
+
+      def withCursor(cursor: Cursor): Context =
+        MipsContext(stack,cursor,_temporary,saved)
     }
 
   private def goal
@@ -97,14 +116,32 @@ object tacToMips extends Stage {
     ): (Context, Goal) = {
       val topLevel = context.cursor.current
       local(Std.mainIdentifier, topLevel) match {
-        case Some(Std.`mainFunc`)
-          if definition(Std.mainIdentifier,topLevel).isDefined =>
-            val (contextFinal, goal) =
-              foldCode(topLevelStatements)(context.next.get,tac)(identity(_,_))
-            (contextFinal, predef ++ goal)
+        case Some(Std.`mainFunc`) =>
+          definition(Std.mainIdentifier,topLevel) match {
+            case Some(Function(_,body)) =>
+              val newMainDecl = replaceIdent(Std.mainFunc, actualMainIdent)
+              val newBindings = rename(
+                Std.mainIdentifier,
+                actualMainIdent,
+                newMainDecl,
+                body,
+                context.cursor.current
+              )
+              val newContext =
+                context.withCursor(context.cursor.withBindings(newBindings))
+              val newCode =
+                renameFunction(tac)(actualMainIdent,Std.mainIdentifier)
+              val (contextFinal, goal) =
+                foldCode(topLevelStatements)(newContext.next.get,newCode)(identity(_,_))
+              val top: Goal = predef ++ pseudoMain
+              (contextFinal, top ++ goal)
+            case _ =>
+              throw SemanticError(
+                "function definition for `int main(void)` not found.")
+          }
         case _ =>
           throw SemanticError(
-            "function definition for `int main(void)` not found.")
+            "function declaration for `int main(void)` not found.")
       }
     }
 
@@ -115,6 +152,18 @@ object tacToMips extends Stage {
       case Function(id, body) :: rest =>
         evalFunction(context,rest)(id, body)
       case _ => (Nil, context, Nil)
+    }
+
+  private def renameFunction
+    ( tac: Source )
+    ( id: Identifier,
+      old: Identifier,
+    ): Source = tac.foldRight(Nil: Source) { (s,acc) =>
+      s match {
+        case Function(`old`, body) =>
+          Function(id, body) :: acc
+        case any => any :: acc
+      }
     }
 
   private def evalFunction
@@ -148,7 +197,7 @@ object tacToMips extends Stage {
       case (temp @ Temporary(inner)) :: rest =>
         rest *:
           assignExpr(getRegisterElse(assignTemporary)(context,temp),inner)
-      case Return(List(expr: Assignments, _: _*)) :: rest =>
+      case Return((expr @ Assign()) :: Nil) :: rest =>
         val (tContext: Context, code: Goal) =
           assignExpr((context, V0),expr)
         rest *: (tContext, Jr(Ra) :: code)
@@ -165,38 +214,44 @@ object tacToMips extends Stage {
       value match {
         case c: Constant =>
           (context,List(Li(dest,c)))
-        case v @ (_: Identifier | _: Temporary) =>
+        case v @ RSrc() =>
           val src = getRegister(context,v)
           (context,List(Move(dest,src)))
-        case Unary(op, r @ (_: Identifier | _: Temporary)) =>
+        case Unary(op, r @ RSrc()) =>
           val src = getRegister(context,r)
           (context,List(unary(op)(dest,src)))
-        case Binary(op,
-          l @ (_: Identifier | _: Temporary | _: Constant),
-          r @ (_: Identifier | _: Temporary | _: Constant)
-        ) =>
-          val rarg: Src = r match {
-            case r @ (_: Identifier | _: Temporary) =>
-              getRegister(context, r)
-            case c: Constant =>
-              c
-          }
-          l match {
-            case variable @ (_: Identifier | _: Temporary) =>
-              val lreg = getRegister(context, variable)
-              val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
-              (context, List(result))
-            case c: Constant =>
-              val temp = Temporary(c)
-              val (tContext, treg: Register) = assignTemporary(context, temp)
-              val loadTemp: Assembler = Li(treg,c)
-              val result: Assembler = binaryOperators(op)(dest, treg, rarg)
-              (tContext, List(loadTemp, result))
-          }          
+        case Binary(op, c: Constant, r @ RSrc()) =>
+          val temp = Temporary(c)
+          val (tContext, treg: Register) = assignTemporary(context, temp)
+          val loadTemp: Assembler = Li(treg,c)
+          val rarg = getRegister(tContext, r)
+          val result: Assembler = binaryOperators(op)(dest, treg, rarg)
+          (tContext, List(result, loadTemp)) // code geerated in reverse order
+        case Binary(op, l @ RSrc(), c: Constant) =>
+          val lreg = getRegister(context, l)
+          val result: Assembler = binaryOperators(op)(dest, lreg, c)
+          (context, List(result))      
+        case Binary(op, l @ RSrc(), r @ RSrc()) =>
+          val lreg = getRegister(context, l)
+          val rarg = getRegister(context, r)
+          val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
+          (context, List(result))    
         case _ =>
           (context, Nil)
       }
     }
+
+  object Assign {
+    def unapply(assign: Assignments): Boolean = true
+  }
+
+  object RSrc {
+    def unapply(rsrc: Identifier | Temporary): Boolean = true
+  }
+
+  object MSrc {
+    def unapply(msrc: Identifier | Temporary | Constant): Boolean = true
+  }
 
   private def binaryOperators(op: BinaryOp): BinaryArgs = op match {
     case ad: AdditiveOperators => additive(ad)

@@ -101,3 +101,24 @@ case class Assignment(lvalue: Identifier, rvalue: Assignments)
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
 case class Function(id: Identifier, body: List[Statements])
 case class Block(inner: List[Statements])
+
+object Atomic {
+  def unapply(node: Assignments): Boolean =
+    node match {
+      case 
+        _: Equality
+      | _: Relational
+      | _: Additive
+      | _: Multiplicative
+      | _: Unary
+      | _: Constant
+      | _: StringLiteral
+      | _: Identifier
+      | _: Relational =>
+        true
+      case Temporary(t @ Atomic()) =>
+        true
+      case _ =>
+        false
+    }
+}

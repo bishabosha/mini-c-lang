@@ -47,7 +47,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def topLevelStatement(node: Statements): Option[Int] = node match {
-    case Function(id, body) if id == Std.mainIdentifier =>
+    case Function(Std.`mainIdentifier`, body) =>
       stacked {
         body.foldLeft(None: Option[Int]){ (code, statement) =>
           code.orElse(evalStatement(statement))

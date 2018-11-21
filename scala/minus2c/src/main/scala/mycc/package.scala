@@ -44,12 +44,24 @@ package object mycc {
     ): Bindings =
       bindings + (DefinitionKey(key), value)
 
+  def undefineIn
+    ( key: Identifier,
+      bindings: Bindings
+    ): Bindings =
+      bindings - DefinitionKey(key)
+
   def declareIn
     ( key: Identifier,
       value: Declaration,
       bindings: Bindings
     ): Bindings =
       bindings + (DeclarationKey(key), value)
+
+  def undeclareIn
+    ( key: Identifier,
+      bindings: Bindings
+    ): Bindings =
+      bindings - DeclarationKey(key)
 
   def scope(id: Identifier, bindings: Bindings): Option[Declaration] =
     bindings.genSearch(DeclarationKey(id))
@@ -62,6 +74,32 @@ package object mycc {
       .collect {
         case (DeclarationKey(id), decl) => decl.asInstanceOf[Declaration]
       }
+
+  def replaceIdent(decl: Declaration, id: Identifier) = decl match {
+    case Declaration(s,t, _: Identifier) =>
+      Declaration(s,t,id)
+    case Declaration(s,t,FunctionDeclarator(_,args)) =>
+      Declaration(s,t,FunctionDeclarator(id,args))
+  }
+
+  def rename
+    ( old: Identifier,
+      id: Identifier,
+      decl: Declaration,
+      body: List[Statements],
+      bindings: Bindings
+    ): Bindings =
+      declareIn(
+        id,
+        decl,
+        defineIn(
+          id,
+          Function(id,body),
+          undefineIn(
+            old,
+            undeclareIn(
+              old,
+              bindings))))
 
   object Std {
     val mainIdentifier = Identifier("main")

@@ -30,7 +30,7 @@ normal:
 	${PARSER} -n
 
 mips:
-	${PARSER} -m
+	${PARSER} -m > out.asm
 
 timed:
 	${PARSER} -time -n -m -t -sep

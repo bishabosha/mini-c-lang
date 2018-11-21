@@ -42,6 +42,9 @@ class Bindings private
     def +(key: Key, value: key.Value): Bindings =
       new Bindings(seen + (key -> value), parents, children)
 
+    def -(key: Key): Bindings =
+      new Bindings(seen - key, parents, children)
+
     def addChild(child: Bindings) =
       new Bindings(seen, parents, children :+ child)
 
