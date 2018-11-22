@@ -186,33 +186,44 @@ object tacToMips extends Stage {
 
   import AssignmentsPattern._
   private def assignExpr
-    (contextDest: (Context, Register), value: Statements): MipsAcc = {
-      val (context: Context, dest: Register) = contextDest
+    (contextDest: (Context, Dest), value: Statements): MipsAcc = {
+      val (topcontext: Context, destination: Dest) = contextDest
+      val (context, dest, post) = destination match {
+        case r @ Register() =>
+          val d: Register = r
+          (topcontext, d, Nil: Goal)
+        case l: Label =>
+          val (tContext, treg: Register) =
+            assignTemporary(topcontext, Temporary(zero))
+          (tContext, treg, List(Sw(treg,l)))
+        case _ => throw UnexpectedAstNode("Not register or label")
+          (???, ???, ???)
+      }
       value match {
         case c: Constant =>
-          (context,List(Li(dest,c)))
+          (context, post ++ List(Li(dest,c)))
         case v @ RSrc() =>
           val src = getRegister(context,v)
-          (context,List(Move(dest,src)))
+          (context, post ++ List(Move(dest,src)))
         case Unary(op, r @ RSrc()) =>
           val src = getRegister(context,r)
-          (context,List(unary(op)(dest,src)))
+          (context, post ++ List(unary(op)(dest,src)))
         case Binary(op, c: Constant, r @ RSrc()) =>
-          val temp = Temporary(c)
-          val (tContext, treg: Register) = assignTemporary(context, temp)
+          val (tContext, treg: Register) =
+            assignTemporary(context, Temporary(zero))
           val loadTemp: Assembler = Li(treg,c)
           val rarg = getRegister(tContext, r)
           val result: Assembler = binaryOperators(op)(dest, treg, rarg)
-          (tContext, List(result, loadTemp)) // code geerated in reverse order
+          (tContext, post ++ List(result, loadTemp)) // code geerated in reverse order
         case Binary(op, l @ RSrc(), c: Constant) =>
           val lreg = getRegister(context, l)
           val result: Assembler = binaryOperators(op)(dest, lreg, c)
-          (context, List(result))      
+          (context, post ++ List(result))      
         case Binary(op, l @ RSrc(), r @ RSrc()) =>
           val lreg = getRegister(context, l)
           val rarg = getRegister(context, r)
           val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
-          (context, List(result))    
+          (context, post ++ List(result))    
         case _ =>
           (context, Nil)
       }
@@ -294,11 +305,21 @@ object tacToMips extends Stage {
     }
 
   private def getRegisterElse
-    (f: (Context, Identifier | Temporary) => (Context, Register))
-    (context: Context, lvalue: Identifier | Temporary): (Context, Register) =
+    (f: (Context, Identifier | Temporary) => (Context, Dest))
+    (context: Context, lvalue: Identifier | Temporary): (Context, Dest) =
       context.cursor.current
         .genSearch(RegisterKey(lvalue))
         .map((context,_))
+        .orElse {
+          lvalue match {
+            case i: Identifier =>
+              context.cursor.current
+                .genSearch(DataKey(Label(i)))
+                .map(_ => (context,Label(i)))
+            case _ =>
+              None
+          }
+        }
         .getOrElse {
           f(context,lvalue)
         }
@@ -317,7 +338,9 @@ object tacToMips extends Stage {
 
   private def getData(context: Context): Goal = {
     val data =
-      context.cursor.current.topView
+      context.cursor.current.stack.lastOption
+        .toList
+        .flatMap(_.topView)
         .collect {
           case (DataKey(label), c: Constant) => List(label, Word(c)): Goal
         }
@@ -326,6 +349,6 @@ object tacToMips extends Stage {
     if data.isEmpty then
       Nil
     else
-      Data :: Comment("global data not linked to code yet") :: data
+      Data :: Comment("global data read not yet possible") :: data
   }
 }

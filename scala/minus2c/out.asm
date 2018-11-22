@@ -7,12 +7,16 @@ main:
   syscall
 # 17: exit with argument
 _main_:
-  li $s7, 9
-  li $s7, 10
-  move $v0, $s7
+  li $t0, 21
+  sw $t0, yy
+  li $s3, 4
+  li $s3, 10
+  move $v0, $s3
   jr $ra
   .data
-# global data not linked to code yet
+# global data read not yet possible
+yy:
+  .word 36
 zz:
   .word 25
 f:

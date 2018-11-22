@@ -5,7 +5,8 @@ import MIPS._
 object MIPS {
   type Src = Register | Constant
   type Register = Results | Arguments | Temporaries | SavedValues | Trap | Misc
-  type Addresses = OffsetAddress | Identifier
+  type Addresses = OffsetAddress | Label
+  type Dest = Addresses | Register
   type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero | PseudoUnary | Label
 }
 
@@ -80,6 +81,11 @@ enum PseudoUnary {
   case Globl(name: Identifier)
   case Asciiz(value: String)
   case Comment(msg: String)
+}
+
+object Register {
+  def unapply(register:
+    Results | Arguments | Temporaries | SavedValues | Trap | Misc) = true
 }
 
 object AssignmentsPattern {

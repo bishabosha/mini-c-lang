@@ -37,3 +37,4 @@
 [ ] Type check as an interpreter step
 [ ] Need to encode in the current frame an id for each variable or temporary
     so that its current register can be recorded
+[ ] global variable name conflicts please remove
