@@ -363,6 +363,17 @@ int main(void) {
     return (3 == 2, c, a + c);
 }
 
+int foo(int, int, int);
+int zz = 25;
+function f = foo;
+int main(void) {
+    {
+        foo(5 + 1 % 7, 4 != 2 + 2, 3 == 3 + 3);
+    }
+    int a = zz;
+    return a = 10;
+}
+
 int main(void) {
     int a = 0, b = 0;
     int c;

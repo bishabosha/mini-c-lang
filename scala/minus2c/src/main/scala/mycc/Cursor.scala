@@ -1,12 +1,25 @@
 package mycc
 
 import Cursor._
+import mycc.exception.SemanticError
 
 object Cursor {
-  val Empty = Cursor(Nil, Bindings.Empty)
+  def apply(bindings: Bindings): Cursor =
+    new Cursor(bindings, Nil)
 }
 
-case class Cursor(stack: List[Cursor], val current: Bindings) {
-  def next: Option[Cursor] =
-    current.firstChild.map { copy(this :: stack, _) }
+class Cursor private (val current: Bindings, queue: List[Bindings]) {
+  def next: Cursor = {
+    current.children.foldRight(queue) { (child, acc) =>
+      child.updateParents(current) :: acc
+    } match {
+      case head :: tail =>
+        new Cursor(head, tail)
+      case _ =>
+        throw SemanticError("Unexpected next call on Cursor")
+    }
+  }
+
+  def withBindings(bindings: Bindings): Cursor =
+    new Cursor(bindings, queue)
 }

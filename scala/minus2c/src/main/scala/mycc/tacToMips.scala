@@ -61,18 +61,13 @@ object tacToMips extends Stage {
   }
 
   def apply(context: normalToTac.Context, tac: Source): (Context, Goal) = {
-    val cursor = Cursor.Empty.copy(current = context)
-    val mipsContext = MipsContext.Empty.copy(cursor = cursor)
+    val cursor = Cursor(context)
+    val mipsContext = MipsContext(cursor,None,Set())
     goal(mipsContext, tac)
   }
 
-  object MipsContext {
-    val Empty = MipsContext(Nil,Cursor.Empty,None,Set())
-  }
-
   case class MipsContext
-    ( stack: List[MipsContext],
-      cursor: Cursor,
+    ( cursor: Cursor,
       private val _temporary: Option[Temporaries],
       private val saved: Set[SavedValues],
     ) {
@@ -85,7 +80,7 @@ object tacToMips extends Stage {
         } orElse {
           Some(T0)
         }
-        MipsContext(stack, cursor, temp, saved)
+        copy(_temporary = temp)
       }
 
       def advanceSaved: (SavedValues, MipsContext) = {
@@ -95,20 +90,10 @@ object tacToMips extends Stage {
           throw SemanticError("Too many saved variables!")
         }
         val consumed = newSet.head
-        (consumed, MipsContext(stack, cursor, _temporary, saved + consumed))
+        (consumed, copy(saved = saved + consumed))
       }
 
       def temporary: Temporaries = _temporary.getOrElse { T0 }
-
-      def +(key: Bindings.Key, value: key.Value): MipsContext =
-        copy(cursor = cursor.copy(current = cursor.current + (key, value)))
-
-      def apply(key: Label): Option[Constant] =
-        cursor.current.genGet(DataKey(key))
-
-      def next: Option[MipsContext] = cursor.next.map {
-        MipsContext.Empty.copy(this :: stack, _)
-      }
     }
 
   private def goal
@@ -122,7 +107,7 @@ object tacToMips extends Stage {
             case Some(Function(_,body)) =>
               val (uContext, uTac) = renameMain(context, body, tac)
               val (contextFinal, goal) =
-                foldCode(topLevelStatements)(uContext.next.get,uTac) {
+                foldCode(topLevelStatements)(uContext,uTac) {
                   identity(_,_)
                 }
               val data = getData(contextFinal)
@@ -153,7 +138,7 @@ object tacToMips extends Stage {
         context.cursor.current
       )
       val newContext =
-        context.copy(cursor = context.cursor.copy(current = newBindings))
+        context.copy(cursor = context.cursor.withBindings(newBindings))
       val newCode =
         renameFunction(tac)(actualMainIdent,Std.mainIdentifier)
       (newContext,newCode)
@@ -173,25 +158,38 @@ object tacToMips extends Stage {
       Data :: Comment("global data not linked to code yet") :: data
   }
 
+  private def next(context: Context): Context =
+    context.copy(context.cursor.next)
+
+  private def add
+    (context: Context, key: Bindings.Key, value: key.Value): Context =
+      context.copy(
+        context.cursor.withBindings(
+          context.cursor.current + (key, value)))
+
+  private def get(context: Context, key: Label): Option[Constant] =
+    context.cursor.current.genGet(DataKey(key))
+
   private def topLevelStatements
     ( context: Context,
       statement: Statements
-    ): MipsAcc = statement match {
+    ): MipsAcc = {
+      statement match {
       case Function(id, body) =>
-        evalFunction(context)(id, body)
+        evalFunction(next(context))(id, body)
       case Declaration(_, _, i: Identifier) =>
         val label = Label(i)
-        (context + (DataKey(label), zero), Nil)
+        (add(context, DataKey(label), zero), Nil)
       case Assignment(i: Identifier, c: Constant) =>
         val label = Label(i)
-        context(label) match {
+        get(context, label) match {
           case Some(value) =>
-            (context + (DataKey(label), c), Nil)
+            (add(context, DataKey(label), c), Nil)
           case None =>
             throw UnexpectedAstNode("Assignment of $i before declaration")
         }
       case _ => (context, Nil)
-    }
+    }}
 
   private def renameFunction
     ( tac: Source )
@@ -219,7 +217,7 @@ object tacToMips extends Stage {
       kv match {
         case (DeclarationKey(i: Identifier), IdentifierDeclaration()) => 
           val (register, advanced) = c.advanceSaved
-          advanced + (RegisterKey(i), register)
+          add(advanced, RegisterKey(i), register)
         case _ =>
           c
       }
@@ -357,7 +355,7 @@ object tacToMips extends Stage {
   private def assignTemporary
     (context: Context, lvalue: Identifier | Temporary): (Context, Register) = {
       val advanced = context.advanceTemporary
-      (advanced + (RegisterKey(lvalue), advanced.temporary), advanced.temporary)
+      (add(advanced, RegisterKey(lvalue), advanced.temporary), advanced.temporary)
     }
 
   private def unexpected(lvalue: Identifier | Temporary): Nothing = {

@@ -320,7 +320,9 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                   compoundStatements(b)
                 }
               }
-            if declarators._2 != Cvoid then tailYieldsValue(bodyParsed)
+            if declarators._2 != Cvoid then {
+              tailYieldsValue(bodyParsed)
+            }
             define {
               Function(i, bodyParsed.getOrElse { Nil })
             }
@@ -328,7 +330,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     }
 
   private def stacked[A](parser: => A): A = {
-    context = context.stacked
+    context = context.push
     val result = parser
     context = context.popOrElse { Bindings.Empty }
     result

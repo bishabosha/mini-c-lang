@@ -22,11 +22,11 @@ case class Bindings
 
     def topView: Iterable[(Key, Any)] = data.view
 
-    def stacked: Bindings = Empty.copy(stack = this :: stack)
+    def push: Bindings = Empty.copy(stack = this :: stack)
 
     def popOrElse(default: => Bindings): Bindings =
       stack.headOption
-           .map(_.addChild(Empty.copy(data)))
+           .map(_.addChild(this))
            .getOrElse(default)
 
     def updateParents(parent: Bindings): Bindings =

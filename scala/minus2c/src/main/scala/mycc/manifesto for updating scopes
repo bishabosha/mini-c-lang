@@ -17,16 +17,16 @@ Bindings(data,parent,children)
 
 accumulation:
 
-global := Bindings({},None,[])                | push
-main := Bindings({b,c},Some(global),[])             | push
-_d := Bindings({d},Some(main),[])                   | push
-_x := Bindings({x},Some(_d),[])                     | pop
-_d' := Bindings({d},Some(main),[_x])                | pop
-main' := Bindings({b,c},Some(global),[_d'])          | push
-_e := Bindings({e},Some(main'),[])                  | pop
-main'' := Bindings({b,c},Some(global),[_d',_e])         | pop
-global' := Bindings({a},None,[main''])                  | +
-global'' := Bindings({a,X},None,[main''])
+global := Bindings({},[],[])                | push
+main := Bindings({b,c},[global],[])             | push
+_d := Bindings({d},[main,global],[])                   | push
+_x := Bindings({x},[_d,main,global],[])                     | pop
+_d' := Bindings({d},[main,global],[_x])                | pop
+main' := Bindings({b,c},[global],[_d'])          | push
+_e := Bindings({e},[main',global],[])                  | pop
+main'' := Bindings({b,c},[global],[_d',_e])         | pop
+global' := Bindings({a},[],[main''])                  | +
+global'' := Bindings({a,X},[],[main''])
 
 iteration:
 
@@ -34,20 +34,20 @@ iteration:
 
 Cursor.mk(global'',[]) // children of global'': [main'']
 
-main''' := Bindings({b,c},Some(global''),[_d',_e]) // update parent of each child; append
+main''' := Bindings({b,c},[global''],[_d',_e]) // update parent of each child; append
 
 cursor := (global'',[_main''']) | next
 
 Cursor.mk(_main''',[]) // children of _main''': [_d',_e]
 
-_d'' := Bindings({d},Some(main'''),[_x])   // update parent of each child; append
-_e' := Bindings({e},Some(main'''),[])  // update parent of each child; append
+_d'' := Bindings({d},[main''',global''],[_x])   // update parent of each child; append
+_e' := Bindings({e},[main''',global''],[])  // update parent of each child; append
 
 cursor':= (main''',[_d'',_e']) | next
 
 Cursor.mk(_d'',[_e']) // children of _d'': [_x]
 
-_x' := Bindings({x},Some(_d''),[]) // update parent of each child; append
+_x' := Bindings({x},[_d'',main''',global''],[]) // update parent of each child; append
 
 cursor'' := (_d',[_x',_e']) | next
 

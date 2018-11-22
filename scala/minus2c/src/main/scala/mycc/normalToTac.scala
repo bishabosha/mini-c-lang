@@ -13,7 +13,7 @@ object normalToTac extends Stage {
   type Goal     = List[Statements]
 
   def apply(context: Context, nodes: Source): (Context, Goal) =
-    new normalToTac(Cursor.Empty.copy(current = context), nodes).goal
+    new normalToTac(Cursor(context), nodes).goal
 }
 
 class normalToTac private (var cursor: Cursor, nodes: Goal) {
@@ -50,9 +50,7 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def stacked[O](f: => List[O]): List[O] = {
-    cursor = cursor.next.getOrElse {
-      throw new IllegalStateException("no child")
-    }
+    cursor = cursor.next
     f
   }
 

@@ -17,7 +17,7 @@ import scala.util.Random
 object interpretAst {
 
   def apply(context: Context, nodes: Goal): Unit = {
-    val cursor = Cursor.Empty.copy(current = context)
+    val cursor = Cursor(context)
     val exitCode = new interpretAst(cursor, nodes).evalProgram
     println(s"exit code: $exitCode")
   }
@@ -68,9 +68,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def stacked(f: => Option[Int]): Option[Int] = {
-    cursor = cursor.next.getOrElse {
-      throw new IllegalStateException("no child")
-    }
+    cursor = cursor.next
     f
   }
 
@@ -108,7 +106,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def addConstant(k: Identifier | Temporary, c: Constant): Unit = {
-     cursor = cursor.copy(current = cursor.current + (IdentKey(k), c))
+     cursor = cursor.withBindings(cursor.current + (IdentKey(k), c))
   }
 
   private def evalAsConstant(o: Option[Int]): Constant = {
