@@ -266,6 +266,7 @@ int main(void) {}
 
 int foo(int, int, int);
 int b = foo(1 == 1 + 1, 2 == 2 + 2, 3 == 3 + 3);
+function f = foo;
 int main(void) {
     {
         foo(5 + 1 % 7, 4 != 2 + 2, 3 == 3 + 3);

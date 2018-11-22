@@ -128,7 +128,7 @@ class astToNormal private (var context: Context) {
     }
 
   private val canApply: FlattenO[Assignments, Boolean] = {
-    case _: Application | _: Identifier => true
+    case CanApply() => true
     case _ => false
   }
 
@@ -234,30 +234,15 @@ class astToNormal private (var context: Context) {
         }
     }
 
-  object Primary {
-    def unapply(foo: Constant | Identifier | StringLiteral): Boolean = true
-  }
-
   private val assignment: FlattenO[Assignments, Assignment] = {
     case a: Assignment => a
   }
 
   private val constant: FlattenO[Statements, Primary] = {
-    case c @ (
-      _: Identifier
-    | _: Constant
-    | _: StringLiteral
-    | _: Temporary
-    ) => c
+    case c @ (Primary() | _: Temporary) => c
   }
 
   private val node: FlattenO[Statements, Assignments] = {
-    case n @ (
-      _: Equality
-    | _: Relational
-    | _: Additive
-    | _: Multiplicative
-    | _: Unary
-    ) => n
+    case n @ Node() => n
   }
 }

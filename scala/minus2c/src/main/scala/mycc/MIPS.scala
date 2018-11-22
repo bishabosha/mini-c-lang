@@ -76,7 +76,7 @@ enum PseudoZero {
 }
 
 enum PseudoUnary {
-  case Word(size: Int)
+  case Word(size: Constant)
   case Globl(name: Identifier)
   case Asciiz(value: String)
   case Comment(msg: String)

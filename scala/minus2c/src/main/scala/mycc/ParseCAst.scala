@@ -28,7 +28,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
-  private var context: Context = Bindings.withSeen(extractDeclarations(Std.declarations))
+  private var context: Context = Bindings.Empty.copy(extractDeclarations(Std.declarations))
 
   private lazy val goal: Parse[(Context, Goal)] =
     translationUnit ->> { context -> _ }
@@ -39,7 +39,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     
   private lazy val externalDeclaration: Parse[List[Declarations]] =
     functionDefinition |
-    declarationsAndAssignments
+    declarationsAndAssignments !! noAssign
 
   private lazy val declarationsAndAssignments: Parse[List[Declarations]] =
     variableDeclaration |
@@ -350,38 +350,54 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       types: Types,
       declarator: Declarator
     ): Option[Declaration] = {
-      for (Declaration(s, t, existing) <- local(identifier,context)) existing match {
-        case _: Identifier => declarator match {
-          case _: FunctionDeclarator =>
-            throw new SemanticError(s"Redefinition of '${identifier.id}' as a function type.")
-          case _ =>
-            throw new SemanticError(s"Redefinition of '${identifier.id}'.")
-        }
-        case _: FunctionDeclarator => declarator match {
-          case f: FunctionDeclarator =>
-            if existing == f && s == storage && t == types then {
-              return None
-            } else {
-              throw new SemanticError(s"Redefinition of function '${identifier.id}' with incompatible types.")
-            }
-          case _ =>
-            throw new SemanticError(s"Redefinition of function '${identifier.id}' to variable.")
+      for (
+        Declaration(s, t, existing) <-
+          context.genGet(DeclarationKey(identifier))
+      ) {
+        existing match {
+          case _: Identifier => declarator match {
+            case _: FunctionDeclarator =>
+              throw new SemanticError(
+                s"Redefinition of '${identifier.id}' as a function type.")
+            case _ =>
+              throw new SemanticError(s"Redefinition of '${identifier.id}'.")
+          }
+          case _: FunctionDeclarator => declarator match {
+            case f: FunctionDeclarator =>
+              if existing == f && s == storage && t == types then {
+                return None
+              } else {
+                throw new SemanticError(
+                  s"Redefinition of function '${identifier.id}' with incompatible types.")
+              }
+            case _ =>
+              throw new SemanticError(
+                s"Redefinition of function '${identifier.id}' to variable.")
+          }
         }
       }
       val declaration = Declaration(storage, types, declarator)
-      context = declareIn(identifier, declaration, context)
+      context += (DeclarationKey(identifier), declaration)
       Some(declaration)
     }
 
   private def define(f: => Function): Function = {
     val definition = f
-    context = defineIn(definition.id, definition, context)
+    context += (DefinitionKey(definition.id), definition)
     definition
   }
 
+  private def noAssign[A](a:A): Unit =
+    a match {
+      case List(_: Declaration, Assignment(Identifier(i),_:Application)) =>
+        throw SemanticError(
+          s"Assignment of global variable $i to a function application")
+      case _ =>
+    }
+
   private def existsInScope[A](get: A => Identifier): A => Unit =
     get.andThen { ident =>
-      if !scope(ident,context).isDefined then {
+      if !context.genSearch(DeclarationKey(ident)).isDefined then {
         throw SemanticError(s"Identifier '${ident.id}' is undefined")
       }
     }

@@ -102,23 +102,39 @@ case class Declaration(storage: StorageTypes, declType: Types, declarator: Decla
 case class Function(id: Identifier, body: List[Statements])
 case class Block(inner: List[Statements])
 
-object Atomic {
+object Expression {
   def unapply(node: Assignments): Boolean =
     node match {
-      case 
-        _: Equality
-      | _: Relational
-      | _: Additive
-      | _: Multiplicative
-      | _: Unary
-      | _: Constant
-      | _: StringLiteral
-      | _: Identifier
-      | _: Relational =>
-        true
-      case Temporary(t @ Atomic()) =>
+      case ExpressionRoot() | Temporary(Expression()) =>
         true
       case _ =>
         false
     }
+}
+
+object ExpressionRoot {
+  def unapply(node: Equality | Relational | Additive | Multiplicative |
+    Unary | Constant | StringLiteral | Identifier | Relational) = true
+}
+
+object IdentifierDeclaration {
+  def unapply(decl: Declaration): Boolean =
+    decl.declarator.isInstanceOf[Identifier]
+}
+
+object CanApply {
+  def unapply(canApply: Application | Identifier) = true
+}
+
+object Primary {
+  def unapply(primary: Constant | Identifier | StringLiteral) = true
+}
+
+object Node {
+  def unapply(node: 
+      Equality
+    | Relational
+    | Additive
+    | Multiplicative
+    | Unary) = true
 }

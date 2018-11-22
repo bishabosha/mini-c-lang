@@ -13,16 +13,16 @@ object normalToTac extends Stage {
   type Goal     = List[Statements]
 
   def apply(context: Context, nodes: Source): (Context, Goal) =
-    new normalToTac(Cursor.Empty.withBindings(context), nodes).goal
+    new normalToTac(Cursor.Empty.copy(current = context), nodes).goal
 }
 
 class normalToTac private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
   private def goal: (Context, Goal) = {
-    local(Std.mainIdentifier,topLevel) match {
+    topLevel.genGet(Std.mainIdentifierKey) match {
       case Some(Std.`mainFunc`)
-        if definition(Std.mainIdentifier,topLevel).isDefined =>
+        if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
           val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
             topLevelStatement(statement) ++ code
           }.reverse
@@ -44,6 +44,8 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
           }.reverse
         List(Function(Std.mainIdentifier, validated))
       }
+    case a: Assignment => List(a)
+    case d: Declaration => List(d)
     case _ => Nil
   }
 
@@ -55,15 +57,14 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def evalStatement(node: Statements): Goal = {
-    import Atomic._
     node match {
       case d: Declaration =>
         List(d)
-      case t @ Temporary(Atomic()) =>
+      case t @ Temporary(Expression()) =>
         List(t)
-      case a @ Assignment(_, Atomic()) =>
+      case a @ Assignment(_, Expression()) =>
         List(a)
-      case r @ Return(Atomic() :: Nil) =>
+      case r @ Return(Expression() :: Nil) =>
         List(r)
       case _ =>
         List()

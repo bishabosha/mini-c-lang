@@ -3,50 +3,45 @@ package mycc
 import Bindings._
 
 object Bindings {
-  val Empty = new Bindings(Map(), Nil, Nil)
-
+  val Empty = Bindings(Map(), Nil, Nil)
   trait Key { type Value }
-
-  def withParents(parents: List[Bindings]) =
-    new Bindings(Map(), parents, Nil)
-
-  def withSeen(seen: Map[Key, Any]) =
-    new Bindings(seen, Nil, Nil)
 }
 
-class Bindings private
-  (
-    private val seen: Map[Key, Any],
-    parents: List[Bindings],
+case class Bindings
+  ( data: Map[Key, Any],
+    stack: List[Bindings],
     children: List[Bindings]
   ) {
     def genGet(id: Key): Option[id.Value] =
-      seen.get(id).map(_.asInstanceOf[id.Value])
-
-    def stack: Iterable[Bindings] = (this :: parents).view
+      data.get(id).map(_.asInstanceOf[id.Value])
 
     def genSearch(id: Key): Option[id.Value] =
-      stack
-        .map(_.seen.get(id))
+      (Stream(this) ++: stack.view)
+        .map(_.data.get(id))
         .collectFirst { case Some(o) => o.asInstanceOf[id.Value] }
 
-    def topView: Iterable[(Key, Any)] = seen.view
+    def topView: Iterable[(Key, Any)] = data.view
 
-    def stacked: Bindings = Bindings.withParents(this :: parents)
+    def stacked: Bindings = Empty.copy(stack = this :: stack)
 
     def popOrElse(default: => Bindings): Bindings =
-      parents.headOption
-             .map(_.addChild(Bindings.withSeen(seen)))
-             .getOrElse(default)
+      stack.headOption
+           .map(_.addChild(Empty.copy(data)))
+           .getOrElse(default)
+
+    def updateParents(parent: Bindings): Bindings =
+      copy(stack = parent :: parent.stack)
 
     def +(key: Key, value: key.Value): Bindings =
-      new Bindings(seen + (key -> value), parents, children)
+      copy(data + (key -> value))
 
     def -(key: Key): Bindings =
-      new Bindings(seen - key, parents, children)
+      copy(data - key)
 
     def addChild(child: Bindings) =
-      new Bindings(seen, parents, children :+ child)
+      copy(children = children :+ child)
 
     def firstChild: Option[Bindings] = children.headOption
+
+    override def toString = s"Bindings(seen = $data)"
   }

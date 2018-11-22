@@ -17,7 +17,7 @@ import scala.util.Random
 object interpretAst {
 
   def apply(context: Context, nodes: Goal): Unit = {
-    val cursor = Cursor.Empty.withBindings(context)
+    val cursor = Cursor.Empty.copy(current = context)
     val exitCode = new interpretAst(cursor, nodes).evalProgram
     println(s"exit code: $exitCode")
   }
@@ -32,9 +32,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
   private def evalProgram: Int = {
-    local(Std.mainIdentifier,topLevel) match {
+    topLevel.genGet(Std.mainIdentifierKey) match {
       case Some(Std.`mainFunc`)
-        if definition(Std.mainIdentifier, topLevel).isDefined =>
+        if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
           println("interpreting:")
           nodes.foldLeft(None: Option[Int]){ (code, statement) =>
             code.orElse(topLevelStatement(statement))
@@ -108,7 +108,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def addConstant(k: Identifier | Temporary, c: Constant): Unit = {
-     cursor += (IdentKey(k), c)
+     cursor.copy(current = cursor.current + (IdentKey(k), c))
   }
 
   private def evalAsConstant(o: Option[Int]): Constant = {
@@ -136,9 +136,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
       case StringLiteral(str) =>
         None
       case i: Identifier =>
-        cursor.value(IdentKey(i)).map(_.value)
+        cursor.current.genSearch(IdentKey(i)).map(_.value)
       case t: Temporary =>
-        cursor.value(IdentKey(t)).map(_.value)
+        cursor.current.genSearch(IdentKey(t)).map(_.value)
       case x =>
         throw UnexpectedAstNode(s"expression: ${x.toString}")
     }

@@ -52,7 +52,7 @@ object printMips {
           s"$indent.globl $id$endl"
         case Label(Identifier(i)) =>
           s"$i:$endl"
-        case Word(w) =>
+        case Word(Constant(w)) =>
           s"$indent.word $w$endl"
         case Syscall =>
           s"${indent}syscall$endl"

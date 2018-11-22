@@ -7,8 +7,13 @@ main:
   syscall
 # 17: exit with argument
 _main_:
-  sub $t0, $s8, 3
-  div $t1, $s5, $s8
-  sub $t2, $s8, 2
-  add $t3, $t0, $t1
-  sle $t4, $s5, $t2
+  li $s7, 9
+  li $s7, 10
+  move $v0, $s7
+  jr $ra
+  .data
+# global data not linked to code yet
+zz:
+  .word 25
+f:
+  .word 0

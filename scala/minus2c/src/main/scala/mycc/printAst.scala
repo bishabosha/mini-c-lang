@@ -15,24 +15,22 @@ object printAst {
 
   private val endl = System.lineSeparator
 
-  def apply(context: Bindings, nodes: List[Statements]): Unit =
-    print(astNode(context, nodes, 0))
+  def apply(nodes: List[Statements]): Unit =
+    print(astNode(nodes, 0))
 
   private def astNode
-    ( context: Bindings,
-      nodes: List[Statements],
+    ( nodes: List[Statements],
       level: Int
     ): String = {
-      (for (node <- nodes.view) yield astNode(context, node, level)).mkString
+      (for (node <- nodes.view) yield astNode(node, level)).mkString
     }
 
   private def astNode
-    ( context: Bindings,
-      node: Statements,
+    ( node: Statements,
       level: Int
     ): String = {
-      def getIt(value: Statements): String = astNode(context, value, level);
-      def exp(value: Assignments): String = expr(context, value, level);
+      def getIt(value: Statements): String = astNode(value, level);
+      def exp(value: Assignments): String = expr(value, level);
       var lvl = getLevel(level)
       node match {
         case Declaration(storage, types, declarator) =>
@@ -47,8 +45,8 @@ object printAst {
         case t @ Temporary(v) =>
           s"$lvl${getId(t)} = ${exp(v)};$endl"
         case Function(i @ Identifier(id), b) =>
-          fn(context, id, b, level)
-        case Block(b) => block(context, b, level)
+          fn(id, b, level)
+        case Block(b) => block(b, level)
         case Return(Nil) => s"${lvl}return;$endl"
         case Return(v) =>
           val newArgs = v.map(exp).mkString(", ")
@@ -58,11 +56,10 @@ object printAst {
     }
 
   private def expr
-    ( context: Bindings,
-      node: Assignments,
+    ( node: Assignments,
       level: Int
     ): String = {
-      def getIt(value: Assignments): String = expr(context, value, level)
+      def getIt(value: Assignments): String = expr(value, level)
       node match {
         case Application(i, args) =>
           val newArgs = args.map(getIt).mkString(", ")
@@ -103,35 +100,33 @@ object printAst {
     case LAny => "()"
     case LParam(params) =>
       params.view.map {
-        case t: Types => s"$t"
-        case (t: Types, _ @ Identifier(i)) => s"$t $i"
+        case t: Types => typesToString(t)
+        case (t: Types, Identifier(i)) => s"${typesToString(t)} $i"
       }.mkString("(", ", ", ")")
   }
 
   private def fn
-    ( context: Bindings,
-      name: String,
+    ( name: String,
       b: List[Statements],
       level: Int
     ): String = {
       var lvl: String = getLevel(level)
       var res = s"$lvl$name: {$endl"
       if !b.isEmpty then
-        res + astNode(context, b, inc(level)) + s"$lvl}$endl"
+        res + astNode(b, inc(level)) + s"$lvl}$endl"
       else
         res + s"}$endl"
     }
 
   private def block
-    ( context: Bindings,
-      b: List[Statements],
+    ( b: List[Statements],
       level: Int
     ): String = {
       var lvl: String = getLevel(level)
       if b.isEmpty then
         s"$lvl{}$endl"
       else
-        s"$lvl{$endl${astNode(context, b, inc(level))}$lvl}$endl"
+        s"$lvl{$endl${astNode(b, inc(level))}$lvl}$endl"
     }
 
   private def inc(level: Int) = level + 2

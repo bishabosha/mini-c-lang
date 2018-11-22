@@ -1,13 +1,10 @@
+int foo(int, int, int);
+int zz = 25;
+function f = foo;
 int main(void) {
-    int a, c;
-    int foo(int a, int b, int c) {
-        int bar(void) {
-            int bax(int b, int c, int d) {
-                return b + c / d % 1 >= a - d;
-            }
-            return bax(a + 2 / 4 == 1, b % 3 + 4, 1+ -2 / a);
-        }
-        return bar();
+    {
+        foo(5 + 1 % 7, 4 != 2 + 2, 3 == 3 + 3);
     }
-    return foo(a - 3 + c / a, c <= a - 1 * 2);
+    int a = zz;
+    return a = 10;
 }

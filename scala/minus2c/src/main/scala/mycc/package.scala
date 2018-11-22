@@ -22,6 +22,10 @@ package object mycc {
     type Value = Register
   }
 
+  case class DataKey(key: Label) extends Bindings.Key {
+    type Value = Constant
+  }
+
   def extractDeclarations
     (declarations: List[Declaration]
     ): Map[Bindings.Key, Any] =
@@ -33,47 +37,6 @@ package object mycc {
     case i: Identifier => i
     case _ @ FunctionDeclarator(i, _) => i
   }
-
-  def definition(id: Identifier, bindings: Bindings): Option[Function] =
-    bindings.genGet(DefinitionKey(id))
-  
-  def defineIn
-    ( key: Identifier,
-      value: Function,
-      bindings: Bindings
-    ): Bindings =
-      bindings + (DefinitionKey(key), value)
-
-  def undefineIn
-    ( key: Identifier,
-      bindings: Bindings
-    ): Bindings =
-      bindings - DefinitionKey(key)
-
-  def declareIn
-    ( key: Identifier,
-      value: Declaration,
-      bindings: Bindings
-    ): Bindings =
-      bindings + (DeclarationKey(key), value)
-
-  def undeclareIn
-    ( key: Identifier,
-      bindings: Bindings
-    ): Bindings =
-      bindings - DeclarationKey(key)
-
-  def scope(id: Identifier, bindings: Bindings): Option[Declaration] =
-    bindings.genSearch(DeclarationKey(id))
-
-  def local(id: Identifier, bindings: Bindings): Option[Declaration] =
-    bindings.genGet(DeclarationKey(id))
-
-  def locals(bindings: Bindings): Iterable[Declaration] =
-    bindings.topView
-      .collect {
-        case (DeclarationKey(id), decl) => decl.asInstanceOf[Declaration]
-      }
 
   def replaceIdent(decl: Declaration, id: Identifier) = decl match {
     case Declaration(s,t, _: Identifier) =>
@@ -89,20 +52,40 @@ package object mycc {
       body: List[Statements],
       bindings: Bindings
     ): Bindings =
-      declareIn(
-        id,
-        decl,
-        defineIn(
-          id,
-          Function(id,body),
-          undefineIn(
-            old,
-            undeclareIn(
-              old,
-              bindings))))
+      declareIn(id, decl) {
+        defineIn(id, Function(id,body)) {
+          undefineIn(old) {
+            undeclareIn(old) {
+              bindings
+            }
+          }
+        }
+      }
+
+  private def defineIn
+    (key: Identifier, value: Function)
+    (bindings: => Bindings): Bindings =
+      bindings + (DefinitionKey(key), value)
+
+  private def undefineIn
+    (key: Identifier)
+    (bindings: => Bindings): Bindings =
+      bindings - DefinitionKey(key)
+
+  private def declareIn
+    (key: Identifier, value: Declaration)
+    (bindings: => Bindings): Bindings =
+      bindings + (DeclarationKey(key), value)
+
+  private def undeclareIn
+    (key: Identifier)
+    (bindings: => Bindings): Bindings =
+      bindings - DeclarationKey(key)
 
   object Std {
     val mainIdentifier = Identifier("main")
+    val mainIdentifierKey = DeclarationKey(Std.mainIdentifier)
+    val mainDefinitionKey = DefinitionKey(Std.mainIdentifier)
     val mainFunc =
     Declaration(
       Auto,

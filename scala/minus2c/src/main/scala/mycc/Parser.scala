@@ -45,7 +45,7 @@ object Parser {
           println(s"PARSE_CAST: ${newtim - old}ms")
           old = newtim
         }
-        val (context2, astFlattened) = astToNormal(context, ast)
+        val (nContext, astFlattened) = astToNormal(context, ast)
         if doTime then {
           newtim = System.currentTimeMillis
           println(s"AST_TO_NORMAL: ${newtim - old}ms")
@@ -55,7 +55,7 @@ object Parser {
           if doSeparate then {
             println("code:")
           }          
-          printAst(context2, astFlattened)
+          printAst(astFlattened)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"PRINTING_CODE: ${newtim - old}ms")
@@ -63,14 +63,14 @@ object Parser {
           }
         }
         if doInterpret then {
-          interpretAst(context2, astFlattened)
+          interpretAst(nContext, astFlattened)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"INTERPRETING NORMAL: ${newtim - old}ms")
             old = newtim
           }
         }
-        val (context3, tac) = normalToTac(context2, astFlattened)
+        val (tContext, tac) = normalToTac(nContext, astFlattened)
         if doTime then {
           newtim = System.currentTimeMillis
           println(s"NORMAL_TO_TAC: ${newtim - old}ms")
@@ -80,14 +80,14 @@ object Parser {
           if doSeparate then {
             println("TAC:")
           }
-          printAst(context3, tac)
+          printAst(tac)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"PRINTING_TAC: ${newtim - old}ms")
             old = newtim
           }
         }
-        val (context4, mips) = tacToMips(context3, tac)
+        val (mContext, mips) = tacToMips(tContext, tac)
         if doTime then {
           newtim = System.currentTimeMillis
           println(s"TAC_TO_MIPS: ${newtim - old}ms")
@@ -97,7 +97,7 @@ object Parser {
           if doSeparate then {
             println("MIPS:")
           }
-          printMips(context4, mips)
+          printMips(mContext, mips)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"PRINT_MIPS: ${newtim - old}ms")
