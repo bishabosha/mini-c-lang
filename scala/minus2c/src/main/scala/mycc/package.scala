@@ -4,6 +4,7 @@ package object mycc {
   import Types._
   import parseCAst._
   import exception.SemanticError
+  import exception.UnexpectedAstNode
   import ArgList._
   import MIPS._
 
@@ -45,6 +46,37 @@ package object mycc {
       Declaration(s,t,FunctionDeclarator(id,args))
   }
 
+  def renameMain
+    ( bindings: Bindings,
+      id: Identifier,
+      body: List[Statements],
+      tac: List[Statements]
+    ): (Bindings, List[Statements]) = {
+      val newMainDecl = replaceIdent(Std.mainFunc, id)
+      val newBindings = rename(
+        Std.mainIdentifier,
+        id,
+        newMainDecl,
+        body,
+        bindings
+      )
+      val newCode =
+        renameFunction(tac)(id,Std.mainIdentifier)
+      (newBindings,newCode)
+    }
+
+  def renameFunction
+    ( tac: List[Statements] )
+    ( id: Identifier,
+      old: Identifier,
+    ): List[Statements] = tac.foldRight(Nil: List[Statements]) { (s,acc) =>
+      s match {
+        case Function(`old`, body) =>
+          Function(id, body) :: acc
+        case any => any :: acc
+      }
+    }
+
   def rename
     ( old: Identifier,
       id: Identifier,
@@ -61,6 +93,17 @@ package object mycc {
           }
         }
       }
+
+  def unexpected(lvalue: Identifier | Temporary): Nothing = {
+    val lStr = showLValue(lvalue)
+    throw UnexpectedAstNode(s"unknown variable $lStr")
+  }
+  
+  def showLValue(lvalue: Identifier | Temporary): String =
+    lvalue match {
+      case Identifier(id) => id
+      case t: Temporary => ("_" + t.hashCode).take(6)
+    }
 
   private def defineIn
     (key: Identifier, value: Function)

@@ -1,10 +1,12 @@
 int foo(int, int, int);
 int zz = 25;
+int yy = 36;
 function f = foo;
 int main(void) {
     {
         foo(5 + 1 % 7, 4 != 2 + 2, 3 == 3 + 3);
     }
-    int a = zz;
+    yy = 21;
+    int a = 4;
     return a = 10;
 }

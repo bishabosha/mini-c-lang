@@ -60,12 +60,6 @@ object tacToMips extends Stage {
     case UnaryOperators => PartialFunction[Op,UnaryArgs]
   }
 
-  def apply(context: normalToTac.Context, tac: Source): (Context, Goal) = {
-    val cursor = Cursor(context)
-    val mipsContext = MipsContext(cursor,None,Set())
-    goal(mipsContext, tac)
-  }
-
   case class MipsContext
     ( cursor: Cursor,
       private val _temporary: Option[Temporaries],
@@ -96,6 +90,25 @@ object tacToMips extends Stage {
       def temporary: Temporaries = _temporary.getOrElse { T0 }
     }
 
+  private def nextScope(context: Context): Context =
+    context.copy(context.cursor.next)
+
+  private def updateBindings(context: Context, bindings: Bindings): Context =
+    context.copy(context.cursor.withBindings(bindings))
+
+  private def add
+    (context: Context, key: Bindings.Key, value: key.Value): Context =
+      updateBindings(context, context.cursor.current + (key, value))
+
+  private def get(context: Context, key: Label): Option[Constant] =
+    context.cursor.current.genGet(DataKey(key))
+
+  def apply(context: normalToTac.Context, tac: Source): (Context, Goal) = {
+    val cursor = Cursor(context)
+    val mipsContext = MipsContext(cursor,None,Set())
+    goal(mipsContext, tac)
+  }
+
   private def goal
     ( context: Context,
       tac: normalToTac.Goal
@@ -105,7 +118,9 @@ object tacToMips extends Stage {
         case Some(Std.`mainFunc`) =>
           topLevel.genGet(Std.mainDefinitionKey) match {
             case Some(Function(_,body)) =>
-              val (uContext, uTac) = renameMain(context, body, tac)
+              val (uBindings, uTac) =
+                renameMain(topLevel, actualMainIdent, body, tac)
+              val uContext = updateBindings(context, uBindings)
               val (contextFinal, goal) =
                 foldCode(topLevelStatements)(uContext,uTac) {
                   identity(_,_)
@@ -123,60 +138,14 @@ object tacToMips extends Stage {
             "function declaration for `int main(void)` not found.")
       }
     }
-  
-  private def renameMain
-    ( context: Context,
-      body: Source,
-      tac: normalToTac.Goal
-    ): (Context, Source) = {
-      val newMainDecl = replaceIdent(Std.mainFunc, actualMainIdent)
-      val newBindings = rename(
-        Std.mainIdentifier,
-        actualMainIdent,
-        newMainDecl,
-        body,
-        context.cursor.current
-      )
-      val newContext =
-        context.copy(cursor = context.cursor.withBindings(newBindings))
-      val newCode =
-        renameFunction(tac)(actualMainIdent,Std.mainIdentifier)
-      (newContext,newCode)
-    }
-
-  private def getData(context: Context): Goal = {
-    val data =
-      context.cursor.current.topView
-        .collect {
-          case (DataKey(label), c: Constant) => List(label, Word(c)): Goal
-        }
-        .flatMap[Assembler,Iterable[Assembler]](identity)
-        .toList
-    if data.isEmpty then
-      Nil
-    else
-      Data :: Comment("global data not linked to code yet") :: data
-  }
-
-  private def next(context: Context): Context =
-    context.copy(context.cursor.next)
-
-  private def add
-    (context: Context, key: Bindings.Key, value: key.Value): Context =
-      context.copy(
-        context.cursor.withBindings(
-          context.cursor.current + (key, value)))
-
-  private def get(context: Context, key: Label): Option[Constant] =
-    context.cursor.current.genGet(DataKey(key))
 
   private def topLevelStatements
     ( context: Context,
       statement: Statements
-    ): MipsAcc = {
+    ): MipsAcc =
       statement match {
       case Function(id, body) =>
-        evalFunction(next(context))(id, body)
+        evalFunction(nextScope(context))(id, body)
       case Declaration(_, _, i: Identifier) =>
         val label = Label(i)
         (add(context, DataKey(label), zero), Nil)
@@ -189,18 +158,6 @@ object tacToMips extends Stage {
             throw UnexpectedAstNode("Assignment of $i before declaration")
         }
       case _ => (context, Nil)
-    }}
-
-  private def renameFunction
-    ( tac: Source )
-    ( id: Identifier,
-      old: Identifier,
-    ): Source = tac.foldRight(Nil: Source) { (s,acc) =>
-      s match {
-        case Function(`old`, body) =>
-          Function(id, body) :: acc
-        case any => any :: acc
-      }
     }
 
   private def evalFunction
@@ -211,17 +168,6 @@ object tacToMips extends Stage {
       foldCode(evalStatements)(defineLocals(context),body) {
         (context,code) => (context, Label(id) :: code.reverse)
       }
-
-  private def defineLocals(context: Context): Context =
-    context.cursor.current.topView.foldLeft(context) { (c, kv) =>
-      kv match {
-        case (DeclarationKey(i: Identifier), IdentifierDeclaration()) => 
-          val (register, advanced) = c.advanceSaved
-          add(advanced, RegisterKey(i), register)
-        case _ =>
-          c
-      }
-    }
 
   private def evalStatements
     ( context: Context,
@@ -336,6 +282,17 @@ object tacToMips extends Stage {
     (contextR, codeR ++ l)
   }
 
+  private def defineLocals(context: Context): Context =
+    context.cursor.current.topView.foldLeft(context) { (c, kv) =>
+      kv match {
+        case (DeclarationKey(i: Identifier), IdentifierDeclaration()) => 
+          val (register, advanced) = c.advanceSaved
+          add(advanced, RegisterKey(i), register)
+        case _ =>
+          c
+      }
+    }
+
   private def getRegisterElse
     (f: (Context, Identifier | Temporary) => (Context, Register))
     (context: Context, lvalue: Identifier | Temporary): (Context, Register) =
@@ -358,14 +315,17 @@ object tacToMips extends Stage {
       (add(advanced, RegisterKey(lvalue), advanced.temporary), advanced.temporary)
     }
 
-  private def unexpected(lvalue: Identifier | Temporary): Nothing = {
-    val lStr = showLValue(lvalue)
-    throw UnexpectedAstNode(s"unknown variable $lStr")
+  private def getData(context: Context): Goal = {
+    val data =
+      context.cursor.current.topView
+        .collect {
+          case (DataKey(label), c: Constant) => List(label, Word(c)): Goal
+        }
+        .flatMap[Assembler,Iterable[Assembler]](identity)
+        .toList
+    if data.isEmpty then
+      Nil
+    else
+      Data :: Comment("global data not linked to code yet") :: data
   }
-
-  private def showLValue(lvalue: Identifier | Temporary): String =
-    lvalue match {
-      case Identifier(id) => id
-      case t: Temporary => ("_" + t.hashCode).take(6)
-    }
 }
