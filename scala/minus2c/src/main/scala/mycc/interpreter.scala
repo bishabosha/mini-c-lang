@@ -108,7 +108,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def addConstant(k: Identifier | Temporary, c: Constant): Unit = {
-     cursor.copy(current = cursor.current + (IdentKey(k), c))
+     cursor = cursor.copy(current = cursor.current + (IdentKey(k), c))
   }
 
   private def evalAsConstant(o: Option[Int]): Constant = {
