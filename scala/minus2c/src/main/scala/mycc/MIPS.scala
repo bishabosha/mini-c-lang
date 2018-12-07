@@ -83,11 +83,6 @@ enum PseudoUnary {
   case Comment(msg: String)
 }
 
-object Register {
-  def unapply(register:
-    Results | Arguments | Temporaries | SavedValues | Trap | Misc) = true
-}
-
 object AssignmentsPattern {
   import Ast._
   class Binary
@@ -106,17 +101,18 @@ object AssignmentsPattern {
     }
 
   object Binary {
+    type BinaryNode = Multiplicative | Additive | Relational | Equality
     def unapply
-      ( node: Multiplicative | Additive | Relational | Equality
-      ): Binary = node match {
-        case Multiplicative(op,l,r) =>
-          new Binary(op,l,r)
-        case Additive(op,l,r) =>
-          new Binary(op,l,r)
-        case Relational(op,l,r) =>
-          new Binary(op,l,r)
-        case Equality(op,l,r) =>
-          new Binary(op,l,r)
-      }
+      (node: BinaryNode): Binary =
+        node match {
+          case Multiplicative(op,l,r) =>
+            new Binary(op,l,r)
+          case Additive(op,l,r) =>
+            new Binary(op,l,r)
+          case Relational(op,l,r) =>
+            new Binary(op,l,r)
+          case Equality(op,l,r) =>
+            new Binary(op,l,r)
+        }
   }
 }

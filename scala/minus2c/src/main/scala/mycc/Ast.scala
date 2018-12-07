@@ -72,6 +72,7 @@ object Ast {
   type Postfix = Application | Primary
   type Constants = Identifier | Constant | StringLiteral
   type Primary = Constants | LazyExpressions | Temporary
+  type Node = Equality | Relational | Additive | Multiplicative | Unary
 }
 
 case class Temporary(rvalue: Assignments) {
@@ -103,38 +104,20 @@ case class Function(id: Identifier, body: List[Statements])
 case class Block(inner: List[Statements])
 
 object Expression {
+  
+  type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
+    Unary | Constant | StringLiteral | Identifier | Relational
+
   def unapply(node: Assignments): Boolean =
     node match {
-      case ExpressionRoot() | Temporary(Expression()) =>
+      case _: ExpressionRoot | Temporary(Expression()) =>
         true
       case _ =>
         false
     }
 }
 
-object ExpressionRoot {
-  def unapply(node: Equality | Relational | Additive | Multiplicative |
-    Unary | Constant | StringLiteral | Identifier | Relational) = true
-}
-
 object IdentifierDeclaration {
   def unapply(decl: Declaration): Boolean =
     decl.declarator.isInstanceOf[Identifier]
-}
-
-object CanApply {
-  def unapply(canApply: Application | Identifier) = true
-}
-
-object Primary {
-  def unapply(primary: Constant | Identifier | StringLiteral) = true
-}
-
-object Node {
-  def unapply(node: 
-      Equality
-    | Relational
-    | Additive
-    | Multiplicative
-    | Unary) = true
 }

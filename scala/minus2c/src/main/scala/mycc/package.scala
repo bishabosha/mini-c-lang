@@ -19,13 +19,11 @@ package object mycc {
     type Value = Function
   }
 
-  case class RegisterKey(key: Identifier | Temporary) extends Bindings.Key {
-    type Value = Register
-  }
-
   case class DataKey(key: Label) extends Bindings.Key {
     type Value = Constant
   }
+
+  type LValue = Identifier | Temporary
 
   def extractDeclarations
     (declarations: List[Declaration]
@@ -94,12 +92,12 @@ package object mycc {
         }
       }
 
-  def unexpected(lvalue: Identifier | Temporary): Nothing = {
+  def unexpected(lvalue: LValue): Nothing = {
     val lStr = showLValue(lvalue)
     throw UnexpectedAstNode(s"unknown variable $lStr")
   }
   
-  def showLValue(lvalue: Identifier | Temporary): String =
+  def showLValue(lvalue: LValue): String =
     lvalue match {
       case Identifier(id) => id
       case t: Temporary => ("_" + t.hashCode).take(6)

@@ -52,12 +52,18 @@ object tacToMips extends Stage {
   private type BinaryArgs = (Register,Register,Src) => ThreeAddr
   private type UnaryArgs = (Register,Src) => TwoAddr
 
+  private type RSrc = Identifier | Temporary
+
   private type MipsFor[Op] = Op match {
     case MultiplicativeOperators => PartialFunction[Op,BinaryArgs]
     case AdditiveOperators => PartialFunction[Op,BinaryArgs]
     case RelationalOperators => PartialFunction[Op,BinaryArgs]
     case EqualityOperators => PartialFunction[Op,BinaryArgs]
     case UnaryOperators => PartialFunction[Op,UnaryArgs]
+  }
+
+  case class RegisterKey(key: RSrc) extends Bindings.Key {
+    type Value = Register
   }
 
   case class MipsContext
@@ -177,7 +183,7 @@ object tacToMips extends Stage {
         assignExpr(getRegisterElse(assignTemporary)(context,id),inner)
       case (temp @ Temporary(inner)) =>
         assignExpr(getRegisterElse(assignTemporary)(context,temp),inner)
-      case Return((expr @ Assignments()) :: Nil) =>
+      case Return((expr: Assignments) :: Nil) =>
         val (tContext: Context, code: Goal) =
           assignExpr((context, V0),expr)
         (tContext, Jr(Ra) :: code)
@@ -189,9 +195,8 @@ object tacToMips extends Stage {
     (contextDest: (Context, Dest), value: Statements): MipsAcc = {
       val (topcontext: Context, destination: Dest) = contextDest
       val (context, dest, post) = destination match {
-        case r @ Register() =>
-          val d: Register = r
-          (topcontext, d, Nil: Goal)
+        case r: Register =>
+          (topcontext, r, Nil: Goal)
         case l: Label =>
           val (tContext, treg: Register) =
             assignTemporary(topcontext, Temporary(zero))
@@ -202,24 +207,24 @@ object tacToMips extends Stage {
       value match {
         case c: Constant =>
           (context, post ++ List(Li(dest,c)))
-        case v @ RSrc() =>
+        case v: RSrc =>
           val src = getRegister(context,v)
           (context, post ++ List(Move(dest,src)))
-        case Unary(op, r @ RSrc()) =>
+        case Unary(op, r: RSrc) =>
           val src = getRegister(context,r)
           (context, post ++ List(unary(op)(dest,src)))
-        case Binary(op, c: Constant, r @ RSrc()) =>
+        case Binary(op, c: Constant, r: RSrc) =>
           val (tContext, treg: Register) =
             assignTemporary(context, Temporary(zero))
           val loadTemp: Assembler = Li(treg,c)
           val rarg = getRegister(tContext, r)
           val result: Assembler = binaryOperators(op)(dest, treg, rarg)
           (tContext, post ++ List(result, loadTemp)) // code geerated in reverse order
-        case Binary(op, l @ RSrc(), c: Constant) =>
+        case Binary(op, l: RSrc, c: Constant) =>
           val lreg = getRegister(context, l)
           val result: Assembler = binaryOperators(op)(dest, lreg, c)
           (context, post ++ List(result))      
-        case Binary(op, l @ RSrc(), r @ RSrc()) =>
+        case Binary(op, l: RSrc, r: RSrc) =>
           val lreg = getRegister(context, l)
           val rarg = getRegister(context, r)
           val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
@@ -228,14 +233,6 @@ object tacToMips extends Stage {
           (context, Nil)
       }
     }
-
-  object Assignments {
-    def unapply(assign: Assignments): Boolean = true
-  }
-
-  object RSrc {
-    def unapply(rsrc: Identifier | Temporary): Boolean = true
-  }
 
   private def binaryOperators(op: BinaryOp): BinaryArgs = op match {
     case ad: AdditiveOperators => additive(ad)
@@ -305,8 +302,8 @@ object tacToMips extends Stage {
     }
 
   private def getRegisterElse
-    (f: (Context, Identifier | Temporary) => (Context, Dest))
-    (context: Context, lvalue: Identifier | Temporary): (Context, Dest) =
+    (f: (Context, RSrc) => (Context, Dest))
+    (context: Context, lvalue: RSrc): (Context, Dest) =
       context.cursor.current
         .genSearch(RegisterKey(lvalue))
         .map((context,_))
@@ -325,13 +322,13 @@ object tacToMips extends Stage {
         }
 
   private def getRegister
-    (context: Context, lvalue: Identifier | Temporary): Register =
+    (context: Context, lvalue: RSrc): Register =
       context.cursor.current
         .genSearch(RegisterKey(lvalue))
         .getOrElse(unexpected(lvalue))
   
   private def assignTemporary
-    (context: Context, lvalue: Identifier | Temporary): (Context, Register) = {
+    (context: Context, lvalue: RSrc): (Context, Register) = {
       val advanced = context.advanceTemporary
       (add(advanced, RegisterKey(lvalue), advanced.temporary), advanced.temporary)
     }
