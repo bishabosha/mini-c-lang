@@ -147,11 +147,9 @@ static void *(*mycc_CAst$TokenInt)(void *, int);
 static void *(*mycc_CAst$TokenString)(void *, void *);
 static void *(*mycc_CAst$UnaryNode)(void *, void *);
 static void *(*mycc_CAst$BinaryNode)(void *, void *, void *);
-
-static void *(*ArrayDeque_push)(void *);
-static void *(*ArrayDeque_pop)();
-
-static void *ArrayDeque_inst;
+static void *(*mycc_CAst$Sequence)(void *, void *);
+static void *(*System$out$println)(void *);
+static void *(*immutable$List)();
 
 #define SCALA_SINGLETON_FUNCTION(type)                                         \
   polyglot_get_member(polyglot_java_type(type), "apply")
@@ -164,78 +162,135 @@ void init_mycc_CAst() {
   mycc_CAst$TokenString = SCALA_SINGLETON_FUNCTION("mycc.CAst$TokenString");
   mycc_CAst$UnaryNode = SCALA_SINGLETON_FUNCTION("mycc.CAst$UnaryNode");
   mycc_CAst$BinaryNode = SCALA_SINGLETON_FUNCTION("mycc.CAst$BinaryNode");
-
-  ArrayDeque_inst =
-      polyglot_new_instance(polyglot_java_type("java.util.ArrayDeque"));
-  ArrayDeque_pop = polyglot_get_member(ArrayDeque_inst, "pop");
-  ArrayDeque_push = polyglot_get_member(ArrayDeque_inst, "push");
+  mycc_CAst$Sequence = SCALA_SINGLETON_FUNCTION("mycc.CAst$Sequence");
+  immutable$List = polyglot_get_member(
+      polyglot_java_type("scala.collection.immutable.List"), "empty");
+  System$out$println = polyglot_get_member(
+      polyglot_get_member(polyglot_java_type("java.lang.System"), "out"),
+      "println");
 }
 
-void Ast_to_Scala(Ast *);
-void UnaryNode_to_Scala(UnaryNode *);
-void BinaryNode_to_Scala(BinaryNode *);
-void TokenInt_to_Scala(TokenInt *);
-void TokenString_to_Scala(TokenString *);
-void Singleton_to_Scala(Ast *);
+void *Ast_to_Scala(Ast *);
+void *UnaryNode_to_Scala(UnaryNode *);
+void *BinaryNode_to_Scala(BinaryNode *);
+void *Sequence_to_Scala(Ast, BinaryNode *);
+void *TokenInt_to_Scala(TokenInt *);
+void *TokenString_to_Scala(TokenString *);
+void *Singleton_to_Scala(Ast *);
 
-void *get_deque() { return ArrayDeque_inst; }
+void print_java(void *obj) { System$out$println(obj); }
 
-void Ast_to_Scala(Ast *ast) {
+void *Ast_to_Scala(Ast *ast) {
   if (NULL == ast) {
-    return;
+    return NULL;
   }
   if (!mycc_CAst) {
     init_mycc_CAst();
   }
   switch (ast->tag) {
   case UNARY_NODE:
-    UnaryNode_to_Scala((UnaryNode *)ast);
-    return;
+    return UnaryNode_to_Scala((UnaryNode *)ast);
   case BINARY_NODE:
-    BinaryNode_to_Scala((BinaryNode *)ast);
-    return;
+    return BinaryNode_to_Scala((BinaryNode *)ast);
   case TOKEN_INT:
-    TokenInt_to_Scala((TokenInt *)ast);
-    return;
+    return TokenInt_to_Scala((TokenInt *)ast);
   case TOKEN_STRING:
-    TokenString_to_Scala((TokenString *)ast);
-    return;
+    return TokenString_to_Scala((TokenString *)ast);
   case SINGLETON:
-    Singleton_to_Scala(ast);
-    return;
+    return Singleton_to_Scala(ast);
+  default:
+    return NULL;
   }
 }
 
 #define JAVA_STRING(expr) polyglot_from_string(expr, "UTF-8")
 
-void BinaryNode_to_Scala(BinaryNode *node) {
-  Ast_to_Scala(node->a2);
-  Ast_to_Scala(node->a1);
-  ArrayDeque_push(mycc_CAst$BinaryNode(JAVA_STRING(named(&node->ast)),
-                                       ArrayDeque_pop(), ArrayDeque_pop()));
-  free(node);
+void *acc_List(void *, int, BinaryNode *);
+
+void *Sequence_to_Scala(Ast ast, BinaryNode *node) {
+  void *list = acc_List(immutable$List(), ast.type, node);
+  return mycc_CAst$Sequence(JAVA_STRING(named(&ast)), list);
 }
 
-void UnaryNode_to_Scala(UnaryNode *node) {
-  Ast_to_Scala(node->a1);
-  ArrayDeque_push(
-      mycc_CAst$UnaryNode(JAVA_STRING(named(&node->ast)), ArrayDeque_pop()));
-  free(node);
+#define CONS(obj, list) polyglot_invoke(list, "$colon$colon", obj);
+
+void *acc_List(void *list, int type, BinaryNode *node) {
+  bool reverse = false;
+  bool decided = false;
+  Ast *left = node->a1;
+  Ast *right = node->a2;
+  while (true) {
+    if (left->tag == BINARY_NODE && left->type == type) {
+      if (!decided) {
+        decided = true;
+      }
+      free(node);
+      list = CONS(Ast_to_Scala(right), list);
+      node = (BinaryNode *)left;
+      left = node->a1;
+      right = node->a2;
+    } else if (right->tag == BINARY_NODE && right->type == type) {
+      if (!decided) {
+        decided = true;
+        reverse = true;
+      }
+      free(node);
+      list = CONS(Ast_to_Scala(left), list);
+      node = (BinaryNode *)right;
+      left = node->a1;
+      right = node->a2;
+    } else {
+      free(node);
+      if (reverse) {
+        list = CONS(Ast_to_Scala(left), list);
+        list = CONS(Ast_to_Scala(right), list);
+      } else {
+        list = CONS(Ast_to_Scala(right), list);
+        list = CONS(Ast_to_Scala(left), list);
+      }
+      break;
+    }
+  }
+  return reverse ? polyglot_invoke(list, "reverse") : list;
 }
 
-void TokenString_to_Scala(TokenString *token) {
-  ArrayDeque_push(mycc_CAst$TokenString(JAVA_STRING(named(&token->ast)),
-                                        JAVA_STRING(token->lexeme)));
+void *BinaryNode_to_Scala(BinaryNode *node) {
+  switch (node->ast.type) {
+  case 'E':
+  case ';':
+  case ',':
+  case '~':
+    return Sequence_to_Scala(node->ast, node);
+  }
+  void *scala =
+      mycc_CAst$BinaryNode(JAVA_STRING(named(&node->ast)),
+                           Ast_to_Scala(node->a1), Ast_to_Scala(node->a2));
+  free(node);
+  return scala;
+}
+
+void *UnaryNode_to_Scala(UnaryNode *node) {
+  void *scala = mycc_CAst$UnaryNode(JAVA_STRING(named(&node->ast)),
+                                    Ast_to_Scala(node->a1));
+  free(node);
+  return scala;
+}
+
+void *TokenString_to_Scala(TokenString *token) {
+  void *scala = mycc_CAst$TokenString(JAVA_STRING(named(&token->ast)),
+                                      JAVA_STRING(token->lexeme));
   free(token->lexeme);
   free(token);
+  return scala;
 }
 
-void TokenInt_to_Scala(TokenInt *token) {
-  ArrayDeque_push(
-      mycc_CAst$TokenInt(JAVA_STRING(named(&token->ast)), token->value));
+void *TokenInt_to_Scala(TokenInt *token) {
+  void *scala =
+      mycc_CAst$TokenInt(JAVA_STRING(named(&token->ast)), token->value);
   free(token);
+  return scala;
 }
 
-void Singleton_to_Scala(Ast *ast) {
-  ArrayDeque_push(mycc_CAst$Singleton(JAVA_STRING(named(ast))));
+void *Singleton_to_Scala(Ast *ast) {
+  return mycc_CAst$Singleton(JAVA_STRING(named(ast)));
 }

@@ -34,6 +34,7 @@ object Parser {
           old = newtim
         }
         val (cast, identPool) = MyCCLib.astToScala(t)
+        // println(cast)
         if doTime then {
           newtim = System.currentTimeMillis
           println(s"IMPORTING_TO_SCALA: ${newtim - old}ms")

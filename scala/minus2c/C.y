@@ -93,7 +93,7 @@ expression
 declaration
     : declaration_specifiers ';'                      { $$ = $1; }
     | function_definition                             { $$ = $1; }
-    | declaration_specifiers init_declarator_list ';' { $$ = BinaryNode_new('~', $1, $2); }
+    | declaration_specifiers init_declarator_list ';' { $$ = BinaryNode_new('q', $1, $2); }
     ;
 
 declaration_specifiers

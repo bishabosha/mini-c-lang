@@ -141,9 +141,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     { case value => throw UnimplementedError(s"statement: $value") }
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
-    case BinaryNode("E", list, decl) =>
-      translationUnit(list)
-        .++[Declarations, List[Declarations]](externalDeclaration(decl))
+    case Sequence("E", list) =>
+      list.flatMap[Declarations, List[Declarations]](externalDeclaration)
   }
 
   private val functionDefinition: Parse[List[Declarations]] = {
@@ -154,7 +153,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val variableDeclaration: Parse[List[Declarations]] = {
-    case BinaryNode("~", specifiers, expr) =>
+    case BinaryNode("q", specifiers, expr) =>
       val (s, d) = declarationSpecifiersSpecific(specifiers)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
         case i: Identifier =>
@@ -177,8 +176,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val multiList: Parse[List[Statements]] = {
-    case BinaryNode(";", front, end) =>
-      compoundStatements(front) ++ compoundStatements(end)
+    case Sequence(";", statements) =>
+      statements.flatMap[Statements,List[Statements]](compoundStatements)
   }
 
   private val assignment: Parse[Assignment] = {
@@ -232,7 +231,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val expressionList: Parse[Expressions] = {
-    case BinaryNode(",", exprs, assigns) => expressions(exprs) :+ assignments(assigns)
+    case Sequence(",", assigns) => assigns.map[Assignments,Expressions](assignments); 
   }
 
   private val stringLiteral: Parse[StringLiteral] = {
@@ -249,13 +248,13 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val initDeclaratorList: Parse[List[InitDeclarator]] = {
-    case BinaryNode(",", front, end) =>
-      initDeclarators(front) :+ initDeclarator(end)
+    case Sequence(",", decls) =>
+      decls.map[InitDeclarator,List[InitDeclarator]](initDeclarator)
   }
 
   private val declarationSpecifierList: Parse[List[DeclarationSpecifiers]] = {
-    case BinaryNode("~", specifier, tail) =>
-      declarationSpecifier(specifier) :: declarationSpecifiers(tail)
+    case Sequence("~", specifiers) =>
+      specifiers.map[DeclarationSpecifiers, List[DeclarationSpecifiers]](declarationSpecifier)
   }
 
   private val storage: Parse[Storage] = {
@@ -279,8 +278,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val parameterList: Parse[List[Parameter]] = {
-    case BinaryNode(",", tail, param) =>
-      parameters(tail) :+ parameter(param)
+    case Sequence(",", params) =>
+      params.map[Parameter,List[Parameter]](parameter)
   }
 
   private val typesAndIdentifier: Parse[Parameter] = {
