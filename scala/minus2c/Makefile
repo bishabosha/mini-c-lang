@@ -3,12 +3,17 @@ SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mycc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
 DOTTY_VERSION = 0.11
+SUFFIX = 0-RC1
 BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
-GRAAL_CC = clang -I/Library/Java/JavaVirtualMachines/graalvm-ce-1.0.0-rc9/Contents/Home/jre/languages/llvm -O1 -emit-llvm
-LLVM_LINK = /usr/local/opt/llvm/bin/llvm-link
+LLVM_HOME = /usr/local/opt/llvm/bin
+OPT = ${LLVM_HOME}/opt
+GRAALVM_HOME = /Library/Java/JavaVirtualMachines/graalvm-ee-1.0.0-rc10/Contents/Home
+GRAAL_CC = clang -I${GRAALVM_HOME}/jre/languages/llvm -emit-llvm -O1
+GRAAL_CC_SANDBOXED = ${GRAALVM_HOME}/bin/clang-sandboxed
+LLVM_LINK = ${LLVM_HOME}/llvm-link
 TARGET = src/main/resources/mycclib
-CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.10/jars/dotty-library_0.10-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.10.0-RC1.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-0.10/classes/:
+CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_${DOTTY_VERSION}/jars/dotty-library_${DOTTY_VERSION}-${DOTTY_VERSION}.${SUFFIX}.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-${DOTTY_VERSION}.${SUFFIX}.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-${DOTTY_VERSION}/classes/:
 JAR = target/scala-${DOTTY_VERSION}/minus2c_${DOTTY_VERSION}-0.1.0.jar
 PARSER = cat testfile | dotr -cp ${CP}:${JAR} mycc.Parser
 
@@ -54,6 +59,7 @@ rm_logs:
 
 ${TARGET}: C.tab.c lex.yy.c ${OBJS}
 	${LINK} -o ${TARGET} ${OBJS}
+	${OPT} -mem2reg -adce -argpromotion -constmerge -globaldce -globalopt -O3 ${TARGET} -o=${TARGET}
 
 lex.yy.c: C.flex
 	flex C.flex
