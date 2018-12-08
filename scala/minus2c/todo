@@ -1,41 +1,39 @@
 [x] check scope for undeclared identifier access
 [x] frame based scoping
+    [x] flat frame field on functions
+    [x] stack based scope structure in context
 [x] a-normal form
-    [x] exprs
-    [x] statements
-    [x] return
 [x] constant folding
     [x] binary expression of constants
     [x] fold unary operator of constant
-[x] add func args to bindings in scope
-[x] fix -(-(-1))
-    [x] remove dropping constants from lazy expressions
-[x] a-normal form return function call
-[x] test lazyexpression function args for term removal
-[x] check that variable declarations are not removed in normal form
 [x] return is tail
-[-] bindings cursor
-    [x] forwards
-    [ ] backwards
-[x] interpret
-[ ] tac
+[x] bindings cursor
+[x] interpreter of ast
+[>] tac
     [ ] Normal form of function application using recursion
-        [ ] Return multiple lists from `parseCAst.statements` - One for each
-            scope
-        [ ] Add environment field to block and function
-        [ ] Definition of func should be in scope for applications,
-            [ ] whole block must be examined first (bearing in mind forward
+        [x] Add frame field to function
+        [x] Definition of func should be in scope for applications,
+            [x] whole block must be examined first (bearing in mind forward
                 declarations) 
-    [ ] variables to be assigned at most once?
-[ ] run tac
-[ ] possible solution to global stack in mycc is to have a map that for
-    each build process can allot a new bucket.
-[ ] use node to make --C build server and replace main in Parser.scala
-    [ ] or try to send C callbacks to scala
-[ ] specialised form of CAst to reduce match time
-[ ] bitset for used temp registers
+    [>] variables to be assigned at most once?
+        [?] do have key value pairs of scope and identifier
 [ ] Type check as an interpreter step
-[ ] Need to encode in the current frame an id for each variable or temporary
+[x] Need to encode in the current frame an id for each variable or temporary
     so that its current register can be recorded
 [ ] global variable name conflicts (with mips instructions) please remove
-[ ] polyglot_import("astToScala") or something like such
+
+--- FOR REPORT ---
+
+[ ] need to fix recursion in ast node visiting
+
+[>] improve mips speed
+    [ ] bitset for used temp registers, use numbers not enums
+
+[>] improve parse time
+    [ ] polyglot_import("astToScala") or something like such
+    [ ] specialised form of CAst to reduce match time
+    [?] possible solution to global stack in mycc is to have a map that for
+        each build process can allot a new bucket.
+    [-] use node to make --C build server and replace main in Parser.scala
+        [-] or try to send C callbacks to scala
+    [?] no bison at all?
