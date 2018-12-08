@@ -29,7 +29,7 @@ object MyCCLib {
     myCCLib.getMember("print_ast").executeVoid(ast)
 
   def astToScala(ast: Value): (CAst, Map[String, Identifier]) = {
-    (myCCLib.getMember("Node_to_Scala").execute(ast)
+    (myCCLib.getMember("Ast_to_Scala").execute(ast)
            .as(classOf[CAst]), {
              val symbTable =
               myCCLib.getMember("get_SymbTable_inst")
