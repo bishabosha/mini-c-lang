@@ -21,7 +21,7 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
 
   private def goal: (Context, Goal) = {
     topLevel.genGet(Std.mainIdentifierKey) match {
-      case Some(Std.`mainFunc`)
+      case Some((Std.`mainFunc`, 0))
         if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
           val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
             topLevelStatement(statement) ++ code
@@ -31,18 +31,18 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
           // frame
       case _ =>
         throw SemanticError(
-          "function definition for `int main(void)` not found.")
+          "function declaration for `int main(void)` not found.")
     }
   }
 
   private def topLevelStatement(node: Statements): Goal = node match {
-    case Function(Std.`mainIdentifier`, body) =>
+    case Function(Std.`mainIdentifier`, f, body) =>
       stacked {
         val validated = body
           .foldLeft(Nil: List[Statements]){ (code, statement) =>
             evalStatement(statement) ++ code
           }.reverse
-        List(Function(Std.mainIdentifier, validated))
+        List(Function(Std.mainIdentifier, f, validated))
       }
     case a: Assignment => List(a)
     case d: Declaration => List(d)
@@ -56,7 +56,7 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
 
   private def evalStatement(node: Statements): Goal = {
     node match {
-      case d: Declaration =>
+      case d @ Declaration(_, _, _: Identifier) =>
         List(d)
       case t @ Temporary(Expression()) =>
         List(t)

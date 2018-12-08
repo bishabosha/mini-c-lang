@@ -53,6 +53,7 @@ object tacToMips extends Stage {
   private type UnaryArgs = (Register,Src) => TwoAddr
 
   private type RSrc = Identifier | Temporary
+  private type LValue = RSrc | Constant
 
   private type MipsFor[Op] = Op match {
     case MultiplicativeOperators => PartialFunction[Op,BinaryArgs]
@@ -121,11 +122,12 @@ object tacToMips extends Stage {
     ): (Context, Goal) = {
       val topLevel = context.cursor.current
       topLevel.genGet(Std.mainIdentifierKey) match {
-        case Some(Std.`mainFunc`) =>
+        case Some((Std.`mainFunc`, 0)) =>
           topLevel.genGet(Std.mainDefinitionKey) match {
-            case Some(Function(_,body)) =>
+            case Some(Function(_,frame,body)) =>
+              val scope = getCurrentScope(context.cursor.current)
               val (uBindings, uTac) =
-                renameMain(topLevel, actualMainIdent, body, tac)
+                renameMain(scope, topLevel, actualMainIdent, frame, body, tac)
               val uContext = updateBindings(context, uBindings)
               val (contextFinal, goal) =
                 foldCode(topLevelStatements)(uContext,uTac) {
@@ -150,7 +152,7 @@ object tacToMips extends Stage {
       statement: Statements
     ): MipsAcc =
       statement match {
-      case Function(id, body) =>
+      case Function(id, _, body) =>
         evalFunction(nextScope(context))(id, body)
       case Declaration(_, _, i: Identifier) =>
         val label = Label(i)
@@ -161,7 +163,7 @@ object tacToMips extends Stage {
           case Some(value) =>
             (add(context, DataKey(label), c), Nil)
           case None =>
-            throw UnexpectedAstNode("Assignment of $i before declaration")
+            throw UnexpectedAstNode(s"Assignment of $i before declaration")
         }
       case _ => (context, Nil)
     }
@@ -293,13 +295,18 @@ object tacToMips extends Stage {
   private def defineLocals(context: Context): Context =
     context.cursor.current.topView.foldLeft(context) { (c, kv) =>
       kv match {
-        case (DeclarationKey(i: Identifier), IdentifierDeclaration()) => 
+        case (DeclarationKey(i: Identifier), (IdentifierDeclaration(), _)) => 
           val (register, advanced) = c.advanceSaved
           add(advanced, RegisterKey(i), register)
         case _ =>
           c
       }
     }
+
+  private def prepareRegisterFor
+    (f: (Context, LValue) => (Context, Dest))
+    (context: Context, lvalue: LValue): (Context, Dest, List[Assembler]) =
+      (???,???,???)
 
   private def getRegisterElse
     (f: (Context, RSrc) => (Context, Dest))

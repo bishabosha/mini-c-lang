@@ -44,7 +44,7 @@ object printAst {
           s"$lvl$id = ${exp(value)};$endl"
         case t @ Temporary(v) =>
           s"$lvl${getId(t)} = ${exp(v)};$endl"
-        case Function(i @ Identifier(id), b) =>
+        case Function(i @ Identifier(id), _, b) =>
           fn(id, b, level)
         case Block(b) => block(b, level)
         case Return(Nil) => s"${lvl}return;$endl"

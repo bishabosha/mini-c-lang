@@ -35,7 +35,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
 
   private def evalProgram: Int = {
     topLevel.genGet(Std.mainIdentifierKey) match {
-      case Some(Std.`mainFunc`)
+      case Some((Std.`mainFunc`, 0))
         if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
           println("interpreting:")
           nodes.foldLeft(None: Option[Int]){ (code, statement) =>
@@ -49,7 +49,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def topLevelStatement(node: Statements): Option[Int] = node match {
-    case Function(Std.`mainIdentifier`, body) =>
+    case Function(Std.`mainIdentifier`, _, body) =>
       stacked {
         body.foldLeft(None: Option[Int]){ (code, statement) =>
           code.orElse(evalStatement(statement))

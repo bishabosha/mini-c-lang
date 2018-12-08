@@ -11,8 +11,12 @@ package object mycc {
   import scala.language.implicitConversions
   implicit def bool2Int(b: Boolean): Int = if b then 1 else 0
 
+  case object ScopeKey extends Bindings.Key {
+    type Value = Long
+  }
+
   case class DeclarationKey(id: Identifier) extends Bindings.Key {
-    type Value = Declaration
+    type Value = (Declaration, Long)
   }
 
   case class DefinitionKey(id: Identifier) extends Bindings.Key {
@@ -24,6 +28,8 @@ package object mycc {
   }
 
   type LValue = Identifier | Temporary
+
+  def replaceHead[A](list: List[A])(f: A => A): List[A] = f(list.head) :: list.tail
 
   def extractDeclarations
     (declarations: List[Declaration]
@@ -45,16 +51,20 @@ package object mycc {
   }
 
   def renameMain
-    ( bindings: Bindings,
+    ( scope: Long,
+      bindings: Bindings,
       id: Identifier,
+      frame: Frame,
       body: List[Statements],
       tac: List[Statements]
     ): (Bindings, List[Statements]) = {
       val newMainDecl = replaceIdent(Std.mainFunc, id)
       val newBindings = rename(
+        scope,
         Std.mainIdentifier,
         id,
         newMainDecl,
+        frame,
         body,
         bindings
       )
@@ -69,21 +79,23 @@ package object mycc {
       old: Identifier,
     ): List[Statements] = tac.foldRight(Nil: List[Statements]) { (s,acc) =>
       s match {
-        case Function(`old`, body) =>
-          Function(id, body) :: acc
+        case Function(`old`, f, body) =>
+          Function(id, f, body) :: acc
         case any => any :: acc
       }
     }
 
   def rename
-    ( old: Identifier,
+    ( scope: Long,
+      old: Identifier,
       id: Identifier,
       decl: Declaration,
+      frame: Frame,
       body: List[Statements],
       bindings: Bindings
     ): Bindings =
-      declareIn(id, decl) {
-        defineIn(id, Function(id,body)) {
+      declareIn(id, decl, scope) {
+        defineIn(id, Function(id, frame, body)) {
           undefineIn(old) {
             undeclareIn(old) {
               bindings
@@ -114,14 +126,18 @@ package object mycc {
       bindings - DefinitionKey(key)
 
   private def declareIn
-    (key: Identifier, value: Declaration)
+    (key: Identifier, value: Declaration, scope: Long)
     (bindings: => Bindings): Bindings =
-      bindings + (DeclarationKey(key), value)
+      bindings + (DeclarationKey(key), value -> scope)
 
   private def undeclareIn
     (key: Identifier)
     (bindings: => Bindings): Bindings =
       bindings - DeclarationKey(key)
+
+  def getCurrentScope(bindings: Bindings): Long = bindings.genGet(ScopeKey).getOrElse{
+    throw new IllegalStateException("Context has no scope!")
+  }
 
   object Std {
     val mainIdentifier = Identifier("main")

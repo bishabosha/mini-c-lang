@@ -46,6 +46,7 @@ object Parser {
           println(s"PARSE_CAST: ${newtim - old}ms")
           old = newtim
         }
+        // println(ast)
         val (nContext, astFlattened) = astToNormal(context, ast)
         if doTime then {
           newtim = System.currentTimeMillis
@@ -54,7 +55,7 @@ object Parser {
         }
         if doPrintNormal then {
           if doSeparate then {
-            println("code:")
+            println("NORMAL:")
           }          
           printAst(astFlattened)
           if doTime then {
@@ -71,6 +72,7 @@ object Parser {
             old = newtim
           }
         }
+        // println(nContext)
         val (tContext, tac) = normalToTac(nContext, astFlattened)
         if doTime then {
           newtim = System.currentTimeMillis

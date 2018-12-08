@@ -100,7 +100,7 @@ case class Relational(op: RelationalOperators, left: Relationals, right: Additiv
 case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
 case class Assignment(lvalue: Identifier, rvalue: Assignments)
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
-case class Function(id: Identifier, body: List[Statements])
+case class Function(id: Identifier, frame: Frame, body: List[Statements])
 case class Block(inner: List[Statements])
 
 object Expression {

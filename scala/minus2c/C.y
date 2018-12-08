@@ -170,7 +170,7 @@ parameter_list
     ;
 
 parameter_declaration
-    : param_type_specifier variable_declarator { $$ = BinaryNode_new('~', $1, $2); }
+    : param_type_specifier variable_declarator { $$ = BinaryNode_new('q', $1, $2); }
     | param_type_specifier                     { $$ = $1; }
     ;
 

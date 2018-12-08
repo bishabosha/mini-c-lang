@@ -1,0 +1,65 @@
+List(
+    Declaration(Extern,Cint,FunctionDeclarator(Identifier(foo),LParam(Vector(Cint, Cint, Cint)))),
+    Declaration(Auto,Cint,FunctionDeclarator(Identifier(bar),LParam(Vector((Cfunction,Identifier(a)), Cint, (Cint,Identifier(c)))))),
+    Declaration(Auto,Cint,Identifier(zz)),
+    Assignment(Identifier(zz),Constant(25)),
+    Declaration(Auto,Cint,Identifier(yy)),
+    Assignment(Identifier(yy),Constant(36)),
+    Declaration(Auto,Cfunction,Identifier(f)),
+    Assignment(Identifier(f),Identifier(foo)),
+    Declaration(Auto,Cint,FunctionDeclarator(Identifier(main),LVoid)),
+    Function(
+        Identifier(main),
+        Frame(
+            Map(Identifier(yy) -> Declaration(Auto,Cint,Identifier(yy))),
+            Map(
+                (Identifier(a),2) -> Declaration(Auto,Cint,Identifier(a)),
+                (Identifier(a),1) -> Declaration(Auto,Cint,Identifier(a))
+            ),
+            Map(),
+            Map()
+        ),
+        List(
+            Block(List(
+                Declaration(Auto,Cint,Identifier(a)),
+                LazyExpressions(List(
+                    Additive(PLUS,Constant(5),Multiplicative(MODULUS,Constant(1),Constant(7))),
+                    Equality(NOT_EQUAL,Constant(4),Additive(PLUS,Constant(2),Constant(2))),
+                    Equality(EQUAL,Constant(3),Additive(PLUS,Constant(3),Constant(3)))
+                ))
+            )),
+            Assignment(Identifier(yy),Constant(21)),
+            Declaration(Auto,Cint,Identifier(a)),
+            Assignment(Identifier(a),Constant(4)),
+            Declaration(Auto,Cint,FunctionDeclarator(Identifier(bax),LVoid)),
+            Function(
+                Identifier(bax),
+                Frame(
+                    Map(),
+                    Map(),
+                    Map(),
+                    Map((Identifier(a),1) -> Declaration(Auto,Cint,Identifier(a)))
+                ),
+                List(
+                    Return(List(
+                        Multiplicative(MULTIPLY,Identifier(a),Constant(3))
+                    ))
+                )
+            ),
+            Return(List(Assignment(Identifier(a),Constant(10))))
+        )
+    ),
+    Function(
+        Identifier(bar),
+        Frame(
+            Map(),
+            Map(),
+            Map(
+                (Identifier(a),3) -> Declaration(Auto,Cfunction,Identifier(a)),
+                (Identifier(c),3) -> Declaration(Auto,Cint,Identifier(c))
+            ),
+            Map()
+        ),
+        List(Return(List(Constant(0))))
+    )
+)

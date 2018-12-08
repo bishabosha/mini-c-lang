@@ -28,7 +28,11 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
-  private var context: Context = Bindings.Empty.copy(extractDeclarations(Std.declarations))
+  private var scopeCount = 0L
+  private var context: Context =
+    Bindings.Empty
+      .copy(extractDeclarations(Std.declarations)) + (ScopeKey, scopeCount)
+  private var frames: List[Frame] = Nil
 
   private lazy val goal: Parse[(Context, Goal)] =
     translationUnit ->> { context -> _ }
@@ -155,13 +159,14 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private val variableDeclaration: Parse[List[Declarations]] = {
     case BinaryNode("q", specifiers, expr) =>
       val (s, d) = declarationSpecifiersSpecific(specifiers)
+      val lens = if frames.isEmpty then None else Some(Frame.localsLens)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
         case i: Identifier =>
-          declareInScope(i, s, d, i).toList
+          declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
-          declareInScope(id, s, d, f).toList
+          declareInScope(id, s, d, f, lens).toList
         case a @ Assignment(i, _) =>
-          declareInScope(i, s, d, i).toList
+          declareInScope(i, s, d, i, lens).toList
             .:+[Declarations, List[Declarations]](a)
       }
   }
@@ -283,7 +288,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val typesAndIdentifier: Parse[Parameter] = {
-    case BinaryNode("~", typeSpecifier, ident) =>
+    case BinaryNode("q", typeSpecifier, ident) =>
       (types(typeSpecifier), identifier(ident))
   }
 
@@ -291,27 +296,24 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     (declarators: Source, bodyOp: Option[Source]): List[Declarations] =
       declarators match {
         case BinaryNode("d", types, declarator) =>
-          yieldDefinition(
-            declarationSpecifiersSpecific(types),
-            bodyOp
-          ) { functionDeclarator(declarator) }
+          val (storage, typeFinal) = declarationSpecifiersSpecific(types)
+          yieldDefinition(storage,typeFinal)(bodyOp) {
+            functionDeclarator(declarator)
+          }
         case declarator =>
-          yieldDefinition(
-            (Auto, Cint),
-            bodyOp
-          ) { functionDeclarator(declarator) }
+          yieldDefinition(Auto, Cint)(bodyOp)(functionDeclarator(declarator))
       }
 
   private def yieldDefinition
-    ( declarators: (StorageTypes, Types),
-      bodyOp: Option[Source]
-    ): PartialFunction[FunctionDeclarator, List[Declarations]] = {
+    (storage: StorageTypes, types: Types)
+    (bodyOp: Option[Source])
+    : PartialFunction[FunctionDeclarator, List[Declarations]] = {
       case f @ FunctionDeclarator(i, args) =>
-        declareInScope(i, declarators._1, declarators._2, f).toList
+        declareInScope(i, storage, types, f, None).toList
           .:+[Declarations, List[Declarations]] {
             val bodyParsed =
               for (b <- bodyOp) yield {
-                stacked {
+                framed {
                   args match {
                     case LParam(l) => declareParamsInScope(l)
                     case _ =>
@@ -319,17 +321,32 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                   compoundStatements(b)
                 }
               }
-            if declarators._2 != Cvoid then {
-              tailYieldsValue(bodyParsed)
+            if types != Cvoid then {
+              tailYieldsValue(bodyParsed.map(_._2))
             }
             define {
-              Function(i, bodyParsed.getOrElse { Nil })
+              bodyParsed.map {
+                Function(i,_,_)
+              } getOrElse { 
+                Function(i, Frame.Empty, Nil)
+              }
             }
           }
     }
 
+  private def framed[A](parser: => A): (Frame, A) =
+    stacked {
+      frames = Frame.Empty :: frames
+      val result = parser
+      val popped = frames.head
+      frames = frames.tail
+      (popped, result)
+    }
+
   private def stacked[A](parser: => A): A = {
     context = context.push
+    scopeCount += 1L
+    context += (ScopeKey, scopeCount)
     val result = parser
     context = context.popOrElse { Bindings.Empty }
     result
@@ -339,20 +356,22 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
     for (p <- args) {
       p match {
         case (t: Types, i: Identifier) =>
-          declareInScope(i, Auto, t, i)
+          declareInScope(i, Auto, t, i, Some(Frame.paramsLens))
         case _ =>
       }
     }
   }
 
+  import Frame._
   private def declareInScope
     ( identifier: Identifier,
       storage: StorageTypes,
       types: Types,
-      declarator: Declarator
+      declarator: Declarator,
+      frameLens: Option[FrameLens]
     ): Option[Declaration] = {
       for (
-        Declaration(s, t, existing) <-
+        (Declaration(s, t, existing),_) <-
           context.genGet(DeclarationKey(identifier))
       ) {
         existing match {
@@ -369,7 +388,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                 return None
               } else {
                 throw new SemanticError(
-                  s"Redefinition of function '${identifier.id}' with incompatible types.")
+                  s"Redefinition of function '${identifier.id}' with "+
+                   "incompatible types.")
               }
             case _ =>
               throw new SemanticError(
@@ -378,17 +398,23 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
         }
       }
       val declaration = Declaration(storage, types, declarator)
-      context += (DeclarationKey(identifier), declaration)
+      var currentScope = getCurrentScope(context)
+      context += (DeclarationKey(identifier), declaration -> currentScope)
+      for (updater <- frameLens) {
+        var declInFrame = (identifier -> currentScope) -> declaration
+        frames = replaceHead(frames) { updater(_ + declInFrame) }
+      }
       Some(declaration)
     }
 
   private def define(f: => Function): Function = {
     val definition = f
+    var currentScope = getCurrentScope(context)
     context += (DefinitionKey(definition.id), definition)
     definition
   }
 
-  private def noAssign[A](a:A): Unit =
+  private def noAssign[A](a: A): Unit =
     a match {
       case List(_: Declaration, Assignment(Identifier(i),_:Application)) =>
         throw SemanticError(
@@ -398,8 +424,19 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   private def existsInScope[A](get: A => Identifier): A => Unit =
     get.andThen { ident =>
-      if !context.genSearch(DeclarationKey(ident)).isDefined then {
-        throw SemanticError(s"Identifier '${ident.id}' is undefined")
+      context.genSearch(DeclarationKey(ident)) match {
+        case Some((d: Declaration, scope)) =>
+          var currentScope = getCurrentScope(context)
+          if currentScope != scope then {
+              if scope == 0 then {
+                frames = replaceHead(frames) { Frame.globalsLens(_ + (ident -> d)) }
+              } else {
+                var declInFrame = (ident -> scope) -> d
+                frames = replaceHead(frames) { Frame.capturesLens(_ + declInFrame) }
+              }
+          }
+        case None =>
+          throw SemanticError(s"Identifier '${ident.id}' is undefined")
       }
     }
 

@@ -76,7 +76,7 @@ class astToNormal private (var context: Context) {
     jumpStatements
 
   private val function: FlattenO[Statements, Function] = {
-    case Function(i, body) => Function(i, statementList(body))
+    case Function(i, f, body) => Function(i, f, statementList(body))
   }
 
   private val declaration: FlattenO[Statements, Declaration] = {
