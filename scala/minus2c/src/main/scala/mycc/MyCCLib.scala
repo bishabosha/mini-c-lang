@@ -6,7 +6,9 @@ import org.graalvm.polyglot._
 
 object MyCCLib {
   private val polyglot =
-    Context.newBuilder().allowAllAccess(true).build
+    Context.newBuilder().allowAllAccess(true)
+    // .option("llvm.sandboxed","true")
+    .build
 
   private val source =
     Source.newBuilder("llvm", getClass.getResource("/mycclib")).build
@@ -27,7 +29,7 @@ object MyCCLib {
     myCCLib.getMember("print_ast").executeVoid(ast)
 
   def astToScala(ast: Value): (CAst, Map[String, Identifier]) = {
-    (myCCLib.getMember("Ast_to_Scala").execute(ast)
+    (myCCLib.getMember("Node_to_Scala").execute(ast)
            .as(classOf[CAst]), {
              val symbTable =
               myCCLib.getMember("get_SymbTable_inst")

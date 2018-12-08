@@ -1,5 +1,5 @@
-OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc mycc.bc
-SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mycc.c
+OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc vector.bc mycc.bc
+SRCS = lex.yy.c C.tab.c SymbTable.c ast.c vector.c mycc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
 DOTTY_VERSION = 0.11
