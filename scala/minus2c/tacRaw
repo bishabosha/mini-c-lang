@@ -1,5 +1,5 @@
 data:
-Map(Identifier(yy) -> GlobalWord(Identifier(yy),Constant(32)))
+Map(Identifier(yy) -> GlobalConstant(Identifier(yy),Constant(32)))
 tac:
 List(
     Func(

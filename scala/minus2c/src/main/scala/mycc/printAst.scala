@@ -43,7 +43,7 @@ object printAst {
         case Assignment(Identifier(id), value) =>
           s"$lvl$id = ${exp(value)};$endl"
         case Assignment(t: Temporary, value) =>
-          s"$lvl${getId(t)} = ${exp(value)};$endl"
+          s"$lvl${showTemporary(t)} = ${exp(value)};$endl"
         case Function(i @ Identifier(id), _, b) =>
           fn(id, b, level)
         case Block(b) => block(b, level)
@@ -81,13 +81,11 @@ object printAst {
         case Identifier(i) =>
           s"$i"
         case t: Temporary =>
-          getId(t)
+          showTemporary(t)
         case x =>
           throw UnexpectedAstNode(s"expression: ${x.toString}")
       }
     }
-
-  private def getId(t: Temporary): String = ("_" + t.hashCode).take(6)
 
   private def getUnary(op: Operand, v: String): String =
     s"${op.symbol} $v"

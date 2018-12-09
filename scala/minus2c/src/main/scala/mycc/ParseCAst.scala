@@ -172,6 +172,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
         case a @ Assignment(i: Identifier, _) =>
           declareInScope(i, s, d, i, lens).toList
             .:+[Declarations, List[Declarations]](a)
+        case _ =>
+          Nil
       }
   }
 
@@ -462,7 +464,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
             }
           case None =>
             throw SemanticError(s"Identifier '${ident.id}' is undefined")
-      }
+        }
+      case _ =>
     }
 
   private def tailYieldsValue(statements: Option[List[Statements]]): Unit = {

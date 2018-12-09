@@ -61,9 +61,9 @@ object tacToTac extends Stage {
 
   private def getData(node: Statements): Option[(Identifier, GlobalData)] = node match {
     case Declaration(_, _, i: Identifier) =>
-      Some((i, GlobalWord(i, zero)))
+      Some((i, GlobalConstant(i, zero)))
     case Assignment(i: Identifier, c: Constant) =>
-      Some((i, GlobalWord(i, c)))
+      Some((i, GlobalConstant(i, c)))
     case _ => None
   }
 
@@ -110,8 +110,6 @@ object tacToTac extends Stage {
         case r: Identifier =>
           (???, ???, ???)
         case l: Temporary =>
-          (???, ???, ???)
-        case _ => throw UnexpectedAstNode("Not register or label")
           (???, ???, ???)
       }
       value match {

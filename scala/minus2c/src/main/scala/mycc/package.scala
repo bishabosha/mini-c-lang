@@ -129,8 +129,11 @@ package object mycc {
   def showLValue(lvalue: LValue): String =
     lvalue match {
       case Identifier(id) => id
-      case t: Temporary => ("_" + t.hashCode).take(6)
+      case t: Temporary => showTemporary(t)
     }
+
+  def showTemporary(temporary: Temporary): String =
+    ("@" + temporary.hashCode).take(6)
 
   private def defineIn
     (key: Identifier, value: Function)

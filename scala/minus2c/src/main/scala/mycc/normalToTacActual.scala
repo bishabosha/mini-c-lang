@@ -33,9 +33,9 @@ object normalToTacActual extends Stage {
   private def getData(node: Statements): Option[(Identifier, GlobalData)] =
     node match {
       case Declaration(_, _, i: Identifier) =>
-        Some((i, GlobalWord(i, zero)))
+        Some((i, GlobalConstant(i, zero)))
       case Assignment(i: Identifier, c: Constant) =>
-        Some((i, GlobalWord(i, c)))
+        Some((i, GlobalConstant(i, c)))
       case _ => None
     }
 
@@ -51,25 +51,27 @@ object normalToTacActual extends Stage {
   private def evalStatement(node: Statements): List[Code] =
     node match {
       case Assignment(dest, expr: ExpressionRoot) =>
-        List(evalExpr(dest,expr))
+        evalExpr(dest,expr)
       case Return((a: ASrc) :: Nil) =>
         List(OneTac(RETURN, a))
-      case Return((expr: ExpressionRoot) :: Nil) =>
-        val temp = new Temporary
-        List(OneTac(RETURN, temp), evalExpr(temp,expr))
+      // case Return((expr: ExpressionRoot) :: Nil) =>
+      //   val temp = new Temporary
+      //   OneTac(RETURN, temp) :: evalExpr(temp,expr)
       case _ =>
         List()
     }
 
-  private def evalExpr(dest: Variable, expr: ExpressionRoot): Code = {
+  private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = {
     import AssignmentsPattern._
     expr match {
       case Binary(op: BinaryOperators, l: ASrc, r: ASrc) =>
-        ThreeTac(op, dest, l, r)
+        ThreeTac(op, dest, l, r) :: Nil
       case Unary(op, v: ASrc) =>
-        TwoTac(op, dest, v)
+        TwoTac(op, dest, v) :: Nil
       case b: ASrc =>
-        TwoTac(ASSIGN, dest, b)
+        TwoTac(ASSIGN, dest, b) :: Nil
+      case _ =>
+        Nil
     }
   }
 }

@@ -10,14 +10,14 @@ object Tac {
   type OneOperators = MiscOneOperators
 
   type ASrc = Variable | Constant
-  type GlobalData = GlobalWord
+  type GlobalData = GlobalConstant
   type Code = OneTac | TwoTac | ThreeTac
   type Tac = Func
 }
 
 enum MiscTwoOperators { case ASSIGN }
 enum MiscOneOperators { case RETURN }
-case class GlobalWord(name: Identifier, value: Constant)
+case class GlobalConstant(name: Identifier, value: Constant)
 case class OneTac(op: OneOperators, a1: ASrc)
 case class TwoTac(op: TwoOperators, dest: Variable, a1: ASrc)
 case class ThreeTac(op: ThreeOperators, dest: Variable, a1: ASrc, a2: ASrc)

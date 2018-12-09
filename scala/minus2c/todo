@@ -2,10 +2,10 @@
 [x] frame based scoping
     [x] flat frame field on functions
     [x] stack based scope structure in context
-[x] a-normal form
-[x] constant folding
-    [x] binary expression of constants
-    [x] fold unary operator of constant
+[>] a-normal form
+    [x] constant folding
+        [x] binary expression of constants
+        [x] fold unary operator of constant
 [x] return is tail
 [x] bindings cursor
 [x] interpreter of ast
@@ -26,9 +26,11 @@
 [ ] create data segment at ast stage
 [ ] Do global data at AST level
 [?] Consider adding temporaries to the frame
+[ ] only use Cursor in a terminal consumer
 
 --- FOR REPORT ---
 
+[ ] everything I removed from C.y
 [ ] talk about WASM
 [ ] changed data segment parsing from end to the start
 [ ] previously temporaries contained nested expressions,
