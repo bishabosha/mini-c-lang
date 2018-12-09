@@ -2,7 +2,8 @@ package mycc
 
 import Ast._
 import exception._
-import tacToMips._
+import tacActualToMips._
+import normalToTacActual._
 import PseudoZero._
 import PseudoUnary._
 import MIPS._
@@ -19,10 +20,13 @@ import EqualityOperators._
 import RelationalOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
+import Tac._
+import MiscTwoOperators._
+import MiscOneOperators._
 
-object tacToMips extends Stage {
-  type Source   = normalToTac.Goal
-  type Context  = MipsContext
+object tacActualToMips extends Stage {
+  type Source   = normalToTacActual.Goal
+  type Context  = MipsContext2
   type Goal     = List[Assembler]
 
   private val exitWithArg = Constant(17)
@@ -61,12 +65,12 @@ object tacToMips extends Stage {
     type Value = Register
   }
 
-  case class MipsContext
+  case class MipsContext2
     ( cursor: Cursor,
       private val _temporary: Option[Temporaries],
       private val saved: Set[SavedValues],
     ) {
-      def advanceTemporary: MipsContext = {
+      def advanceTemporary: MipsContext2 = {
         val temp = _temporary.map { t =>
           if t.enumTag == Temporaries.enumValue.size then {
             throw SemanticError("Too many temporaries!")
@@ -78,7 +82,7 @@ object tacToMips extends Stage {
         copy(_temporary = temp)
       }
 
-      def advanceSaved: (SavedValues, MipsContext) = {
+      def advanceSaved: (SavedValues, MipsContext2) = {
         val savedValues = SavedValues.enumValues.toSet
         val newSet = savedValues &~ saved
         if newSet.isEmpty then {
@@ -104,58 +108,50 @@ object tacToMips extends Stage {
   private def get(context: Context, key: Label): Option[Constant] =
     context.cursor.current.genGet(DataKey(key))
 
-  def apply(context: normalToTac.Context, tac: Source): (Context, Goal) = {
-    val cursor = Cursor(context)
-    val mipsContext = MipsContext(cursor,None,Set())
-    goal(mipsContext, tac)
-  }
+  def apply
+    ( context: normalToTacActual.Context,
+      tac: (DataMap, List[Tac])
+    ): (Context, Goal) = {
+      val cursor = Cursor(context)
+      val mipsContext = MipsContext2(cursor,None,Set())
+      goal(mipsContext, tac)
+    }
 
   private def goal
     ( context: Context,
-      tac: normalToTac.Goal
+      tac: (DataMap, List[Tac])
     ): (Context, Goal) = {
+      val (data, nodes) = tac
       val topLevel = context.cursor.current
       parseMain(topLevel) { () =>
         val scope = getCurrentScope(context.cursor.current)
         val (uBindings, uTac) =
-          renameMain(scope, topLevel, actualMainIdent, tac)
+          renameMainFunc(scope, topLevel, actualMainIdent, nodes)
         val uContext = updateBindings(context, uBindings)
         val (contextFinal, goal) =
           foldCode(topLevelStatements)(uContext,uTac) {
             identity(_,_)
           }
-        val data = getData(contextFinal)
+        val dataAssembler = getData(data)
         val top: Goal = predef ++ pseudoMain
-        val end: Goal = goal ++ data
+        val end: Goal = goal ++ dataAssembler
         (contextFinal, top ++ end)
       }
     }
 
   private def topLevelStatements
     ( context: Context,
-      statement: Statements
+      statement: Tac
     ): MipsAcc =
       statement match {
-      case Function(id, _, body) =>
+      case Func(id, _, body) =>
         evalFunction(nextScope(context))(id, body)
-      case Declaration(_, _, i: Identifier) =>
-        val label = Label(i)
-        (add(context, DataKey(label), zero), Nil)
-      case Assignment(i: Identifier, c: Constant) =>
-        val label = Label(i)
-        get(context, label) match {
-          case Some(value) =>
-            (add(context, DataKey(label), c), Nil)
-          case None =>
-            throw UnexpectedAstNode(s"Assignment of $i before declaration")
-        }
-      case _ => (context, Nil)
     }
 
   private def evalFunction
     ( context: Context )
     ( id: Identifier,
-      body: Source,
+      body: List[Code],
     ): MipsAcc =
       foldCode(evalStatements)(defineLocals(context),body) {
         (context,code) => (context, Label(id) :: code.reverse)
@@ -163,16 +159,15 @@ object tacToMips extends Stage {
 
   private def evalStatements
     ( context: Context,
-      statement: Statements
-    ): MipsAcc = statement match {
-      case Assignment(dest, inner) =>
-        assignExpr(getRegisterElse(assignTemporary)(context,dest),inner)
-      case Return((expr: Assignments) :: Nil) =>
-        val (tContext: Context, code: Goal) =
-          assignExpr((context, V0),expr)
-        (tContext, Jr(Ra) :: code)
-      case _ => (context, Nil) // yield rest, consume 1
-    }
+      code: Code
+    ): MipsAcc = code match {
+        case ThreeTac(op,d,l,r) =>
+          (???, ???)
+        case TwoTac(op,d,v) =>
+          (???, ???)
+        case OneTac(op,v) =>
+          (???, ???)
+      }
 
   import AssignmentsPattern._
   private def assignExpr
@@ -253,10 +248,10 @@ object tacToMips extends Stage {
     case NEGATIVE => Neg
   }
 
-  private def foldCode[O]
-    (f: (Context, Statements) => MipsAcc)
-    (context: Context, rest: Source)
-    (finisher: (Context, Goal) => O): O = {
+  private def foldCode[O,A]
+    (f: (Context, A) => MipsAcc)
+    (context: Context, rest: List[A])
+    (finisher: (Context, List[Assembler]) => O): O = {
       var contextAcc = context
       var restAcc = rest
       var codeAcc: Goal = Nil
@@ -325,16 +320,8 @@ object tacToMips extends Stage {
       (add(advanced, RegisterKey(lvalue), advanced.temporary), advanced.temporary)
     }
 
-  private def getData(context: Context): Goal = {
-    val data =
-      context.cursor.current.stack.lastOption
-        .toList
-        .flatMap(_.topView)
-        .collect {
-          case (DataKey(label), c: Constant) => List(label, Word(c)): Goal
-        }
-        .flatMap[Assembler,Iterable[Assembler]](identity)
-        .toList
+  private def getData(data: DataMap): Goal = {
+    val data = Nil
     if data.isEmpty then
       Nil
     else

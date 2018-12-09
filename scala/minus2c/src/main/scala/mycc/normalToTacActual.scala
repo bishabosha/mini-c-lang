@@ -19,7 +19,7 @@ object normalToTacActual extends Stage {
   type DataMap = Map[Identifier, GlobalData]
 
   def apply(topLevel: Context, nodes: List[Statements]): (Context, Goal) =
-    parseMain(topLevel) { f =>
+    parseMain(topLevel) { () =>
       val data = nodes.foldLeft(Map(): Map[Identifier, GlobalData]) {
         (acc, statement) =>
           getData(statement).fold(acc)(acc + _)

@@ -33,6 +33,11 @@
 [>] at some point associate identifiers with unique scope ids in all exprs
     [ ] possibly make new case class for scoped identifiers, replace operators
         using Identifier with the new type
+[>] function definitions should not be added to bindings, please just a flag
+    [ ] rename main - just add new declaration + isDefined to topLevel,
+    [ ] replace Func node with new one with same frame and body but new ident
+        [ ] { curr = 0; while (isdeclared(main + curr)) curr += 1; }
+    [?] do this at first declaration
 
 --- FOR REPORT ---
 

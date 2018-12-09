@@ -432,7 +432,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private def define(f: => Function): Function = {
     val definition = f
     var currentScope = getCurrentScope(context)
-    context += (DefinitionKey(definition.id), definition)
+    context += (DefinitionKey(definition.id), ())
     definition
   }
 

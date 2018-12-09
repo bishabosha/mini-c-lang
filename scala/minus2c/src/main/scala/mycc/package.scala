@@ -7,6 +7,7 @@ package object mycc {
   import exception.UnexpectedAstNode
   import ArgList._
   import MIPS._
+  import Tac._
 
   import scala.language.implicitConversions
   implicit def bool2Int(b: Boolean): Int = if b then 1 else 0
@@ -20,7 +21,7 @@ package object mycc {
   }
 
   case class DefinitionKey(id: Identifier) extends Bindings.Key {
-    type Value = Function
+    type Value = Unit
   }
 
   case class DataKey(key: Label) extends Bindings.Key {
@@ -34,14 +35,14 @@ package object mycc {
   def replaceHead[A](list: List[A])(f: A => A): List[A] =
     f(list.head) :: list.tail
 
-  def parseMain[A](topLevel: Bindings)(f: Function=> A): A =
+  def parseMain[A](topLevel: Bindings)(f: () => A): A =
     topLevel.genGet(Std.mainIdentifierKey) match {
         case Some((Std.`mainFunc`, 0)) =>
-          topLevel.genGet(Std.mainDefinitionKey) match {
-            case Some(function) => f(function)
-            case _ =>
-              throw SemanticError(
-                "function definition for `int main(void)` not found.")
+          if topLevel.genGet(Std.mainDefinitionKey) isDefined then
+            f()
+          else {
+            throw SemanticError(
+              "function definition for `int main(void)` not found.")
           }
         case _ =>
           throw SemanticError(
@@ -67,12 +68,29 @@ package object mycc {
       Declaration(s,t,FunctionDeclarator(id,args))
   }
 
+  def renameMainFunc
+    ( scope: Long,
+      bindings: Bindings,
+      id: Identifier,
+      tac: List[Tac]
+    ): (Bindings, List[Tac]) = {
+      val newMainDecl = replaceIdent(Std.mainFunc, id)
+      val newBindings = renameFunc(
+        scope,
+        Std.mainIdentifier,
+        id,
+        newMainDecl,
+        bindings
+      )
+      val newCode =
+        renameFunc(tac)(id,Std.mainIdentifier)
+      (newBindings,newCode)
+    }
+
   def renameMain
     ( scope: Long,
       bindings: Bindings,
       id: Identifier,
-      frame: Frame,
-      body: List[Statements],
       tac: List[Statements]
     ): (Bindings, List[Statements]) = {
       val newMainDecl = replaceIdent(Std.mainFunc, id)
@@ -81,8 +99,6 @@ package object mycc {
         Std.mainIdentifier,
         id,
         newMainDecl,
-        frame,
-        body,
         bindings
       )
       val newCode =
@@ -102,23 +118,51 @@ package object mycc {
       }
     }
 
+  def renameFunc
+    ( tac: List[Tac] )
+    ( id: Identifier,
+      old: Identifier,
+    ): List[Tac] = tac.foldRight(Nil: List[Tac]) { (s,acc) =>
+      s match {
+        case Func(`old`, f, body) =>
+          Func(id, f, body) :: acc
+        case any => any :: acc
+      }
+    }
+
   def rename
     ( scope: Long,
       old: Identifier,
       id: Identifier,
       decl: Declaration,
-      frame: Frame,
-      body: List[Statements],
       bindings: Bindings
     ): Bindings =
       declareIn(id, decl, scope) {
-        defineIn(id, Function(id, frame, body)) {
+        defineIn(id) {
           undefineIn(old) {
             undeclareIn(old) {
               bindings
             }
           }
         }
+      }
+
+    def renameFunc
+    ( scope: Long,
+      old: Identifier,
+      id: Identifier,
+      decl: Declaration,
+      bindings: Bindings
+    ): Bindings =
+      declareIn(id, decl, scope) {
+        // defineIn(id, Func(id, frame, body)) {
+        //   undefineIn(old) {
+        //     undeclareIn(old) {
+        //       bindings
+        //     }
+        //   }
+        // }
+        ???
       }
 
   def unexpected(lvalue: LValue): Nothing = {
@@ -136,9 +180,9 @@ package object mycc {
     ("@" + temporary.hashCode).take(6)
 
   private def defineIn
-    (key: Identifier, value: Function)
+    (key: Identifier)
     (bindings: => Bindings): Bindings =
-      bindings + (DefinitionKey(key), value)
+      bindings + (DefinitionKey(key), ())
 
   private def undefineIn
     (key: Identifier)

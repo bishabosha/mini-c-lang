@@ -19,7 +19,7 @@ object normalToTac extends Stage {
 class normalToTac private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
-  private def goal: (Context, Goal) = parseMain(topLevel) { f =>
+  private def goal: (Context, Goal) = parseMain(topLevel) { () =>
     val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
       topLevelStatement(statement) ++ code
     }.reverse

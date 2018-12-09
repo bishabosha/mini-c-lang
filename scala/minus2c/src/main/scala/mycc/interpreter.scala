@@ -33,7 +33,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
 
-  private def evalProgram: Int = parseMain(topLevel) { f =>
+  private def evalProgram: Int = parseMain(topLevel) { () =>
     println("interpreting:")
     nodes.foldLeft(None: Option[Int]){ (code, statement) =>
       code.orElse(topLevelStatement(statement))
