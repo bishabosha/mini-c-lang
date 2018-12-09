@@ -456,9 +456,12 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                     Frame.globalsLens(_ + (ident -> d))
                   }
                 } else {
-                  var declInFrame = (ident -> scope) -> d
-                  frames = replaceHead(frames) {
-                    Frame.capturesLens(_ + declInFrame)
+                  var uniqueVar = ident -> scope
+                  if frames.head.locals.get(uniqueVar).isEmpty then {
+                    var declInFrame = uniqueVar -> d
+                    frames = replaceHead(frames) {
+                      Frame.capturesLens(_ + declInFrame)
+                    }
                   }
                 }
             }

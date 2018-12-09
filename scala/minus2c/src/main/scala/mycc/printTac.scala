@@ -30,34 +30,95 @@ object printTac {
       val (data, nodes) = src
       val dataString = s"$indent.static$endl"
       val codeString = s"$indent.code$endl"
-      val dataAll = tacData(context, data, indent)
-      val codeAll = tacNodes(context, nodes, indent)
+      val dataAll = evalData(context, data, indent)
+      val codeAll = evalNodes(context, nodes, indent)
       dataString + dataAll + codeString + codeAll
     }
 
-  private def tacNodes
-    ( context: Bindings,
-      nodes: List[Tac],
-      indent: String
-    ): String =
-      nodes.view.map {
-        case Func(Identifier(i),frame,codes) =>
-          s"$i:$endl" +
-          (for (code <- codes.view)
-            yield codeNode(context, code, indent)
-          ).mkString
-      }.mkString
-
-  private def tacData
+  private def evalData
     ( context: Bindings,
       data: DataMap,
       indent: String
     ): String = data.values.view.map {
         case GlobalConstant(Identifier(i),Constant(c)) =>
-          s"$i:$endl${indent}.const $c$endl"
+          s"$i:$endl${indent}.const %I32 $c$endl"
     }.mkString
 
-  private def codeNode
+  private def evalNodes
+    ( context: Bindings,
+      nodes: List[Tac],
+      indent: String
+    ): String =
+      (for (node <- nodes.view)
+          yield evalNode(context, node, indent)
+      ).mkString
+  
+  private def evalNode
+    ( context: Bindings,
+      node: Tac,
+      indent: String
+    ): String =
+      node match {
+        case Func(identifier,frame,codes) =>
+          evalFunction(context, identifier, frame, codes, indent)
+      }
+
+  private def evalFunction
+    ( context: Bindings,
+      identifier: Identifier,
+      frame: Frame,
+      codes: List[Code],
+      indent: String
+    ): String = {
+      s"${identifier.id}:$endl" +
+      s"$indent.begin_function$endl" +
+      evalFrame(context, frame, indent) +
+      evalCodes(context, codes, indent) +
+      s"$indent.end_function$endl"
+    }
+    
+  private def evalFrame
+    ( context: Bindings,
+      frame: Frame,
+      indent: String
+    ): String = {
+      val globals = frame.globals.view.map {
+        case (Identifier(a), Declaration(_,Cint,_)) =>
+          s"${indent}.global %I32 $a$endl"
+        case (Identifier(a), Declaration(_,Cfunction,_)) =>
+          s"${indent}.global %Function $a$endl"
+      }.mkString
+      val locals = frame.locals.view.map {
+        case ((Identifier(a), scope), Declaration(_,Cint,_)) =>
+          s"${indent}.local %I32 $a~$scope$endl"
+        case ((Identifier(a), scope), Declaration(_,Cfunction,_)) =>
+          s"${indent}.local %Function $a~$scope$endl"
+      }.mkString
+      val params = frame.params.view.map {
+        case ((Identifier(a), scope), Declaration(_,Cint,_)) =>
+          s"${indent}.param %I32 $a~$scope$endl"
+        case ((Identifier(a), scope), Declaration(_,Cfunction,_)) =>
+          s"${indent}.param %Function $a~$scope$endl"
+      }.mkString
+      val captured = frame.captures.view.map {
+        case ((Identifier(a), scope), Declaration(_,Cint,_)) =>
+          s"${indent}.captured %I32 $a~$scope$endl"
+        case ((Identifier(a), scope), Declaration(_,Cfunction,_)) =>
+          s"${indent}.captured %Function $a~$scope$endl"
+      }.mkString
+      globals + locals + params + captured
+    }
+
+  private def evalCodes
+    ( context: Bindings,
+      nodes: List[Code],
+      indent: String
+    ): String =
+      (for (code <- nodes.view)
+          yield evalCode(context, code, indent)
+      ).mkString
+
+  private def evalCode
     ( context: Bindings,
       node: Code,
       indent: String
@@ -85,10 +146,10 @@ object printTac {
     (indent: String )
     (op: TwoOperators, dest: Variable, value: ASrc): String = {
       val name = op match {
-        case ASSIGN => "set"
+        case ASSIGN => "assign"
         case NOT => "not"
-        case POSITIVE => "identity"
-        case NEGATIVE => "negate"
+        case POSITIVE => "positive"
+        case NEGATIVE => "negative"
       }
       s"${indent}$name ${const(dest)}, ${const(value)}$endl"
     }
@@ -97,17 +158,17 @@ object printTac {
     (indent: String)
     (op: ThreeOperators, dest: Variable, left: ASrc, right: ASrc): String = {
       val name = op match {
-        case EQUAL => "eq"
-        case NOT_EQUAL => "neq"
-        case LT => "lt"
-        case GT => "gt"
-        case GT_EQ => "gte"
-        case LT_EQ => "lte"
-        case PLUS => "add"
-        case MINUS => "sub"
-        case MULTIPLY => "mul"
-        case DIVIDE => "div"
-        case MODULUS => "mod"
+        case EQUAL => "equal"
+        case NOT_EQUAL => "not_equal"
+        case LT => "less_than"
+        case GT => "greater_than"
+        case GT_EQ => "greater_than_or_equal"
+        case LT_EQ => "less_than_or_equal"
+        case PLUS => "plus"
+        case MINUS => "minus"
+        case MULTIPLY => "multiply"
+        case DIVIDE => "divide"
+        case MODULUS => "modulus"
       }
       s"${indent}$name ${const(dest)}, ${const(left)}, ${const(right)}$endl"
     }

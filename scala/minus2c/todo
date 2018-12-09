@@ -12,6 +12,7 @@
 [x] Need to encode in the current frame an id for each variable or temporary
 [x] replace temporaries having inner values with assignments to a temporary,
     or else awful lalr descent will be needed
+[x] record frame scope id so that captures are not recorded for ifs etc.
 [ ] Type check as an interpreter step
 [>] tac
     [ ] Normal form of function application using recursion
@@ -27,9 +28,16 @@
 [ ] Do global data at AST level
 [?] Consider adding temporaries to the frame
 [ ] only use Cursor in a terminal consumer
+[ ] inlining blocks is ok because variable names are associated to
+    unique scope ids
+[>] at some point associate identifiers with unique scope ids in all exprs
+    [ ] possibly make new case class for scoped identifiers, replace operators
+        using Identifier with the new type
 
 --- FOR REPORT ---
 
+[ ] stack machine based interpreter for tac vs recursive descent
+    of structured data
 [ ] everything I removed from C.y
 [ ] talk about WASM
 [ ] changed data segment parsing from end to the start
