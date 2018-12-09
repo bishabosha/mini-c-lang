@@ -169,7 +169,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
           declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
           declareInScope(id, s, d, f, lens).toList
-        case a @ Assignment(i, _) =>
+        case a @ Assignment(i: Identifier, _) =>
           declareInScope(i, s, d, i, lens).toList
             .:+[Declarations, List[Declarations]](a)
       }
@@ -436,31 +436,32 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   private def noAssign[A](a: A): Unit =
     a match {
-      case List(_: Declaration, Assignment(Identifier(i),_:Application)) =>
+      case List(_: Declaration, Assignment(Identifier(i), _: Application)) =>
         throw SemanticError(
           s"Assignment of global variable $i to a function application")
       case _ =>
     }
 
-  private def existsInScope[A](get: A => Identifier): A => Unit =
-    get.andThen { ident =>
-      context.genSearch(DeclarationKey(ident)) match {
-        case Some((d: Declaration, scope)) =>
-          var currentScope = getCurrentScope(context)
-          if currentScope != scope then {
-              if scope == 0 then {
-                frames = replaceHead(frames) {
-                  Frame.globalsLens(_ + (ident -> d))
+  private def existsInScope[A](get: A => Variable): A => Unit =
+    get.andThen {
+      case ident: Identifier =>
+        context.genSearch(DeclarationKey(ident)) match {
+          case Some((d: Declaration, scope)) =>
+            var currentScope = getCurrentScope(context)
+            if currentScope != scope then {
+                if scope == 0 then {
+                  frames = replaceHead(frames) {
+                    Frame.globalsLens(_ + (ident -> d))
+                  }
+                } else {
+                  var declInFrame = (ident -> scope) -> d
+                  frames = replaceHead(frames) {
+                    Frame.capturesLens(_ + declInFrame)
+                  }
                 }
-              } else {
-                var declInFrame = (ident -> scope) -> d
-                frames = replaceHead(frames) {
-                  Frame.capturesLens(_ + declInFrame)
-                }
-              }
-          }
-        case None =>
-          throw SemanticError(s"Identifier '${ident.id}' is undefined")
+            }
+          case None =>
+            throw SemanticError(s"Identifier '${ident.id}' is undefined")
       }
     }
 

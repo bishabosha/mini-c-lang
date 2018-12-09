@@ -48,7 +48,7 @@ class astToNormal private (var context: Context) {
 
   private lazy val tryReduce: FlattenO[Assignments, Stack] =
     assignmentsWithEffects |
-    (constant ->> Temporary) .L
+    (constant ->> temporaryAssignment) .L
 
   private lazy val jumpStatements: Flatten[Statements] =
     jumpStatementsImpl .R
@@ -96,8 +96,8 @@ class astToNormal private (var context: Context) {
       stack: Stack
     ): List[Statements] =
       (args.lastOption, stack) match {
-        case (Some(Temporary(c)), _ :: (rest: Stack)) =>
-          Return(c :: Nil) :: rest
+        // case (Some(Temporary(c)), _ :: (rest: Stack)) =>
+        //   Return(c :: Nil) :: rest
         case (Some(a), _) =>
           Return(a :: Nil) :: stack
         case _ =>
@@ -105,7 +105,7 @@ class astToNormal private (var context: Context) {
       }
 
   private val assignmentsWithEffects: FlattenO[Statements, Stack] = {
-    case Assignment(i, v) => assignment(i, v)
+    case Assignment(d, v) => assignment(d, v)
     case Equality(op, l, r) => binary(Equality, op, l, r)
     case Relational(op, l, r) => binary(Relational, op, l, r)
     case Additive(op, l, r) => binary(Additive, op, l, r)
@@ -145,19 +145,19 @@ class astToNormal private (var context: Context) {
   private def applicationP(p: Primary, e: Expressions): Stack =
     foldArgumentsNT(e) { Application(p, _) }
 
-  private def assignment(id: Identifier, v: Assignments): Stack =
-    foldArguments(List(v)) { mapAssignment(id) }
+  private def assignment(dest: Variable, v: Assignments): Stack =
+    foldArguments(List(v)) { mapAssignment(dest) }
 
   private def mapAssignment
-    ( id: Identifier )
+    ( dest: Variable )
     ( args: List[Assignments],
       stack: Stack
     ): Stack =
       (args, stack) match {
-        case ((a @ Temporary(t)) :: _, _ :: (rest: Stack)) =>
-          Assignment(id, t) :: rest
+        case (Assignment(_: Temporary, t) :: _, _ :: (rest: Stack)) =>
+          Assignment(dest, t) :: rest
         case (a :: _, _) =>
-          Assignment(id, a) :: stack
+          Assignment(dest, a) :: stack
         case _ =>
           stack
       }
@@ -186,7 +186,7 @@ class astToNormal private (var context: Context) {
     ( e: Expressions )
     ( f: (List[Assignments]) => Assignments
     ): Stack =
-      foldArgumentsN(e) { Temporary.compose(f) }
+      foldArgumentsN(e) { temporaryAssignment.compose(f) }
 
   private def mapUnary[Op <: UnaryOp, A >: Primary, O >: Assignments]
     ( f: (Op, A) => O,
@@ -225,7 +225,7 @@ class astToNormal private (var context: Context) {
     acc match {
       case (args, repush, stack) =>
         argStack match {
-          case Temporary(c: Constants) :: (rest: Stack) =>
+          case Assignment(_: Temporary, c: Constants) :: (rest: Stack) =>
             (args :+ c, repush, rest ++ stack)
           case s :: (rest: Stack) =>
             (args :+ arg(s), s :: repush, rest ++ stack)

@@ -42,8 +42,8 @@ object printAst {
           }
         case Assignment(Identifier(id), value) =>
           s"$lvl$id = ${exp(value)};$endl"
-        case t @ Temporary(v) =>
-          s"$lvl${getId(t)} = ${exp(v)};$endl"
+        case Assignment(t: Temporary, value) =>
+          s"$lvl${getId(t)} = ${exp(value)};$endl"
         case Function(i @ Identifier(id), _, b) =>
           fn(id, b, level)
         case Block(b) => block(b, level)
@@ -143,10 +143,4 @@ object printAst {
   }
 
   private def getLevel(l: Int): String = " " * l
-
-  private def getRoot(temporary: Temporary): Assignments =
-    temporary.rvalue match {
-      case t: Temporary => getRoot(t)
-      case x => x 
-    }
 }

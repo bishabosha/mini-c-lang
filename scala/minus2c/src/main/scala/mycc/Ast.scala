@@ -73,17 +73,15 @@ object Ast {
   type Constants = Identifier | Constant | StringLiteral
   type Primary = Constants | LazyExpressions | Temporary
   type Node = Equality | Relational | Additive | Multiplicative | Unary
+  type Variable = Identifier | Temporary
+  type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
+     Unary | Constant | StringLiteral | Variable
+
+  def temporaryAssignment(value: Assignments): Assignment =
+    Assignment(new Temporary, value)
 }
 
-case class Temporary(rvalue: Assignments) {
-  override def hashCode() = System.identityHashCode(this)
-  override def equals(that: Any): Boolean =
-    that match {
-      case that: Temporary => that.canEqual(this) && (this eq that)
-      case _ => false
-  }
-}
-
+class Temporary
 case class Identifier(id: String)
 case class FunctionDeclarator(id: Identifier, args: ArgList)
 case class Constant(value: Int)
@@ -98,26 +96,7 @@ case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, ri
 case class Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives)
 case class Relational(op: RelationalOperators, left: Relationals, right: Additives)
 case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
-case class Assignment(lvalue: Identifier, rvalue: Assignments)
+case class Assignment(lvalue: Variable, rvalue: Assignments)
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
 case class Function(id: Identifier, frame: Frame, body: List[Statements])
 case class Block(inner: List[Statements])
-
-object Expression {
-  
-  type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
-    Unary | Constant | StringLiteral | Identifier | Relational
-
-  def unapply(node: Assignments): Boolean =
-    node match {
-      case _: ExpressionRoot | Temporary(Expression()) =>
-        true
-      case _ =>
-        false
-    }
-}
-
-object IdentifierDeclaration {
-  def unapply(decl: Declaration): Boolean =
-    decl.declarator.isInstanceOf[Identifier]
-}

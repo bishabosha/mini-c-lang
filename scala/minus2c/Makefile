@@ -22,6 +22,9 @@ all:  ${TARGET}
 pkg: ${TARGET}
 	sbt package
 
+normal:
+	${PARSER} -n
+
 parse:
 	${PARSER} -n -m -t -sep
 

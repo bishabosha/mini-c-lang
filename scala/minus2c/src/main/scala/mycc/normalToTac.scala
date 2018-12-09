@@ -58,11 +58,9 @@ class normalToTac private (var cursor: Cursor, nodes: Goal) {
     node match {
       case d @ Declaration(_, _, _: Identifier) =>
         List(d)
-      case t @ Temporary(Expression()) =>
-        List(t)
-      case a @ Assignment(_, Expression()) =>
+      case a @ Assignment(_, _: ExpressionRoot) =>
         List(a)
-      case r @ Return(Expression() :: Nil) =>
+      case r @ Return((_: ExpressionRoot) :: Nil) =>
         List(r)
       case _ =>
         List()

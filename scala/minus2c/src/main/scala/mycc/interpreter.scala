@@ -60,11 +60,8 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
       None
     case _ : Declaration =>
       None
-    case Assignment(id, value) =>
-      addValue(id, value)
-      None
-    case t @ Temporary(value) =>
-      addValue(t, value)
+    case Assignment(dest, value) =>
+      addValue(dest, value)
       None
     case _ => None
   }
@@ -81,11 +78,8 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
         None
       case _: Declaration =>
         None
-      case Assignment(id, value) =>
-        addValue(id, value)
-        None
-      case t @ Temporary(value) =>
-        addValue(t, value)
+      case Assignment(dest, value) =>
+        addValue(dest, value)
         None
       case _: Function =>
         None

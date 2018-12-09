@@ -405,3 +405,24 @@ int main(void) {
     c = 1 + a / b;
     return c;
 }
+
+extern int foo(int, int, int);
+int bar(function a, int, int c);
+int zz = 25;
+int yy = 36;
+function f = foo;
+int main(void) {
+    {
+        int a;
+        (5 + 1 % 7, 4 != 2 + 2, 3 == 3 + 3);
+    }
+    yy = 21;
+    int a = 4;
+    int bax(void) {
+        return a * 3;
+    }
+    return a = 10;
+}
+int bar(function a, int, int c) {
+    return 0;
+}

@@ -175,10 +175,8 @@ object tacToMips extends Stage {
     ( context: Context,
       statement: Statements
     ): MipsAcc = statement match {
-      case Assignment(id, inner) =>
-        assignExpr(getRegisterElse(assignTemporary)(context,id),inner)
-      case (temp @ Temporary(inner)) =>
-        assignExpr(getRegisterElse(assignTemporary)(context,temp),inner)
+      case Assignment(dest, inner) =>
+        assignExpr(getRegisterElse(assignTemporary)(context,dest),inner)
       case Return((expr: Assignments) :: Nil) =>
         val (tContext: Context, code: Goal) =
           assignExpr((context, V0),expr)
@@ -195,7 +193,7 @@ object tacToMips extends Stage {
           (topcontext, r, Nil: Goal)
         case l: Label =>
           val (tContext, treg: Register) =
-            assignTemporary(topcontext, Temporary(zero))
+            assignTemporary(topcontext, new Temporary)
           (tContext, treg, List(Sw(treg,l)))
         case _ => throw UnexpectedAstNode("Not register or label")
           (???, ???, ???)
@@ -211,7 +209,7 @@ object tacToMips extends Stage {
           (context, post ++ List(unary(op)(dest,src)))
         case Binary(op, c: Constant, r: RSrc) =>
           val (tContext, treg: Register) =
-            assignTemporary(context, Temporary(zero))
+            assignTemporary(context, new Temporary)
           val loadTemp: Assembler = Li(treg,c)
           val rarg = getRegister(tContext, r)
           val result: Assembler = binaryOperators(op)(dest, treg, rarg)
@@ -289,7 +287,10 @@ object tacToMips extends Stage {
   private def defineLocals(context: Context): Context =
     context.cursor.current.topView.foldLeft(context) { (c, kv) =>
       kv match {
-        case (DeclarationKey(i: Identifier), (IdentifierDeclaration(), _)) => 
+        case (
+          DeclarationKey(i: Identifier), 
+          (Declaration(_, _, _: Identifier), _)
+        ) => 
           val (register, advanced) = c.advanceSaved
           add(advanced, RegisterKey(i), register)
         case _ =>
