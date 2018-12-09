@@ -8,58 +8,68 @@ import exception._
 import StorageTypes._
 import Types._
 import Tac._
+import MiscTwoOperators._
+import MiscOneOperators._
 
 object normalToTacActual extends Stage {
   type Source   = astToNormal.Goal
   type Context  = astToNormal.Context
-  type Goal     = (Map[Identifier, GlobalData], List[Tac])
+  type Goal     = (DataMap, List[Tac])
 
-  def apply(context: Context, nodes: normalToTacActual.Source): (Context, Goal) =
-    new normalToTacActual(Cursor(context), nodes).goal
-}
+  type DataMap = Map[Identifier, GlobalData]
 
-class normalToTacActual private (var cursor: Cursor, nodes: normalToTacActual.Source) {
-  val topLevel: Bindings = cursor.current
-
-  private def goal: (Context, normalToTacActual.Goal) = {
-    topLevel.genGet(Std.mainIdentifierKey) match {
-      case Some((Std.`mainFunc`, 0))
-        if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
-          val code = nodes.foldLeft(Nil: List[Tac]){ (code, statement) =>
-            topLevelStatement(statement) ++ code
-          }.reverse
-          (topLevel, (Map(), code))
-          // TODO: replace topLevel with context.current once stacked pops off
-          // frame
-      case _ =>
-        throw SemanticError(
-          "function declaration for `int main(void)` not found.")
+  def apply(topLevel: Context, nodes: List[Statements]): (Context, Goal) =
+    parseMain(topLevel) { f =>
+      val data = nodes.foldLeft(Map(): Map[Identifier, GlobalData]) {
+        (acc, statement) =>
+          getData(statement).fold(acc)(acc + _)
+        }
+      val code = nodes.foldLeft(Nil: List[Tac]){ (code, statement) =>
+        topLevelStatement(statement) ++ code
+      }.reverse
+      (topLevel, (data, code))
     }
-  }
 
-  private def getData(node: Statements): Option[(Identifier, GlobalData)] = node match {
-    case Declaration(_, _, i: Identifier) =>
-      Some((i, GlobalWord(i, zero)))
-    case Assignment(i: Identifier, c: Constant) =>
-      Some((i, GlobalWord(i, c)))
-    case _ => None
-  }
+  private def getData(node: Statements): Option[(Identifier, GlobalData)] =
+    node match {
+      case Declaration(_, _, i: Identifier) =>
+        Some((i, GlobalWord(i, zero)))
+      case Assignment(i: Identifier, c: Constant) =>
+        Some((i, GlobalWord(i, c)))
+      case _ => None
+    }
 
   private def topLevelStatement(node: Statements): List[Tac] = node match {
     case Function(Std.`mainIdentifier`, f, body) =>
-      stacked {
-        Nil
-      }
+        val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
+          evalStatement(statement) ++ code
+        }
+        List(Func(Std.mainIdentifier, f, validated.reverse))
     case _ => Nil
   }
 
-  private def stacked[O](f: => List[O]): List[O] = {
-    cursor = cursor.next
-    f
-  }
+  private def evalStatement(node: Statements): List[Code] =
+    node match {
+      case Assignment(dest, expr: ExpressionRoot) =>
+        List(evalExpr(dest,expr))
+      case Return((a: ASrc) :: Nil) =>
+        List(OneTac(RETURN, a))
+      case Return((expr: ExpressionRoot) :: Nil) =>
+        val temp = new Temporary
+        List(OneTac(RETURN, temp), evalExpr(temp,expr))
+      case _ =>
+        List()
+    }
 
-  import AssignmentsPattern._
-  private def evalStatement(node: Statements): List[Tac] = {
-    Nil
+  private def evalExpr(dest: Variable, expr: ExpressionRoot): Code = {
+    import AssignmentsPattern._
+    expr match {
+      case Binary(op: BinaryOperators, l: ASrc, r: ASrc) =>
+        ThreeTac(op, dest, l, r)
+      case Unary(op, v: ASrc) =>
+        TwoTac(op, dest, v)
+      case b: ASrc =>
+        TwoTac(ASSIGN, dest, b)
+    }
   }
 }

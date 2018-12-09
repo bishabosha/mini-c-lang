@@ -31,7 +31,22 @@ package object mycc {
 
   type LValue = Identifier | Temporary
 
-  def replaceHead[A](list: List[A])(f: A => A): List[A] = f(list.head) :: list.tail
+  def replaceHead[A](list: List[A])(f: A => A): List[A] =
+    f(list.head) :: list.tail
+
+  def parseMain[A](topLevel: Bindings)(f: Function=> A): A =
+    topLevel.genGet(Std.mainIdentifierKey) match {
+        case Some((Std.`mainFunc`, 0)) =>
+          topLevel.genGet(Std.mainDefinitionKey) match {
+            case Some(function) => f(function)
+            case _ =>
+              throw SemanticError(
+                "function definition for `int main(void)` not found.")
+          }
+        case _ =>
+          throw SemanticError(
+            "function declaration for `int main(void)` not found.")
+    }
 
   def extractDeclarations
     (declarations: List[Declaration]

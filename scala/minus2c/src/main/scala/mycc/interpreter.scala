@@ -33,18 +33,12 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
 
-  private def evalProgram: Int = {
-    topLevel.genGet(Std.mainIdentifierKey) match {
-      case Some((Std.`mainFunc`, 0))
-        if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
-          println("interpreting:")
-          nodes.foldLeft(None: Option[Int]){ (code, statement) =>
-            code.orElse(topLevelStatement(statement))
-          } getOrElse {
-            throw SemanticError("Program does not terminate")
-          }
-      case _ =>
-        throw SemanticError("function definition for `int main(void)` not found.")
+  private def evalProgram: Int = parseMain(topLevel) { f =>
+    println("interpreting:")
+    nodes.foldLeft(None: Option[Int]){ (code, statement) =>
+      code.orElse(topLevelStatement(statement))
+    } getOrElse {
+      throw SemanticError("Program does not terminate")
     }
   }
 

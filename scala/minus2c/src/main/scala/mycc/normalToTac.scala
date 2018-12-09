@@ -19,20 +19,13 @@ object normalToTac extends Stage {
 class normalToTac private (var cursor: Cursor, nodes: Goal) {
   val topLevel: Bindings = cursor.current
 
-  private def goal: (Context, Goal) = {
-    topLevel.genGet(Std.mainIdentifierKey) match {
-      case Some((Std.`mainFunc`, 0))
-        if topLevel.genGet(Std.mainDefinitionKey).isDefined =>
-          val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
-            topLevelStatement(statement) ++ code
-          }.reverse
-          (topLevel, code)
-          // TODO: replace topLevel with context.current once stacked pops off
-          // frame
-      case _ =>
-        throw SemanticError(
-          "function declaration for `int main(void)` not found.")
-    }
+  private def goal: (Context, Goal) = parseMain(topLevel) { f =>
+    val code = nodes.foldLeft(Nil: Goal){ (code, statement) =>
+      topLevelStatement(statement) ++ code
+    }.reverse
+    (topLevel, code)
+    // TODO: replace topLevel with context.current once stacked pops off
+    // frame
   }
 
   private def topLevelStatement(node: Statements): Goal = node match {

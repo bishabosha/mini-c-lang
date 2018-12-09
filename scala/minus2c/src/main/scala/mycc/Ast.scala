@@ -76,6 +76,8 @@ object Ast {
   type Variable = Identifier | Temporary
   type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
      Unary | Constant | StringLiteral | Variable
+  type BinaryOperators = EqualityOperators | RelationalOperators |
+    AdditiveOperators | MultiplicativeOperators
 
   def temporaryAssignment(value: Assignments): Assignment =
     Assignment(new Temporary, value)

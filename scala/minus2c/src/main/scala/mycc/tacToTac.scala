@@ -13,12 +13,13 @@ object tacToTac extends Stage {
 
   private type TacAcc = (Context, Goal)
   private type Stack = List[Tac]
+  private type DataMap = Map[Identifier, GlobalData]
 
   type RSrc = Identifier | Temporary
   type ASrc = RSrc | Constant
 
   case class TemporaryKey(key: RSrc) extends Bindings.Key {
-    type Value = Temp
+    type Value = Temporary
   }
 
   case class TacContext(cursor: Cursor)
@@ -47,24 +48,14 @@ object tacToTac extends Stage {
       tac: normalToTac.Goal
     ): (Context, Goal) = {
       val topLevel = context.cursor.current
-      topLevel.genGet(Std.mainIdentifierKey) match {
-        case Some((Std.`mainFunc`, 0)) =>
-          topLevel.genGet(Std.mainDefinitionKey) match {
-            case Some(Function(_,frame,body)) =>
-              val (contextFinal, goal) =
-                foldCode(topLevelStatements)(context,tac) {
-                  identity(_,_)
-                }
-              // val data = getData(contextFinal)
-              // (contextFinal, goal ++ data)
-              (contextFinal, goal)
-            case _ =>
-              throw SemanticError(
-                "function definition for `int main(void)` not found.")
+      parseMain(topLevel) { f =>
+        val (contextFinal, goal) =
+          foldCode(topLevelStatements)(context,tac) {
+            identity(_,_)
           }
-        case _ =>
-          throw SemanticError(
-            "function declaration for `int main(void)` not found.")
+        // val data = getData(contextFinal)
+        // (contextFinal, goal ++ data)
+        (contextFinal, goal)
       }
     }
 
@@ -113,8 +104,8 @@ object tacToTac extends Stage {
 
   import AssignmentsPattern._
   private def assignExpr
-    (contextDest: (Context, LDest), value: Statements): (Context, List[Code]) = {
-      val (topcontext: Context, destination: LDest) = contextDest
+    (contextDest: (Context, Variable), value: Statements): (Context, List[Code]) = {
+      val (topcontext: Context, destination: Variable) = contextDest
       val (context, dest, post) = destination match {
         case r: Identifier =>
           (???, ???, ???)

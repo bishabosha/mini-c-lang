@@ -90,6 +90,24 @@ object Parser {
             old = newtim
           }
         }
+        // println(nContext)
+        val (tContext2, (data, tac2)) = normalToTacActual(nContext, astFlattened)
+        if doTime then {
+          newtim = System.currentTimeMillis
+          println(s"NORMAL_TO_TAC_ACTUAL: ${newtim - old}ms")
+          old = newtim
+        }
+        if doPrintTac then {
+          if doSeparate then {
+            println("TAC_ACTUAL:")
+          }
+          println(s"data:\n$data\ntac:\n$tac2")
+          if doTime then {
+            newtim = System.currentTimeMillis
+            println(s"PRINTING_TAC_ACTUAL: ${newtim - old}ms")
+            old = newtim
+          }
+        }
         val (mContext, mips) = tacToMips(tContext, tac)
         if doTime then {
           newtim = System.currentTimeMillis

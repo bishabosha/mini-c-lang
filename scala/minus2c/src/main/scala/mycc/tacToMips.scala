@@ -115,29 +115,19 @@ object tacToMips extends Stage {
       tac: normalToTac.Goal
     ): (Context, Goal) = {
       val topLevel = context.cursor.current
-      topLevel.genGet(Std.mainIdentifierKey) match {
-        case Some((Std.`mainFunc`, 0)) =>
-          topLevel.genGet(Std.mainDefinitionKey) match {
-            case Some(Function(_,frame,body)) =>
-              val scope = getCurrentScope(context.cursor.current)
-              val (uBindings, uTac) =
-                renameMain(scope, topLevel, actualMainIdent, frame, body, tac)
-              val uContext = updateBindings(context, uBindings)
-              val (contextFinal, goal) =
-                foldCode(topLevelStatements)(uContext,uTac) {
-                  identity(_,_)
-                }
-              val data = getData(contextFinal)
-              val top: Goal = predef ++ pseudoMain
-              val end: Goal = goal ++ data
-              (contextFinal, top ++ end)
-            case _ =>
-              throw SemanticError(
-                "function definition for `int main(void)` not found.")
+      parseMain(topLevel) { f =>
+        val scope = getCurrentScope(context.cursor.current)
+        val (uBindings, uTac) =
+          renameMain(scope, topLevel, actualMainIdent, f.frame, f.body, tac)
+        val uContext = updateBindings(context, uBindings)
+        val (contextFinal, goal) =
+          foldCode(topLevelStatements)(uContext,uTac) {
+            identity(_,_)
           }
-        case _ =>
-          throw SemanticError(
-            "function declaration for `int main(void)` not found.")
+        val data = getData(contextFinal)
+        val top: Goal = predef ++ pseudoMain
+        val end: Goal = goal ++ data
+        (contextFinal, top ++ end)
       }
     }
 
