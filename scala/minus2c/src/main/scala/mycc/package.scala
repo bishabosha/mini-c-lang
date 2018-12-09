@@ -27,6 +27,8 @@ package object mycc {
     type Value = Constant
   }
 
+  val zero = Constant(0)
+
   type LValue = Identifier | Temporary
 
   def replaceHead[A](list: List[A])(f: A => A): List[A] = f(list.head) :: list.tail

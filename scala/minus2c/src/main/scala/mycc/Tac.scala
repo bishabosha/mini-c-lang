@@ -1,26 +1,28 @@
 package mycc
 
-import TacTypes._
+import Tac._
 import Ast._
 
-object TacTypes {
-  type Tac = I32 | Psuedo | Meta | Mem
-  type Register = Int
-  type Location = Register | Identifier
-  type Value = Location | Constant
-  type Psuedo = Declaration
+object Tac {
+  type ThreeOperators = EqualityOperators | RelationalOperators |
+    AdditiveOperators | MultiplicativeOperators
+  type TwoOperators = UnaryOperators | MiscTwoOperators
+  type OneOperators = MiscOneOperators
+
+  type RSrc = Identifier | Temp
+  type ASrc = RSrc | Constant
+
+  type GlobalData = GlobalWord
+  type Code = OneTac | TwoTac | ThreeTac
+  type Tac = Func
+  type LDest = Temp | Identifier
 }
 
-enum I32 {
-  case Binary(op: BinaryOp, dest: Register, l: Register, r: Register)
-  case Unary(op: UnaryOp, dest: Register, l: Register)
-}
-
-enum Meta {
-  case Label(id: Identifier)
-}
-
-enum Mem {
-  case Load(dest: Register, v: Value)
-  case Store(source: Register, v: Location)
-}
+class Temp // TODO: fix nesting
+enum MiscTwoOperators { case ASSIGN }
+enum MiscOneOperators { case RETURN }
+case class GlobalWord(name: Identifier, value: Constant)
+case class OneTac(op: OneOperators, a1: ASrc)
+case class TwoTac(op: TwoOperators, dest: LDest, a1: ASrc)
+case class ThreeTac(op: ThreeOperators, dest: LDest, a1: ASrc, a2: ASrc)
+case class Func(id: Identifier, frame: Frame, body: List[Code])

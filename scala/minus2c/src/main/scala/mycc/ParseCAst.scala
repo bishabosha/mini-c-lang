@@ -20,7 +20,11 @@ object parseCAst extends Stage {
   type Context  = Bindings
   type Goal     = List[Declarations]
 
-  def apply(source: Source, identPool: Map[String, Identifier]): (Context, Goal) = new parseCAst(identPool).goal(source)
+  def apply
+    ( source: Source,
+      identPool: Map[String, Identifier]
+    ): (Context, Goal) =
+      new parseCAst(identPool).goal(source)
 }
 
 class parseCAst private(private val identPool: Map[String, Identifier]) {
@@ -186,30 +190,42 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val assignment: Parse[Assignment] = {
-    case BinaryNode("=", id, value) => Assignment(identifier(id), assignments(value))
+    case BinaryNode("=", id, value) =>
+      Assignment(identifier(id), assignments(value))
   }
 
   private val equality: Parse[Equality] = {
-    case BinaryNode("==", left, right) => Equality(EQUAL, equalities(left), relationals(right))
-    case BinaryNode("!=", left, right) => Equality(NOT_EQUAL, equalities(left), relationals(right))
+    case BinaryNode("==", left, right) =>
+      Equality(EQUAL, equalities(left), relationals(right))
+    case BinaryNode("!=", left, right) =>
+      Equality(NOT_EQUAL, equalities(left), relationals(right))
   }
 
   private val relational: Parse[Relational] = {
-    case BinaryNode("<", left, right) => Relational(LT, relationals(left), additives(right))
-    case BinaryNode(">", left, right) => Relational(GT, relationals(left), additives(right))
-    case BinaryNode("<=", left, right) => Relational(LT_EQ, relationals(left), additives(right))
-    case BinaryNode(">=", left, right) => Relational(GT_EQ, relationals(left), additives(right))
+    case BinaryNode("<", left, right) =>
+      Relational(LT, relationals(left), additives(right))
+    case BinaryNode(">", left, right) =>
+      Relational(GT, relationals(left), additives(right))
+    case BinaryNode("<=", left, right) =>
+      Relational(LT_EQ, relationals(left), additives(right))
+    case BinaryNode(">=", left, right) =>
+      Relational(GT_EQ, relationals(left), additives(right))
   }
 
   private val additive: Parse[Additive] = {
-    case BinaryNode("+", left, right) => Additive(PLUS, additives(left), multiplicatives(right))
-    case BinaryNode("-", left, right) => Additive(MINUS, additives(left), multiplicatives(right))
+    case BinaryNode("+", left, right) =>
+      Additive(PLUS, additives(left), multiplicatives(right))
+    case BinaryNode("-", left, right) =>
+      Additive(MINUS, additives(left), multiplicatives(right))
   }
 
   private val multiplicative: Parse[Multiplicative] = {
-    case BinaryNode("*", left, right) => Multiplicative(MULTIPLY, multiplicatives(left), unaries(right))
-    case BinaryNode("/", left, right) => Multiplicative(DIVIDE, multiplicatives(left), unaries(right))
-    case BinaryNode("%", left, right) => Multiplicative(MODULUS, multiplicatives(left), unaries(right))
+    case BinaryNode("*", left, right) =>
+      Multiplicative(MULTIPLY, multiplicatives(left), unaries(right))
+    case BinaryNode("/", left, right) =>
+      Multiplicative(DIVIDE, multiplicatives(left), unaries(right))
+    case BinaryNode("%", left, right) =>
+      Multiplicative(MODULUS, multiplicatives(left), unaries(right))
   }
 
   private val unary: Parse[Unaries] = {
@@ -219,8 +235,10 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val application: Parse[Application] = {
-    case BinaryNode("apply", name, args) => Application(postfix(name), expressions(args))
-    case UnaryNode("apply", name) => Application(postfix(name), Nil)
+    case BinaryNode("apply", name, args) =>
+      Application(postfix(name), expressions(args))
+    case UnaryNode("apply", name) =>
+      Application(postfix(name), Nil)
   }
 
   private val identifier: Parse[Identifier] = {
@@ -236,7 +254,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   }
 
   private val expressionList: Parse[Expressions] = {
-    case Sequence(",", assigns) => assigns.map[Assignments,Expressions](assignments); 
+    case Sequence(",", assigns) =>
+      assigns.map[Assignments,Expressions](assignments); 
   }
 
   private val stringLiteral: Parse[StringLiteral] = {
@@ -259,7 +278,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   private val declarationSpecifierList: Parse[List[DeclarationSpecifiers]] = {
     case Sequence("~", specifiers) =>
-      specifiers.map[DeclarationSpecifiers, List[DeclarationSpecifiers]](declarationSpecifier)
+      specifiers.map[DeclarationSpecifiers, 
+        List[DeclarationSpecifiers]](declarationSpecifier)
   }
 
   private val storage: Parse[Storage] = {
@@ -429,10 +449,14 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
           var currentScope = getCurrentScope(context)
           if currentScope != scope then {
               if scope == 0 then {
-                frames = replaceHead(frames) { Frame.globalsLens(_ + (ident -> d)) }
+                frames = replaceHead(frames) {
+                  Frame.globalsLens(_ + (ident -> d))
+                }
               } else {
                 var declInFrame = (ident -> scope) -> d
-                frames = replaceHead(frames) { Frame.capturesLens(_ + declInFrame) }
+                frames = replaceHead(frames) {
+                  Frame.capturesLens(_ + declInFrame)
+                }
               }
           }
         case None =>
@@ -457,7 +481,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       val storage: StorageTypes = storages match {
         case Nil => Auto
         case (s: Storage) :: Nil => s.id
-        case _ => throw SemanticError("More than one storage class may not be specified.")
+        case _ => throw SemanticError(
+          "More than one storage class may not be specified.")
       }
 
       val returnType: Types = types match {

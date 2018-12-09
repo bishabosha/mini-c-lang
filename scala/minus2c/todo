@@ -21,8 +21,17 @@
 [x] Need to encode in the current frame an id for each variable or temporary
     so that its current register can be recorded
 [ ] global variable name conflicts (with mips instructions) please remove
+[ ] create data segment at ast stage
+[ ] Do global data at AST level
+[ ] replace temporaries having inner values with assignments to a temporary,
+    or else awful lalr descent will be needed
+[?] Consider adding temporaries to the frame
 
 --- FOR REPORT ---
+
+[ ] changed data segment parsing from end to the start
+[ ] previously temporaries contained nested expressions,
+    bad for mapping as no canonical reference
 
 [ ] need to fix recursion in ast node visiting
 

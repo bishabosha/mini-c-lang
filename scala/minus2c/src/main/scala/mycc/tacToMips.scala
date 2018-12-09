@@ -1,7 +1,6 @@
 package mycc
 
 import Ast._
-import ArgList._
 import exception._
 import tacToMips._
 import PseudoZero._
@@ -20,10 +19,6 @@ import EqualityOperators._
 import RelationalOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
-import StorageTypes._
-import Types._
-import PartialFunctionConversions._
-import scala.collection.mutable
 
 object tacToMips extends Stage {
   type Source   = normalToTac.Goal
@@ -31,7 +26,6 @@ object tacToMips extends Stage {
   type Goal     = List[Assembler]
 
   private val exitWithArg = Constant(17)
-  private val zero = Constant(0)
 
   private val actualMainIdent = Identifier("_main_")
 
@@ -52,8 +46,8 @@ object tacToMips extends Stage {
   private type BinaryArgs = (Register,Register,Src) => ThreeAddr
   private type UnaryArgs = (Register,Src) => TwoAddr
 
-  private type RSrc = Identifier | Temporary
-  private type LValue = RSrc | Constant
+  type RSrc = Identifier | Temporary
+  type ASrc = RSrc | Constant
 
   private type MipsFor[Op] = Op match {
     case MultiplicativeOperators => PartialFunction[Op,BinaryArgs]
@@ -304,8 +298,8 @@ object tacToMips extends Stage {
     }
 
   private def prepareRegisterFor
-    (f: (Context, LValue) => (Context, Dest))
-    (context: Context, lvalue: LValue): (Context, Dest, List[Assembler]) =
+    (f: (Context, ASrc) => (Context, Dest))
+    (context: Context, src: ASrc): (Context, Dest, List[Assembler]) =
       (???,???,???)
 
   private def getRegisterElse
