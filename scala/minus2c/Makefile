@@ -31,6 +31,9 @@ parse:
 run:
 	${PARSER} -i
 
+run_timed:
+	${PARSER} -i -time -sep
+
 tac:
 	${PARSER} -t
 

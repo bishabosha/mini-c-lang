@@ -7,6 +7,6 @@ int main(void) {
     {
         a = 5555;
     }
-    int c;
+    int c = 32;
     return (3 == 2, c, a + c);
 }

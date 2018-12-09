@@ -38,6 +38,9 @@
     [ ] replace Func node with new one with same frame and body but new ident
         [ ] { curr = 0; while (isdeclared(main + curr)) curr += 1; }
     [?] do this at first declaration
+[>] add DataKeys to toplevel from Data map
+    [ ] Then remove DataKeys in favour of frame
+[ ] parse DataMap in MIPS
 
 --- FOR REPORT ---
 

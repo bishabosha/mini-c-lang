@@ -1,5 +1,5 @@
 (
-    Map(Identifier(yy) -> GlobalConstant(Identifier(yy),Constant(32))),
+    Map(Identifier(yy) -> Global(Identifier(yy),Constant(32))),
     List(
         Func(
             Identifier(main),

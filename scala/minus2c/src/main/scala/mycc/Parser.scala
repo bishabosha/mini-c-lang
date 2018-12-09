@@ -65,64 +65,61 @@ object Parser {
           }
         }
         if doInterpret then {
-          interpretAst(nContext, astFlattened)
+          val (intContext, intCode) = normalToInterpreter(nContext, astFlattened)
+          if doTime then {
+            newtim = System.currentTimeMillis
+            println(s"FILTER_NORMAL_TO_INTERPRETER: ${newtim - old}ms")
+            old = newtim
+          }
+          if doSeparate then {
+            println("NORMAL_FILTERED:")
+          }
+          printAst(intCode)
+          if doTime then {
+            newtim = System.currentTimeMillis
+            println(s"PRINTING_NORMAL_FOR_INTERPRETER: ${newtim - old}ms")
+            old = newtim
+          }
+          interpretAst(intContext, intCode)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"INTERPRETING NORMAL: ${newtim - old}ms")
             old = newtim
           }
-        }
-        // println(nContext)
-        val (tContext, tac) = normalToTac(nContext, astFlattened)
-        if doTime then {
-          newtim = System.currentTimeMillis
-          println(s"NORMAL_TO_TAC: ${newtim - old}ms")
-          old = newtim
-        }
-        if doPrintTac then {
-          if doSeparate then {
-            println("TAC:")
-          }
-          printAst(tac)
+        } else {
+          val (tContext2, tac2) = normalToTac(nContext, astFlattened)
           if doTime then {
             newtim = System.currentTimeMillis
-            println(s"PRINTING_TAC: ${newtim - old}ms")
+            println(s"NORMAL_TO_TAC: ${newtim - old}ms")
             old = newtim
           }
-        }
-        // println(nContext)
-        val (tContext2, tac2) = normalToTacActual(nContext, astFlattened)
-        if doTime then {
-          newtim = System.currentTimeMillis
-          println(s"NORMAL_TO_TAC_ACTUAL: ${newtim - old}ms")
-          old = newtim
-        }
-        if doPrintTac then {
-          if doSeparate then {
-            println("TAC_ACTUAL:")
+          if doPrintTac then {
+            if doSeparate then {
+              println("TAC:")
+            }
+            printTac(tContext2,tac2)
+            if doTime then {
+              newtim = System.currentTimeMillis
+              println(s"PRINTING_TAC: ${newtim - old}ms")
+              old = newtim
+            }
           }
-          printTac(tContext2,tac2)
+          val (mContext2, mips2) = tacToMips(tContext2, tac2)
           if doTime then {
             newtim = System.currentTimeMillis
-            println(s"PRINTING_TAC_ACTUAL: ${newtim - old}ms")
+            println(s"TAC_TO_MIPS: ${newtim - old}ms")
             old = newtim
           }
-        }
-        val (mContext, mips) = tacToMips(tContext, tac)
-        if doTime then {
-          newtim = System.currentTimeMillis
-          println(s"TAC_TO_MIPS: ${newtim - old}ms")
-          old = newtim
-        }
-        if doPrintMips then {
-          if doSeparate then {
-            println("MIPS:")
-          }
-          printMips(mContext, mips)
-          if doTime then {
-            newtim = System.currentTimeMillis
-            println(s"PRINT_MIPS: ${newtim - old}ms")
-            old = newtim
+          if doPrintMips then {
+            if doSeparate then {
+              println("MIPS:")
+            }
+            printMips(mips2)
+            if doTime then {
+              newtim = System.currentTimeMillis
+              println(s"PRINT_MIPS: ${newtim - old}ms")
+              old = newtim
+            }
           }
         }
       } catch {

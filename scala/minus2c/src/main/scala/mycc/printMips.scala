@@ -24,23 +24,20 @@ object printMips {
 
   private val endl = System.lineSeparator
 
-  def apply(context: MipsContext, nodes: List[Assembler]): Unit =
-    print(mipsNode(context, nodes, "  "))
+  def apply(nodes: List[Assembler]): Unit =
+    print(mipsNode(nodes, "  "))
 
   private def mipsNode
-    ( context: MipsContext,
-      nodes: List[Assembler],
+    ( nodes: List[Assembler],
       indent: String
     ): String = {
-      (for (node <- nodes.view) yield astNode(context, node, indent)).mkString
+      (for (node <- nodes.view) yield astNode(node, indent)).mkString
     }
 
   private def astNode
-    ( context: MipsContext,
-      node: Assembler,
+    ( node: Assembler,
       indent: String
     ): String = {
-      def getIt(value: Assembler): String = astNode(context, value, indent);
       node match {
         case Text =>
           s"$indent.text$endl"

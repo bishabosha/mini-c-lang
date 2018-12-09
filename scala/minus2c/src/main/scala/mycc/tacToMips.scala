@@ -3,6 +3,7 @@ package mycc
 import Ast._
 import exception._
 import tacToMips._
+import normalToTac._
 import PseudoZero._
 import PseudoUnary._
 import MIPS._
@@ -19,6 +20,9 @@ import EqualityOperators._
 import RelationalOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
+import Tac._
+import MiscTwoOperators._
+import MiscOneOperators._
 
 object tacToMips extends Stage {
   type Source   = normalToTac.Goal
@@ -46,18 +50,12 @@ object tacToMips extends Stage {
   private type BinaryArgs = (Register,Register,Src) => ThreeAddr
   private type UnaryArgs = (Register,Src) => TwoAddr
 
-  type RSrc = Identifier | Temporary
-  type ASrc = RSrc | Constant
-
   private type MipsFor[Op] = Op match {
-    case MultiplicativeOperators => PartialFunction[Op,BinaryArgs]
-    case AdditiveOperators => PartialFunction[Op,BinaryArgs]
-    case RelationalOperators => PartialFunction[Op,BinaryArgs]
-    case EqualityOperators => PartialFunction[Op,BinaryArgs]
-    case UnaryOperators => PartialFunction[Op,UnaryArgs]
+    case ThreeOperators => PartialFunction[Op,BinaryArgs]
+    case TwoOperators => PartialFunction[Op,UnaryArgs]
   }
 
-  case class RegisterKey(key: RSrc) extends Bindings.Key {
+  case class RegisterKey(key: Variable) extends Bindings.Key {
     type Value = Register
   }
 
@@ -101,120 +99,120 @@ object tacToMips extends Stage {
     (context: Context, key: Bindings.Key, value: key.Value): Context =
       updateBindings(context, context.cursor.current + (key, value))
 
-  private def get(context: Context, key: Label): Option[Constant] =
-    context.cursor.current.genGet(DataKey(key))
-
-  def apply(context: normalToTac.Context, tac: Source): (Context, Goal) = {
-    val cursor = Cursor(context)
-    val mipsContext = MipsContext(cursor,None,Set())
-    goal(mipsContext, tac)
-  }
+  def apply
+    ( context: Bindings,
+      tac: (DataMap, List[Tac])
+    ): (Context, Goal) = {
+      val cursor = Cursor(context)
+      val mipsContext = MipsContext(cursor,None,Set())
+      goal(mipsContext, tac)
+    }
 
   private def goal
     ( context: Context,
-      tac: normalToTac.Goal
+      tac: (DataMap, List[Tac])
     ): (Context, Goal) = {
+      val (data, nodes) = tac
       val topLevel = context.cursor.current
       parseMain(topLevel) { () =>
         val scope = getCurrentScope(context.cursor.current)
         val (uBindings, uTac) =
-          renameMain(scope, topLevel, actualMainIdent, tac)
+          renameMainFunc(scope, topLevel, actualMainIdent, nodes)
         val uContext = updateBindings(context, uBindings)
         val (contextFinal, goal) =
           foldCode(topLevelStatements)(uContext,uTac) {
             identity(_,_)
           }
-        val data = getData(contextFinal)
+        val dataAssembler = getData(data)
         val top: Goal = predef ++ pseudoMain
-        val end: Goal = goal ++ data
+        val end: Goal = goal ++ dataAssembler
         (contextFinal, top ++ end)
       }
     }
 
   private def topLevelStatements
     ( context: Context,
-      statement: Statements
+      statement: Tac
     ): MipsAcc =
       statement match {
-      case Function(id, _, body) =>
-        evalFunction(nextScope(context))(id, body)
-      case Declaration(_, _, i: Identifier) =>
-        val label = Label(i)
-        (add(context, DataKey(label), zero), Nil)
-      case Assignment(i: Identifier, c: Constant) =>
-        val label = Label(i)
-        get(context, label) match {
-          case Some(value) =>
-            (add(context, DataKey(label), c), Nil)
-          case None =>
-            throw UnexpectedAstNode(s"Assignment of $i before declaration")
-        }
-      case _ => (context, Nil)
+      case Func(id, frame, body) =>
+        evalFunction(nextScope(context))(id, frame, body)
     }
 
   private def evalFunction
     ( context: Context )
     ( id: Identifier,
-      body: Source,
+      frame: Frame,
+      body: List[Code],
     ): MipsAcc =
-      foldCode(evalStatements)(defineLocals(context),body) {
+      foldCode(evalStatements(frame))(defineLocals(context),body) {
         (context,code) => (context, Label(id) :: code.reverse)
       }
 
   private def evalStatements
-    ( context: Context,
-      statement: Statements
-    ): MipsAcc = statement match {
-      case Assignment(dest, inner) =>
-        assignExpr(getRegisterElse(assignTemporary)(context,dest),inner)
-      case Return((expr: Assignments) :: Nil) =>
-        val (tContext: Context, code: Goal) =
-          assignExpr((context, V0),expr)
-        (tContext, Jr(Ra) :: code)
-      case _ => (context, Nil) // yield rest, consume 1
-    }
-
-  import AssignmentsPattern._
-  private def assignExpr
-    (contextDest: (Context, Dest), value: Statements): MipsAcc = {
-      val (topcontext: Context, destination: Dest) = contextDest
-      val (context, dest, post) = destination match {
-        case r: Register =>
-          (topcontext, r, Nil: Goal)
-        case l: Label =>
-          val (tContext, treg: Register) =
-            assignTemporary(topcontext, new Temporary)
-          (tContext, treg, List(Sw(treg,l)))
-        case _ => throw UnexpectedAstNode("Not register or label")
-          (???, ???, ???)
-      }
-      value match {
-        case c: Constant =>
-          (context, post ++ List(Li(dest,c)))
-        case v: RSrc =>
-          val src = getRegister(context,v)
-          (context, post ++ List(Move(dest,src)))
-        case Unary(op, r: RSrc) =>
-          val src = getRegister(context,r)
-          (context, post ++ List(unary(op)(dest,src)))
-        case Binary(op, c: Constant, r: RSrc) =>
+    ( frame: Frame )
+    ( startContext: Context,
+      code: Code
+    ): MipsAcc =
+      code match {
+        case ThreeTac(op, d, c: Constant, r: Variable) =>
+          val (context, dest: Register, post) = evalDest(startContext, frame, d)
           val (tContext, treg: Register) =
             assignTemporary(context, new Temporary)
           val loadTemp: Assembler = Li(treg,c)
           val rarg = getRegister(tContext, r)
           val result: Assembler = binaryOperators(op)(dest, treg, rarg)
           (tContext, post ++ List(result, loadTemp)) // code geerated in reverse order
-        case Binary(op, l: RSrc, c: Constant) =>
+        case ThreeTac(op, d, l: Variable, c: Constant) =>
+          val (context, dest: Register, post) = evalDest(startContext, frame, d)
           val lreg = getRegister(context, l)
           val result: Assembler = binaryOperators(op)(dest, lreg, c)
-          (context, post ++ List(result))      
-        case Binary(op, l: RSrc, r: RSrc) =>
+          (context, post ++ List(result))
+        case ThreeTac(op, d, l: Variable, r: Variable) =>
+          val (context, dest: Register, post) = evalDest(startContext, frame, d)
           val lreg = getRegister(context, l)
           val rarg = getRegister(context, r)
           val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
-          (context, post ++ List(result))    
+          (context, post ++ List(result))
+        case TwoTac(ASSIGN, d, value) =>
+          val (context, dest: Register, post) = evalDest(startContext, frame, d)
+          val mips = value match {
+            case c: Constant =>
+              Li(dest, c)
+            case v: Variable =>
+              Move(dest, getRegister(startContext, v))
+          }
+          (context, post ++ List(mips))
+        case TwoTac(op, d, v: Variable) =>
+          val (context, dest: Register, post) = evalDest(startContext, frame, d)
+          val src = getRegister(context,v)
+          (context, post ++ List(unary(op)(dest,src)))
+        case OneTac(RETURN, value) =>
+          val move = value match {
+            case c: Constant =>
+              Li(V0, c)
+            case v: Variable =>
+              Move(V0, getRegister(startContext, v))
+          }
+          (startContext, Jr(Ra) :: move :: Nil)
+      }
+
+  private def evalDest
+    ( context: Context,
+      frame: Frame,
+      dest: Variable
+    ): (Context, Register, List[Assembler]) = {
+      val (topcontext: Context, destination: Dest) =
+        getRegisterElse(assignTemporary)(context, frame, dest)
+      destination match {
+        case r: Register =>
+          (topcontext, r, Nil: Goal)
+        case l: Label =>
+          val (tContext, treg: Register) =
+            assignTemporary(topcontext, new Temporary)
+          (tContext, treg, List(Sw(treg,l)))
         case _ =>
-          (context, Nil)
+          throw UnexpectedAstNode("Not register or label")
       }
     }
 
@@ -248,22 +246,22 @@ object tacToMips extends Stage {
     case MODULUS => Rem
   }
 
-  private val unary: MipsFor[UnaryOperators] = {
+  private val unary: MipsFor[TwoOperators] = {
     case NOT => Not
     case NEGATIVE => Neg
   }
 
-  private def foldCode[O]
-    (f: (Context, Statements) => MipsAcc)
-    (context: Context, rest: Source)
-    (finisher: (Context, Goal) => O): O = {
+  private def foldCode[O,A]
+    (f: (Context, A) => MipsAcc)
+    (context: Context, src: List[A])
+    (finisher: MipsAcc => O): O = {
       var contextAcc = context
-      var restAcc = rest
+      var rest = src
       var codeAcc: Goal = Nil
-      while (restAcc.nonEmpty) {
-        val (context, code) = f(contextAcc, restAcc.head)
+      while (rest.nonEmpty) {
+        val (context, code) = f(contextAcc, rest.head)
         codeAcc = code ++ codeAcc
-        restAcc = restAcc.tail
+        rest = rest.tail
         contextAcc = context
       }
       finisher(contextAcc, codeAcc)
@@ -288,23 +286,18 @@ object tacToMips extends Stage {
       }
     }
 
-  private def prepareRegisterFor
-    (f: (Context, ASrc) => (Context, Dest))
-    (context: Context, src: ASrc): (Context, Dest, List[Assembler]) =
-      (???,???,???)
-
   private def getRegisterElse
-    (f: (Context, RSrc) => (Context, Dest))
-    (context: Context, lvalue: RSrc): (Context, Dest) =
+    (f: (Context, Variable) => (Context, Dest))
+    (context: Context, frame: Frame, lvalue: Variable): (Context, Dest) =
       context.cursor.current
         .genSearch(RegisterKey(lvalue))
         .map((context,_))
         .orElse {
           lvalue match {
             case i: Identifier =>
-              context.cursor.current
-                .genSearch(DataKey(Label(i)))
-                .map(_ => (context,Label(i)))
+              frame.globals.get(i).map { _ =>
+                (context, Label(i))
+              }
             case _ =>
               None
           }
@@ -314,27 +307,24 @@ object tacToMips extends Stage {
         }
 
   private def getRegister
-    (context: Context, lvalue: RSrc): Register =
+    (context: Context, lvalue: Variable): Register =
       context.cursor.current
         .genSearch(RegisterKey(lvalue))
         .getOrElse(unexpected(lvalue))
   
   private def assignTemporary
-    (context: Context, lvalue: RSrc): (Context, Register) = {
+    (context: Context, lvalue: Variable): (Context, Register) = {
       val advanced = context.advanceTemporary
       (add(advanced, RegisterKey(lvalue), advanced.temporary), advanced.temporary)
     }
 
-  private def getData(context: Context): Goal = {
+  private def getData(dataMap: DataMap): Goal = {
     val data =
-      context.cursor.current.stack.lastOption
-        .toList
-        .flatMap(_.topView)
-        .collect {
-          case (DataKey(label), c: Constant) => List(label, Word(c)): Goal
-        }
-        .flatMap[Assembler,Iterable[Assembler]](identity)
-        .toList
+      dataMap.view.map {
+        case (i, c) => List(Label(i), Word(c)): Goal
+      }
+      .flatMap[Assembler,Iterable[Assembler]](identity)
+      .toList
     if data.isEmpty then
       Nil
     else

@@ -13,7 +13,7 @@ import exception._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
-import normalToTacActual._
+import normalToTac._
 
 object printTac {
 
@@ -39,8 +39,8 @@ object printTac {
     ( context: Bindings,
       data: DataMap,
       indent: String
-    ): String = data.values.view.map {
-        case GlobalConstant(Identifier(i),Constant(c)) =>
+    ): String = data.view.map {
+        case (Identifier(i),Constant(c)) =>
           s"$i:$endl${indent}.const %I32 $c$endl"
     }.mkString
 

@@ -24,10 +24,6 @@ package object mycc {
     type Value = Unit
   }
 
-  case class DataKey(key: Label) extends Bindings.Key {
-    type Value = Constant
-  }
-
   val zero = Constant(0)
 
   type LValue = Identifier | Temporary
@@ -75,7 +71,7 @@ package object mycc {
       tac: List[Tac]
     ): (Bindings, List[Tac]) = {
       val newMainDecl = replaceIdent(Std.mainFunc, id)
-      val newBindings = renameFunc(
+      val newBindings = rename(
         scope,
         Std.mainIdentifier,
         id,
@@ -85,37 +81,6 @@ package object mycc {
       val newCode =
         renameFunc(tac)(id,Std.mainIdentifier)
       (newBindings,newCode)
-    }
-
-  def renameMain
-    ( scope: Long,
-      bindings: Bindings,
-      id: Identifier,
-      tac: List[Statements]
-    ): (Bindings, List[Statements]) = {
-      val newMainDecl = replaceIdent(Std.mainFunc, id)
-      val newBindings = rename(
-        scope,
-        Std.mainIdentifier,
-        id,
-        newMainDecl,
-        bindings
-      )
-      val newCode =
-        renameFunction(tac)(id,Std.mainIdentifier)
-      (newBindings,newCode)
-    }
-
-  def renameFunction
-    ( tac: List[Statements] )
-    ( id: Identifier,
-      old: Identifier,
-    ): List[Statements] = tac.foldRight(Nil: List[Statements]) { (s,acc) =>
-      s match {
-        case Function(`old`, f, body) =>
-          Function(id, f, body) :: acc
-        case any => any :: acc
-      }
     }
 
   def renameFunc
@@ -147,27 +112,8 @@ package object mycc {
         }
       }
 
-    def renameFunc
-    ( scope: Long,
-      old: Identifier,
-      id: Identifier,
-      decl: Declaration,
-      bindings: Bindings
-    ): Bindings =
-      declareIn(id, decl, scope) {
-        // defineIn(id, Func(id, frame, body)) {
-        //   undefineIn(old) {
-        //     undeclareIn(old) {
-        //       bindings
-        //     }
-        //   }
-        // }
-        ???
-      }
-
   def unexpected(lvalue: LValue): Nothing = {
-    val lStr = showLValue(lvalue)
-    throw UnexpectedAstNode(s"unknown variable $lStr")
+    throw UnexpectedAstNode(s"unknown variable ${showLValue(lvalue)}")
   }
   
   def showLValue(lvalue: LValue): String =
@@ -199,9 +145,10 @@ package object mycc {
     (bindings: => Bindings): Bindings =
       bindings - DeclarationKey(key)
 
-  def getCurrentScope(bindings: Bindings): Long = bindings.genGet(ScopeKey).getOrElse{
-    throw new IllegalStateException("Context has no scope!")
-  }
+  def getCurrentScope(bindings: Bindings): Long =
+    bindings.genGet(ScopeKey).getOrElse {
+      throw new IllegalStateException("Context has no scope!")
+    }
 
   object Std {
     val mainIdentifier = Identifier("main")
