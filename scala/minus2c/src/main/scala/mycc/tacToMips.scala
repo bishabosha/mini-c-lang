@@ -34,9 +34,9 @@ object tacToMips extends Stage {
   private val printInt = Constant(1)
   private val readInt = Constant(5)
 
-  private def pseudoMain(userMain: Identifier): Goal = List(
-    Label(Std.mainIdentifier),
-    Jal(Label(userMain)),
+  private val pseudoMain: Goal = List(
+    Label(Scoped(Std.mainIdentifier.id, -1L)),
+    Jal(Label(Std.mainIdentifier)),
     Move(A0,V0),
     Li(V0,exitWithArg),
     Syscall,
@@ -149,17 +149,12 @@ object tacToMips extends Stage {
       val (data, nodes) = tac
       val topLevel = context.cursor.current
       parseMain(topLevel) { () =>
-        val actualMainIdent = newMainIdentifier(topLevel)
-        val scope = getCurrentScope(context.cursor.current)
-        val (uBindings, uTac) =
-          renameMainFunc(scope, topLevel, actualMainIdent, nodes)
-        val uContext = updateBindings(context, uBindings)
         val (contextFinal, goal) =
-          foldCode(topLevelStatements)(uContext,uTac) {
+          foldCode(topLevelStatements)(context,nodes) {
             identity(_,_)
           }
         val dataAssembler = getData(data)
-        val top: Goal = predef ++ pseudoMain(actualMainIdent)
+        val top: Goal = predef ++ pseudoMain
         val end: Goal = goal ++ dataAssembler
         (contextFinal, top ++ end)
       }
@@ -176,7 +171,7 @@ object tacToMips extends Stage {
 
   private def evalFunction
     ( context: Context )
-    ( id: Identifier,
+    ( id: Scoped,
       frame: Frame,
       body: List[Code],
     ): MipsAcc =
@@ -374,8 +369,8 @@ object tacToMips extends Stage {
     context.cursor.current.topView.foldLeft(context) { (c, kv) =>
       kv match {
         case (
-          DeclarationKey(i: Identifier), 
-          (Declaration(_, _, _: Identifier), _)
+          DeclarationKey(i: Scoped), 
+          (Declaration(_, _, _: Scoped), _)
         ) => 
           val (register, advanced) = c.advanceSaved
           add(advanced, RegisterKey(i), register)
@@ -392,9 +387,9 @@ object tacToMips extends Stage {
         .map((context,_))
         .orElse {
           lvalue match {
-            case i: Identifier =>
+            case s @ Scoped(i, 0) =>
               frame.globals.get(i).map { _ =>
-                (context, Label(i))
+                (context, Label(s))
               }
             case _ =>
               None

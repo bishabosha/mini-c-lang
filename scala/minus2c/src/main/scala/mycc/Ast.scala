@@ -56,9 +56,9 @@ enum ArgList {
 }
 
 object Ast {
-  type Parameter = (Types, Identifier) | Types
+  type Parameter = (Types, Scoped) | Types
   type Statements = Block | Declarations | Assignments | Return
-  type Declarator = Identifier | FunctionDeclarator
+  type Declarator = Scoped | FunctionDeclarator
   type InitDeclarator = Declarator | Assignment
   type DeclarationSpecifiers = Type | Storage
   type Declarations = Declaration | Function | Assignment
@@ -70,10 +70,10 @@ object Ast {
   type Multiplicatives = Multiplicative | Unaries
   type Unaries = Unary | Postfix
   type Postfix = Application | Primary
-  type Constants = Identifier | Constant | StringLiteral
+  type Constants = Scoped | Constant | StringLiteral
   type Primary = Constants | LazyExpressions | Temporary
   type Node = Equality | Relational | Additive | Multiplicative | Unary
-  type Variable = Identifier | Temporary
+  type Variable = Scoped | Temporary
   type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
      Unary | Constant | StringLiteral | Variable
   type BinaryOperators = EqualityOperators | RelationalOperators |
@@ -84,8 +84,9 @@ object Ast {
 }
 
 class Temporary
+case class Scoped(id: Identifier, scope: Long)
 case class Identifier(id: String)
-case class FunctionDeclarator(id: Identifier, args: ArgList)
+case class FunctionDeclarator(id: Scoped, args: ArgList)
 case class Constant(value: Int)
 case class StringLiteral(value: String)
 case class Type(id: Types)
@@ -100,5 +101,5 @@ case class Relational(op: RelationalOperators, left: Relationals, right: Additiv
 case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
 case class Assignment(lvalue: Variable, rvalue: Assignments)
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
-case class Function(id: Identifier, frame: Frame, body: List[Statements])
+case class Function(id: Scoped, frame: Frame, body: List[Statements])
 case class Block(inner: List[Statements])

@@ -45,10 +45,12 @@ object printMips {
           s"$indent#$msg$endl"
         case Data =>
           s"$indent.data$endl"
-        case Globl(Identifier(id)) =>
+        case Globl(Scoped(Identifier(id),_)) =>
           s"$indent.globl $id$endl"
-        case Label(Identifier(i)) =>
+        case Label(Scoped(Identifier(i),-1)) =>
           s"$i:$endl"
+        case Label(Scoped(Identifier(i),s)) =>
+          s"$i$s:$endl"
         case Word(Constant(w)) =>
           s"$indent.word $w$endl"
         case Syscall =>
@@ -125,7 +127,7 @@ object printMips {
 
   private def rsrc(v: Constant | Dest): String = v match {
     case Constant(c) => c.toString
-    case Label(Identifier(i)) => i
+    case Label(Scoped(Identifier(i),_)) => i
     case r: Register => registers(r)
     case u =>
       throw UnexpectedAstNode(u.toString)

@@ -16,11 +16,11 @@ package object mycc {
     type Value = Long
   }
 
-  case class DeclarationKey(id: Identifier) extends Bindings.Key {
-    type Value = (Declaration, Long)
+  case class DeclarationKey(id: Scoped) extends Bindings.Key {
+    type Value = Declaration
   }
 
-  case class DefinitionKey(id: Identifier) extends Bindings.Key {
+  case class DefinitionKey(id: Scoped) extends Bindings.Key {
     type Value = Unit
   }
 
@@ -31,7 +31,7 @@ package object mycc {
 
   def parseMain[A](topLevel: Bindings)(f: () => A): A =
     topLevel.genGet(Std.mainIdentifierKey) match {
-        case Some((Std.`mainFunc`, 0)) =>
+        case Some(Std.`mainFunc`) =>
           if topLevel.genGet(Std.mainDefinitionKey) isDefined then
             f()
           else {
@@ -50,28 +50,11 @@ package object mycc {
         yield (DeclarationKey(extractIdentifier(decl)), (d,0L))
       ).toMap
 
-  private def extractIdentifier(d: Declarator): Identifier = d match {
-    case i: Identifier => i
-    case _ @ FunctionDeclarator(i, _) => i
+  private def extractIdentifier(d: Declarator): Scoped = d match {
+    case s: Scoped => s
+    case _ @ FunctionDeclarator(s, _) => s
   }
-
-  def replaceIdent(decl: Declaration, id: Identifier) = decl match {
-    case Declaration(s,t, _: Identifier) =>
-      Declaration(s,t,id)
-    case Declaration(s,t,FunctionDeclarator(_,args)) =>
-      Declaration(s,t,FunctionDeclarator(id,args))
-  }
-
-  def newMainIdentifier(topLevel: Context): Identifier = {
-    var c = 0;
-    var id = Identifier("main" + c)
-    while (topLevel.genGet(DeclarationKey(id)).isDefined) {
-      c += 1
-      id = Identifier("main" + c)
-    }
-    id
-  }
-
+  
   def printScopesOrdered(bindings: Bindings): Unit = {
     var cursor = Cursor(bindings)
     while (!cursor.isEmpty) {
@@ -81,86 +64,18 @@ package object mycc {
     }
   }
 
-  def renameMainFunc
-    ( scope: Long,
-      bindings: Bindings,
-      id: Identifier,
-      tac: List[Tac]
-    ): (Bindings, List[Tac]) = {
-      val newMainDecl = replaceIdent(Std.mainFunc, id)
-      val newBindings = rename(
-        scope,
-        Std.mainIdentifier,
-        id,
-        newMainDecl,
-        bindings
-      )
-      val newCode =
-        renameFunc(tac)(id,Std.mainIdentifier)
-      (newBindings,newCode)
-    }
-
-  def renameFunc
-    ( tac: List[Tac] )
-    ( id: Identifier,
-      old: Identifier,
-    ): List[Tac] = tac.foldRight(Nil: List[Tac]) { (s,acc) =>
-      s match {
-        case Func(`old`, f, body) =>
-          Func(id, f, body) :: acc
-        case any => any :: acc
-      }
-    }
-
-  def rename
-    ( scope: Long,
-      old: Identifier,
-      id: Identifier,
-      decl: Declaration,
-      bindings: Bindings
-    ): Bindings =
-      declareIn(id, decl, scope) {
-        defineIn(id) {
-          undefineIn(old) {
-            undeclareIn(old) {
-              bindings
-            }
-          }
-        }
-      }
-
   def unexpected(lvalue: Variable): Nothing = {
     throw UnexpectedAstNode(s"unknown variable ${showVariable(lvalue)}")
   }
   
   def showVariable(lvalue: Variable): String =
     lvalue match {
-      case Identifier(id) => id
+      case Scoped(Identifier(id),s) => s"$id~$s"
       case t: Temporary => showTemporary(t)
     }
 
   def showTemporary(temporary: Temporary): String =
     ("@" + temporary.hashCode).take(6)
-
-  private def defineIn
-    (key: Identifier)
-    (bindings: => Bindings): Bindings =
-      bindings + (DefinitionKey(key), ())
-
-  private def undefineIn
-    (key: Identifier)
-    (bindings: => Bindings): Bindings =
-      bindings - DefinitionKey(key)
-
-  private def declareIn
-    (key: Identifier, value: Declaration, scope: Long)
-    (bindings: => Bindings): Bindings =
-      bindings + (DeclarationKey(key), value -> scope)
-
-  private def undeclareIn
-    (key: Identifier)
-    (bindings: => Bindings): Bindings =
-      bindings - DeclarationKey(key)
 
   def getCurrentScope(bindings: Bindings): Long =
     bindings.genGet(ScopeKey).getOrElse {
@@ -168,7 +83,7 @@ package object mycc {
     }
 
   object Std {
-    val mainIdentifier = Identifier("main")
+    val mainIdentifier = Scoped(Identifier("main"),0)
     val mainIdentifierKey = DeclarationKey(Std.mainIdentifier)
     val mainDefinitionKey = DefinitionKey(Std.mainIdentifier)
     val mainFunc =
@@ -177,15 +92,15 @@ package object mycc {
         Cint,
         FunctionDeclarator(mainIdentifier, LVoid)
       )
-    val printIntIdentifier = Identifier("print_int")
-    val readIntIdentifier = Identifier("read_int")
+    val printIntIdentifier = Scoped(Identifier("print_int"),0)
+    val readIntIdentifier = Scoped(Identifier("read_int"),0)
     val print_int =
       Declaration(
         Extern,
         Cvoid,
         FunctionDeclarator(
           printIntIdentifier,
-          LParam(Vector(Cint -> Identifier("value")))
+          LParam(Vector(Cint -> Scoped(Identifier("value"),0)))
         )
       )
     val read_int =

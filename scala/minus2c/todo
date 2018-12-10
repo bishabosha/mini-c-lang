@@ -33,22 +33,23 @@
 
 --- FEATURE FREEZE ---
 
-[>] blocks
-    [>] reintroduce anon blocks
-        [>] associate identifiers with unique scope ids in all exprs
-            [ ] possibly make new case class for scoped identifiers,
-                replace operators using Identifier with the new type.
-                Do the association at TAC level, then bindings may be erased.
-        [ ] inlining blocks is ok because variable names are associated to
-            unique scope ids
-    [>] if else
-        [ ] update check for return in all branches
+[>] reintroduce anon blocks
+    [x] associate identifiers with unique scope ids in all exprs
+    [x] possibly make new case class for scoped identifiers,
+        replace operators using Identifier with the new type.
+        Do the association at AST level, then bindings may be erased.
+    [!] inlining blocks is ok because variable names are associated to
+        unique scope ids
+[>] if else
+[?] update check for return in all branches
 
 --- COMPLETED ---
 
 [x] make void a type that contains undefined single word value
 [x] hack in print_int and read_int
     [x] push params to context and inline the definitions
+[x] global variable name conflicts (with mips instructions) please remove
+[x] fix temporary folding
 
 --- FEATURE EXTEND ---
 
@@ -61,11 +62,10 @@
     [!] move can only copy between registers
 [ ] add reverse register to variable map to context which can be used to then
     free the variable assignments
-[ ] global variable name conflicts (with mips instructions) please remove
-[ ] fix temporary folding
 
 --- FOR REPORT ---
 
+[ ] talk about checking if each block returns
 [ ] stack machine based interpreter for tac vs recursive descent
     of structured data
 [ ] everything I removed from C.y

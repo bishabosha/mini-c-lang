@@ -5,7 +5,7 @@ import Frame._
 
 object Frame {
   val Empty = Frame(Map(),Map(),Map(),Map())
-  type CapturedDefs = Map[(Identifier, Long), Declaration]
+  type CapturedDefs = Map[Scoped, Declaration]
   type Defs = Map[Identifier, Declaration]
   type FrameLens = (CapturedDefs => CapturedDefs) => Frame => Frame
   def paramsLens(f: CapturedDefs => CapturedDefs)(frame: Frame): Frame =

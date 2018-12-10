@@ -40,7 +40,7 @@ object printTac {
       data: DataMap,
       indent: String
     ): String = data.view.map {
-        case (Identifier(i),Constant(c)) =>
+        case (Scoped(Identifier(i),_),Constant(c)) =>
           s"$i:$endl${indent}.const %I32 $c$endl"
     }.mkString
 
@@ -59,18 +59,18 @@ object printTac {
       indent: String
     ): String =
       node match {
-        case Func(identifier,frame,codes) =>
-          evalFunction(context, identifier, frame, codes, indent)
+        case Func(scoped, frame, codes) =>
+          evalFunction(context, scoped, frame, codes, indent)
       }
 
   private def evalFunction
     ( context: Bindings,
-      identifier: Identifier,
+      scoped: Scoped,
       frame: Frame,
       codes: List[Code],
       indent: String
     ): String = {
-      s"${identifier.id}:$endl" +
+      s"${scoped.id.id}~${scoped.scope}:$endl" +
       s"$indent.begin_function$endl" +
       evalFrame(context, frame, indent) +
       evalCodes(context, codes, indent) +
@@ -87,15 +87,15 @@ object printTac {
           s"${indent}.global ${evalType(t)} $a$endl"
       }.mkString
       val locals = frame.locals.view.map {
-        case ((Identifier(a), scope), Declaration(_,t,_)) =>
+        case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
           s"${indent}.local ${evalType(t)} $a~$scope$endl"
       }.mkString
       val params = frame.params.view.map {
-        case ((Identifier(a), scope), Declaration(_,t,_)) =>
+        case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
           s"${indent}.param ${evalType(t)} $a~$scope$endl"
       }.mkString
       val captured = frame.captures.view.map {
-        case ((Identifier(a), scope), Declaration(_,t,_)) =>
+        case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
           s"${indent}.captured ${evalType(t)} $a~$scope$endl"
       }.mkString
       globals + locals + params + captured
@@ -169,7 +169,7 @@ object printTac {
 
   private def const(v: ASrc): String = v match {
     case Constant(c) => c.toString
-    case Identifier(i) => i
+    case Scoped(Identifier(i),s) => s"$i~$s"
     case t: Temporary => showTemporary(t)
   }
 

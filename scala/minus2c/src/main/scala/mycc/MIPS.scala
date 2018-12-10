@@ -55,7 +55,7 @@ enum TwoAddr {
 }
 
 enum ThreeAddr {
-  case Beq(l: Register, r: Register, breakTo: Identifier)
+  case Beq(l: Register, r: Register, breakTo: Scoped)
   case Add(dest: Register, l: Register, r: Src)
   case Sub(dest: Register, l: Register, r: Src)
   case Mul(dest: Register, l: Register, r: Src)
@@ -69,7 +69,7 @@ enum ThreeAddr {
   case Sge(dest: Register, l: Register, r: Src)
 }
 
-case class Label(id: Identifier)
+case class Label(id: Scoped)
 case class OffsetAddress(address: Register, offset: Constant)
 
 enum PseudoZero {
@@ -78,7 +78,7 @@ enum PseudoZero {
 
 enum PseudoUnary {
   case Word(size: Constant)
-  case Globl(name: Identifier)
+  case Globl(name: Scoped)
   case Asciiz(value: String)
   case Comment(msg: String)
 }

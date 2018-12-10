@@ -35,16 +35,16 @@ object printAst {
       node match {
         case Declaration(storage, types, declarator) =>
           declarator match {
-            case Identifier(id) =>
+            case Scoped(Identifier(id),_) =>
               s"$lvl${storageToString(storage)}${typesToString(types)} $id;$endl"
-            case FunctionDeclarator(Identifier(id), args) =>
+            case FunctionDeclarator(Scoped(Identifier(id),_), args) =>
               s"$lvl${storageToString(storage)}${typesToString(types)} $id${getArgList(args)};$endl"
           }
-        case Assignment(Identifier(id), value) =>
+        case Assignment(Scoped(Identifier(id),_), value) =>
           s"$lvl$id = ${exp(value)};$endl"
         case Assignment(t: Temporary, value) =>
           s"$lvl${showTemporary(t)} = ${exp(value)};$endl"
-        case Function(i @ Identifier(id), _, b) =>
+        case Function(i @ Scoped(Identifier(id),_), _, b) =>
           fn(id, b, level)
         case Block(b) => block(b, level)
         case Return(Nil) => s"${lvl}return;$endl"
@@ -78,7 +78,7 @@ object printAst {
           s"$v"
         case StringLiteral(str) =>
           s""""$str""""
-        case Identifier(i) =>
+        case Scoped(Identifier(i),_) =>
           s"$i"
         case t: Temporary =>
           showTemporary(t)
@@ -99,7 +99,7 @@ object printAst {
     case LParam(params) =>
       params.view.map {
         case t: Types => typesToString(t)
-        case (t: Types, Identifier(i)) => s"${typesToString(t)} $i"
+        case (t: Types, Scoped(Identifier(i),_)) => s"${typesToString(t)} $i"
       }.mkString("(", ", ", ")")
   }
 

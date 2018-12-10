@@ -16,7 +16,7 @@ object normalToTac extends Stage {
   type Context  = astToNormal.Context
   type Goal     = (DataMap, List[Tac])
 
-  type DataMap = Map[Identifier, Global]
+  type DataMap = Map[Scoped, Global]
 
   def apply(topLevel: Context, nodes: List[Statements]): (Context, Goal) =
     parseMain(topLevel) { () =>
@@ -25,22 +25,22 @@ object normalToTac extends Stage {
           getData(statement).fold(acc)(acc + _)
         }
       val code = nodes.foldLeft(Nil: List[Tac]){ (code, statement) =>
-        topLevelStatement(topLevel, statement) ++ code
+        topLevelStatement(statement) ++ code
       }.reverse
       (topLevel, (data, code))
     }
 
-  private def getData(node: Statements): Option[(Identifier, Global)] =
+  private def getData(node: Statements): Option[(Scoped, Global)] =
     node match {
-      case Declaration(_, _, i: Identifier) =>
+      case Declaration(_, _, i: Scoped) =>
         Some((i, zero))
-      case Assignment(i: Identifier, c: Constant) =>
+      case Assignment(i: Scoped, c: Constant) =>
         Some((i, c))
       case _ => None
     }
 
   private def topLevelStatement
-    (topLevel: Context, node: Statements): List[Tac] =
+    (node: Statements): List[Tac] =
       node match {
         case Function(Std.`mainIdentifier`, f, body) =>
           val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
@@ -54,7 +54,7 @@ object normalToTac extends Stage {
     node match {
       case Assignment(dest, expr: ExpressionRoot) =>
         evalExpr(dest,expr)
-      case Assignment(dest, Application(id: Identifier, args)) =>
+      case Assignment(dest, Application(id: Scoped, args)) =>
         evalApplication(dest, id, args)
       case Return((a: ASrc) :: Nil) =>
         List(OneTac(RETURN, a))
@@ -63,7 +63,7 @@ object normalToTac extends Stage {
     }
 
   private def evalApplication
-    (dest: Variable, id: Identifier, args: Expressions): List[Code] = {
+    (dest: Variable, id: Scoped, args: Expressions): List[Code] = {
       args.foldRight(List[Code](TwoTac(CALL, dest, id))) { (exp, acc) =>
         exp match {
           case a: ASrc =>

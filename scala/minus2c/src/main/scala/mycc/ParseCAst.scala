@@ -10,7 +10,7 @@ import RelationalOperators._
 import AdditiveOperators._
 import MultiplicativeOperators._
 import UnaryOperators._
-import mycc.exception._
+import exception._
 import PartialFunctionConversions._
 import parseCAst._
 import scala.collection.mutable
@@ -24,15 +24,19 @@ object parseCAst extends Stage {
     ( source: Source,
       identPool: Map[String, Identifier]
     ): (Context, Goal) =
-      new parseCAst(identPool).goal(source)
+      new parseCAst(identPool, new mutable.AnyRefMap()).goal(source)
 }
 
-class parseCAst private(private val identPool: Map[String, Identifier]) {
+class parseCAst private
+  ( private val identPool: Map[String, Identifier],
+    private val scopedPool: mutable.AnyRefMap[(Identifier, Long),Scoped]
+  ) {
 
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
   private var scopeCount = 0L
+  private var currentScope = scopeCount
   private var context: Context =
     Bindings.Empty
       .copy(extractDeclarations(Std.declarations)) + (ScopeKey, scopeCount)
@@ -113,7 +117,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       (lazyExpressions |
         stringLiteral))
 
-  private lazy val identifierInScope: Parse[Identifier] = 
+  private lazy val identifierInScope: Parse[Scoped] =
     identifier !! existsInScope(identity)
 
   private lazy val initDeclarators: Parse[List[InitDeclarator]] =
@@ -165,13 +169,13 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       val (s, d) = declarationSpecifiersSpecific(specifiers)
       val lens = if frames.isEmpty then None else Some(Frame.localsLens)
       initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
-        case i: Identifier =>
+        case i: Scoped =>
           declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
           declareInScope(id, s, d, f, lens).toList
-        case a @ Assignment(Identifier(i), StringLiteral(str)) =>
-          throw SemanticError(s""""$str" can not be assigned to `$i`""")
-        case a @ Assignment(i: Identifier, _) =>
+        case a @ Assignment(Scoped(Identifier(i),s), StringLiteral(str)) =>
+          throw SemanticError(s""""$str" can not be assigned to `$i~s`""")
+        case a @ Assignment(i: Scoped, _) =>
           declareInScope(i, s, d, i, lens).toList
             .:+[Declarations, List[Declarations]](a)
         case _ =>
@@ -245,8 +249,12 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       Application(postfix(name), Nil)
   }
 
-  private val identifier: Parse[Identifier] = {
-    case TokenString("id", id) => identPool(id)
+  private val identifier: Parse[Scoped] = {
+    case TokenString("id", id) =>
+      scopedPool.getOrElseUpdate(
+        (identPool(id), currentScope),
+        { Scoped(identPool(id), currentScope) }
+      )
   }
 
   private val constant: Parse[Constant] = {
@@ -370,17 +378,19 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
   private def stacked[A](parser: => A): A = {
     context = context.push
     scopeCount += 1L
-    context += (ScopeKey, scopeCount)
+    currentScope = scopeCount
+    context += (ScopeKey, currentScope)
     val result = parser
     context = context.popOrElse { Bindings.Empty }
+    currentScope = getCurrentScope(context)
     result
   }
 
   private def declareParamsInScope(args: Vector[Parameter]): Unit = {
     for (p <- args) {
       p match {
-        case (t: Types, i: Identifier) =>
-          declareInScope(i, Auto, t, i, Some(Frame.paramsLens))
+        case (t: Types, s: Scoped) =>
+          declareInScope(s, Auto, t, s, Some(Frame.paramsLens))
         case _ =>
       }
     }
@@ -388,23 +398,23 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   import Frame._
   private def declareInScope
-    ( identifier: Identifier,
+    ( scoped: Scoped,
       storage: StorageTypes,
       types: Types,
       declarator: Declarator,
       frameLens: Option[FrameLens]
     ): Option[Declaration] = {
       for (
-        (Declaration(s, t, existing),_) <-
-          context.genGet(DeclarationKey(identifier))
+        Declaration(s, t, existing) <-
+          context.genGet(DeclarationKey(scoped))
       ) {
         existing match {
-          case _: Identifier => declarator match {
+          case _: Scoped => declarator match {
             case _: FunctionDeclarator =>
               throw new SemanticError(
-                s"Redefinition of '${identifier.id}' as a function type.")
+                s"Redefinition of '${scoped.id.id}' as a function type.")
             case _ =>
-              throw new SemanticError(s"Redefinition of '${identifier.id}'.")
+              throw new SemanticError(s"Redefinition of '${scoped.id.id}'.")
           }
           case _: FunctionDeclarator => declarator match {
             case f: FunctionDeclarator =>
@@ -412,20 +422,19 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
                 return None
               } else {
                 throw new SemanticError(
-                  s"Redefinition of function '${identifier.id}' with "+
+                  s"Redefinition of function '${scoped.id.id}' with "+
                    "incompatible types.")
               }
             case _ =>
               throw new SemanticError(
-                s"Redefinition of function '${identifier.id}' to variable.")
+                s"Redefinition of function '${scoped.id.id}' to variable.")
           }
         }
       }
       val declaration = Declaration(storage, types, declarator)
-      var currentScope = getCurrentScope(context)
-      context += (DeclarationKey(identifier), declaration -> currentScope)
+      context += (DeclarationKey(scoped), declaration)
       for (updater <- frameLens) {
-        var declInFrame = (identifier -> currentScope) -> declaration
+        var declInFrame = scoped -> declaration
         frames = replaceHead(frames) { updater(_ + declInFrame) }
       }
       Some(declaration)
@@ -433,14 +442,13 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   private def define(f: => Function): Function = {
     val definition = f
-    var currentScope = getCurrentScope(context)
     context += (DefinitionKey(definition.id), ())
     definition
   }
 
   private def noAssign[A](a: A): Unit =
     a match {
-      case List(_: Declaration, Assignment(Identifier(i), _: Application)) =>
+      case List(_: Declaration, Assignment(Scoped(Identifier(i),_), _: Application)) =>
         throw SemanticError(
           s"Assignment of global variable $i to a function application")
       case _ =>
@@ -448,21 +456,19 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
 
   private def existsInScope[A](get: A => Variable): A => Unit =
     get.andThen {
-      case ident: Identifier =>
-        context.genSearch(DeclarationKey(ident)) match {
-          case Some((d: Declaration, scope)) =>
+      case scoped: Scoped =>
+        context.genSearch(DeclarationKey(scoped)) match {
+          case Some(d: Declaration) =>
             d match {
-              case Declaration(_, _, _: Identifier) =>
-                var currentScope = getCurrentScope(context)
+              case Declaration(_, _, Scoped(_, scope)) =>
                 if currentScope != scope then {
                   if scope == 0 then {
                     frames = replaceHead(frames) {
-                      Frame.globalsLens(_ + (ident -> d))
+                      Frame.globalsLens(_ + (scoped.id -> d))
                     }
                   } else {
-                    var uniqueVar = ident -> scope
-                    if frames.head.locals.get(uniqueVar).isEmpty then {
-                      var declInFrame = uniqueVar -> d
+                    if frames.head.locals.get(scoped).isEmpty then {
+                      var declInFrame = scoped -> d
                       frames = replaceHead(frames) {
                         Frame.capturesLens(_ + declInFrame)
                       }
@@ -472,7 +478,7 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
               case _ =>
             }
           case None =>
-            throw SemanticError(s"Identifier '${ident.id}' is undefined")
+            throw SemanticError(s"Identifier '${scoped.id.id}' is undefined")
         }
       case _ =>
     }

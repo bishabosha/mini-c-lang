@@ -47,7 +47,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
           code.orElse(evalStatement(statement))
         }
       }
-    case Declaration(_, _, id: Identifier) =>
+    case Declaration(_, _, id: Scoped) =>
       addRandom(id)
       None
     case _ : Declaration =>
@@ -65,7 +65,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
 
   private def evalStatement(node: Statements): Option[Int] = {
     node match {
-      case Declaration(_, _, id: Identifier) =>
+      case Declaration(_, _, id: Scoped) =>
         addRandom(id)
         None
       case _: Declaration =>
@@ -121,7 +121,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
         Some(v)
       case StringLiteral(str) =>
         None
-      case i: Identifier =>
+      case i: Scoped =>
         cursor.current.genSearch(IdentKey(i)).map(_.value)
       case t: Temporary =>
         cursor.current.genSearch(IdentKey(t)).map(_.value)

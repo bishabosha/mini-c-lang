@@ -1,7 +1,7 @@
 package mycc
 
 import Ast._
-import mycc.exception._
+import exception._
 import PartialFunctionConversions._
 import EqualityOperators._
 import astToNormal._
@@ -83,7 +83,7 @@ class astToNormal private (var context: Context) {
     var left = statements.reverse
     while (!left.isEmpty) {
       left match {
-        case (a @ Assignment(id: Identifier, t: Temporary)) :: left1 =>
+        case (a @ Assignment(id: Scoped, t: Temporary)) :: left1 =>
           left1 match {
             case Assignment(`t`, e) :: left2 =>
               acc = Assignment(id, e) :: acc
@@ -137,7 +137,7 @@ class astToNormal private (var context: Context) {
   private def application(p: Postfix, e: Expressions): Stack = p match {
       case a: Application =>
         applicationA(a, e)
-      case i: Identifier =>
+      case i: Scoped =>
         applicationP(i, e)
       case LazyExpressions(l)
         if l.lastOption.forall(canApply) =>
