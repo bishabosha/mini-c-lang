@@ -26,8 +26,6 @@ package object mycc {
 
   val zero = Constant(0)
 
-  type LValue = Identifier | Temporary
-
   def replaceHead[A](list: List[A])(f: A => A): List[A] =
     f(list.head) :: list.tail
 
@@ -112,11 +110,11 @@ package object mycc {
         }
       }
 
-  def unexpected(lvalue: LValue): Nothing = {
-    throw UnexpectedAstNode(s"unknown variable ${showLValue(lvalue)}")
+  def unexpected(lvalue: Variable): Nothing = {
+    throw UnexpectedAstNode(s"unknown variable ${showVariable(lvalue)}")
   }
   
-  def showLValue(lvalue: LValue): String =
+  def showVariable(lvalue: Variable): String =
     lvalue match {
       case Identifier(id) => id
       case t: Temporary => showTemporary(t)

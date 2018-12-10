@@ -155,61 +155,105 @@ object tacToMips extends Stage {
       code: Code
     ): MipsAcc =
       code match {
-        case ThreeTac(op, d, c: Constant, r: Variable) =>
-          val (context, dest: Register, post) = evalDest(startContext, frame, d)
-          val (tContext, treg: Register) =
-            assignTemporary(context, new Temporary)
-          val loadTemp: Assembler = Li(treg,c)
-          val rarg = getRegister(tContext, r)
-          val result: Assembler = binaryOperators(op)(dest, treg, rarg)
-          (tContext, post ++ List(result, loadTemp)) // code geerated in reverse order
-        case ThreeTac(op, d, l: Variable, c: Constant) =>
-          val (context, dest: Register, post) = evalDest(startContext, frame, d)
-          val lreg = getRegister(context, l)
-          val result: Assembler = binaryOperators(op)(dest, lreg, c)
-          (context, post ++ List(result))
-        case ThreeTac(op, d, l: Variable, r: Variable) =>
-          val (context, dest: Register, post) = evalDest(startContext, frame, d)
-          val lreg = getRegister(context, l)
-          val rarg = getRegister(context, r)
-          val result: Assembler = binaryOperators(op)(dest, lreg, rarg)
-          (context, post ++ List(result))
+        case ThreeTac(op, d, l, r) =>
+          val (context, dest: Register, post) =
+            evalVariableDest(startContext, frame, d)
+          val (lContext, lreg: Register, prel) = evalASrcL(context, frame, l)
+          val (rContext, rreg: Src, prer) = evalASrcR(lContext, frame, r)
+          val result: Assembler = binaryOperators(op)(dest, lreg, rreg)
+          val pre = (prer ++ prel): List[Assembler]
+          val resultAndStack = result :: pre
+          (rContext, post ++ resultAndStack)
         case TwoTac(ASSIGN, d, value) =>
-          val (context, dest: Register, post) = evalDest(startContext, frame, d)
-          val mips = value match {
-            case c: Constant =>
-              Li(dest, c)
-            case v: Variable =>
-              Move(dest, getRegister(startContext, v))
-          }
-          (context, post ++ List(mips))
-        case TwoTac(op, d, v: Variable) =>
-          val (context, dest: Register, post) = evalDest(startContext, frame, d)
-          val src = getRegister(context,v)
-          (context, post ++ List(unary(op)(dest,src)))
+          val (context, dest: Register, post) =
+            evalVariableDest(startContext, frame, d)
+          evalAssigment(context,frame,dest,value,post)
+        case TwoTac(op, d, v) =>
+          val (context, dest: Register, post) =
+            evalVariableDest(startContext, frame, d)
+          val (vContext, rreg: Register, prev) = evalASrcL(context, frame, v)
+          val resultAndStack = unary(op)(dest,rreg) :: prev
+          (context, post ++ resultAndStack)
         case OneTac(RETURN, value) =>
-          val move = value match {
-            case c: Constant =>
-              Li(V0, c)
-            case v: Variable =>
-              Move(V0, getRegister(startContext, v))
-          }
-          (startContext, Jr(Ra) :: move :: Nil)
+          evalAssigment(startContext,frame,V0,value,List(Jr(Ra)))
       }
 
-  private def evalDest
+  private def evalAssigment
     ( context: Context,
       frame: Frame,
-      dest: Variable
+      destReg: Register,
+      src: ASrc,
+      post: List[Assembler]
+    ): MipsAcc = {
+      src match {
+        case c: Constant =>
+          (context, post :+ Li(destReg, c))
+        case v: Variable =>
+          val (vContext, vreg: Register, prev) =
+            evalVariableSrc(context, frame, v)
+          val ans = Move(destReg, vreg) :: prev
+          (vContext, post ++ ans)
+      }
+    }
+
+  private def evalASrcL
+    ( context: Context,
+      frame: Frame,
+      dest: ASrc
     ): (Context, Register, List[Assembler]) = {
-      val (topcontext: Context, destination: Dest) =
-        getRegisterElse(assignTemporary)(context, frame, dest)
-      destination match {
+      dest match {
+        case c: Constant =>
+          val (tContext, treg: Register) =
+            assignTemporary(context, new Temporary)
+            (tContext, treg, List(Li(treg,c)))
+        case v: Variable =>
+          evalVariableSrc(context, frame, v)
+      }
+    }
+
+  private def evalASrcR
+    ( context: Context,
+      frame: Frame,
+      dest: ASrc
+    ): (Context, Src, List[Assembler]) = {
+      dest match {
+        case c: Constant => (context, c, Nil)
+        case v: Variable => evalVariableSrc(context, frame, v)
+      }
+    }
+
+  private def evalVariableSrc
+    ( context: Context,
+      frame: Frame,
+      variable: Variable
+    ): (Context, Register, List[Assembler]) = {
+      val (vContext, dest: Dest) =
+        getRegisterElse(unexpectedInContext)(context,frame,variable)
+      dest match {
         case r: Register =>
-          (topcontext, r, Nil: Goal)
+          (vContext, r, Nil)
         case l: Label =>
           val (tContext, treg: Register) =
-            assignTemporary(topcontext, new Temporary)
+            assignTemporary(vContext, new Temporary)
+          (tContext, treg, List(Lw(treg,l)))
+        case u =>
+          throw UnexpectedAstNode(s"Not register or label: $u")
+      }
+    }
+  
+  private def evalVariableDest
+    ( context: Context,
+      frame: Frame,
+      variable: Variable
+    ): (Context, Register, List[Assembler]) = {
+      val (vContext, dest: Dest) =
+        getRegisterElse(assignTemporary)(context, frame, variable)
+      dest match {
+        case r: Register =>
+          (vContext, r, Nil: Goal)
+        case l: Label =>
+          val (tContext, treg: Register) =
+            assignTemporary(vContext, new Temporary)
           (tContext, treg, List(Sw(treg,l)))
         case _ =>
           throw UnexpectedAstNode("Not register or label")
@@ -306,17 +350,16 @@ object tacToMips extends Stage {
           f(context,lvalue)
         }
 
-  private def getRegister
-    (context: Context, lvalue: Variable): Register =
-      context.cursor.current
-        .genSearch(RegisterKey(lvalue))
-        .getOrElse(unexpected(lvalue))
-  
   private def assignTemporary
     (context: Context, lvalue: Variable): (Context, Register) = {
       val advanced = context.advanceTemporary
-      (add(advanced, RegisterKey(lvalue), advanced.temporary), advanced.temporary)
+      val added = add(advanced, RegisterKey(lvalue), advanced.temporary)
+      (added, advanced.temporary)
     }
+
+  private def unexpectedInContext
+    (context: Context, lvalue: Variable): Nothing =
+      unexpected(lvalue)
 
   private def getData(dataMap: DataMap): Goal = {
     val data =
@@ -328,6 +371,6 @@ object tacToMips extends Stage {
     if data.isEmpty then
       Nil
     else
-      Data :: Comment("global data read not yet possible") :: data
+      Data :: data
   }
 }

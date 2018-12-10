@@ -96,8 +96,6 @@ class astToNormal private (var context: Context) {
       stack: Stack
     ): List[Statements] =
       (args.lastOption, stack) match {
-        // case (Some(Temporary(c)), _ :: (rest: Stack)) =>
-        //   Return(c :: Nil) :: rest
         case (Some(a), _) =>
           Return(a :: Nil) :: stack
         case _ =>

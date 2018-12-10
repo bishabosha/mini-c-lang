@@ -59,6 +59,8 @@ object printMips {
           oneAddr(jr,indent)(_.dest)
         case li: Li =>
           twoAddr(li,indent)(_.dest,_.source)
+        case lw: Lw =>
+          twoAddr(lw,indent)(_.dest,_.source)
         case neg: Neg =>
           twoAddr(neg,indent)(_.dest,_.r)
         case not: Not =>

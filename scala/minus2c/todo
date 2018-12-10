@@ -13,34 +13,48 @@
 [x] replace temporaries having inner values with assignments to a temporary,
     or else awful lalr descent will be needed
 [x] record frame scope id so that captures are not recorded for ifs etc.
+[x] parse DataMap in MIPS
+[x] Remove DataKeys in favour of DataMap and frame.globals
+[x] Add frame field to function
+[x] Definition of func should be in scope for applications,
+    [x] whole block must be examined first (bearing in mind forward
+        declarations) 
+[x] create data segment at Tac stage
 [ ] Type check as an interpreter step
 [>] tac
-    [ ] Normal form of function application using recursion
-        [x] Add frame field to function
-        [x] Definition of func should be in scope for applications,
-            [x] whole block must be examined first (bearing in mind forward
-                declarations) 
     [>] variables to be assigned at most once?
         [?] do have key value pairs of scope and identifier
-    so that its current register can be recorded
-[ ] global variable name conflicts (with mips instructions) please remove
-[ ] create data segment at ast stage
-[ ] Do global data at AST level
-[?] Consider adding temporaries to the frame
-[ ] only use Cursor in a terminal consumer
-[ ] inlining blocks is ok because variable names are associated to
-    unique scope ids
-[>] at some point associate identifiers with unique scope ids in all exprs
-    [ ] possibly make new case class for scoped identifiers, replace operators
-        using Identifier with the new type
-[>] function definitions should not be added to bindings, please just a flag
-    [ ] rename main - just add new declaration + isDefined to topLevel,
+            so that its current register can be recorded
+[!] only use Cursor in a terminal consumer
+[x] function definitions should not be added to bindings, please just a flag
+[>] rename main
+    [x] just add new declaration + isDefined to topLevel,
     [ ] replace Func node with new one with same frame and body but new ident
         [ ] { curr = 0; while (isdeclared(main + curr)) curr += 1; }
-    [?] do this at first declaration
-[>] add DataKeys to toplevel from Data map
-    [ ] Then remove DataKeys in favour of frame
-[ ] parse DataMap in MIPS
+        [?] do this at first declaration
+
+--- FEATURE FREEZE ---
+
+[ ] hack in print_int and read_int
+[>] blocks
+    [>] reintroduce anon blocks
+        [>] associate identifiers with unique scope ids in all exprs
+            [ ] possibly make new case class for scoped identifiers,
+                replace operators using Identifier with the new type
+        [ ] inlining blocks is ok because variable names are associated to
+            unique scope ids
+    [>] if else
+        [ ] update check for return in all branches
+
+--- FEATURE EXTEND ---
+
+[ ] in addition to recording when a function captures, record when its
+    variables are captured
+[>] redo whole memory model for MIPS
+    [ ] implement "freeing" temporaries
+    [ ] Add temporaries to the frame aot of mips etc.
+    [!] move can only copy between registers
+[ ] global variable name conflicts (with mips instructions) please remove
 
 --- FOR REPORT ---
 
@@ -51,6 +65,8 @@
 [ ] changed data segment parsing from end to the start
 [ ] previously temporaries contained nested expressions,
     bad for mapping as no canonical reference
+
+[ ] abstract interpreters
 
 [ ] need to fix recursion in ast node visiting
 

@@ -54,17 +54,19 @@ object normalToTac extends Stage {
         evalExpr(dest,expr)
       case Return((a: ASrc) :: Nil) =>
         List(OneTac(RETURN, a))
-      // case Return((expr: ExpressionRoot) :: Nil) =>
-      //   val temp = new Temporary
-      //   OneTac(RETURN, temp) :: evalExpr(temp,expr)
       case _ =>
         List()
     }
 
   private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = {
-    import AssignmentsPattern._
     expr match {
-      case Binary(op: BinaryOperators, l: ASrc, r: ASrc) =>
+      case Multiplicative(op, l: ASrc, r: ASrc) =>
+        ThreeTac(op, dest, l, r) :: Nil
+      case Additive(op, l: ASrc, r: ASrc) =>
+        ThreeTac(op, dest, l, r) :: Nil
+      case Relational(op, l: ASrc, r: ASrc) =>
+        ThreeTac(op, dest, l, r) :: Nil
+      case Equality(op, l: ASrc, r: ASrc) =>
         ThreeTac(op, dest, l, r) :: Nil
       case Unary(op, v: ASrc) =>
         TwoTac(op, dest, v) :: Nil
