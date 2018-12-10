@@ -23,6 +23,7 @@ import UnaryOperators._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
+import printMips._
 
 object tacToMips extends Stage {
   type Source   = normalToTac.Goal
@@ -30,16 +31,33 @@ object tacToMips extends Stage {
   type Goal     = List[Assembler]
 
   private val exitWithArg = Constant(17)
+  private val printInt = Constant(1)
+  private val readInt = Constant(5)
 
-  private val actualMainIdent = Identifier("_main_")
-
-  private val pseudoMain: Goal = List(
+  private def pseudoMain(userMain: Identifier): Goal = List(
     Label(Std.mainIdentifier),
-    Jal(Label(actualMainIdent)),
+    Jal(Label(userMain)),
     Move(A0,V0),
     Li(V0,exitWithArg),
     Syscall,
-    Comment("17: exit with argument"),
+    Comment("call 17: exit2")
+  )
+
+  private def inlinePrintInt
+    (context: Context, frame: Frame, value: ASrc): MipsAcc = {
+      val post: Goal =
+        List(
+          Li(V0,printInt),
+          Syscall,
+          Comment("call 1: print_int")
+        )
+      evalAssigment(context,frame,A0,value,post.reverse)
+    }
+
+  private val inlineReadInt: Goal = List(
+    Li(V0,readInt),
+    Syscall,
+    Comment("call 5: read_int")
   )
 
   private val predef = List(Globl(Std.mainIdentifier), Text): Goal
@@ -61,17 +79,27 @@ object tacToMips extends Stage {
 
   case class MipsContext
     ( cursor: Cursor,
+      private val stack: List[ASrc],
       private val _temporary: Option[Temporaries],
       private val saved: Set[SavedValues],
     ) {
       def advanceTemporary: MipsContext = {
         val temp = _temporary.map { t =>
-          if t.enumTag == Temporaries.enumValue.size then {
+          if t.enumTag == Temporaries.enumValue.size -1 then {
             throw SemanticError("Too many temporaries!")
           }
           Temporaries.enumValue(t.enumTag + 1)
         } orElse {
           Some(T0)
+        }
+        copy(_temporary = temp)
+      }
+
+      def freeTemporary: MipsContext = {
+        val temp = _temporary.map { t =>
+          Temporaries.enumValue(t.enumTag - 1)
+        } orElse {
+          throw SemanticError("No temporary to free!")
         }
         copy(_temporary = temp)
       }
@@ -87,6 +115,12 @@ object tacToMips extends Stage {
       }
 
       def temporary: Temporaries = _temporary.getOrElse { T0 }
+
+      def push(asrc: ASrc): MipsContext =
+        copy(stack = asrc :: stack)
+
+      def pop: (ASrc, MipsContext) =
+        (stack.head, copy(stack = stack.tail))
     }
 
   private def nextScope(context: Context): Context =
@@ -104,7 +138,7 @@ object tacToMips extends Stage {
       tac: (DataMap, List[Tac])
     ): (Context, Goal) = {
       val cursor = Cursor(context)
-      val mipsContext = MipsContext(cursor,None,Set())
+      val mipsContext = MipsContext(cursor,Nil,None,Set())
       goal(mipsContext, tac)
     }
 
@@ -115,6 +149,7 @@ object tacToMips extends Stage {
       val (data, nodes) = tac
       val topLevel = context.cursor.current
       parseMain(topLevel) { () =>
+        val actualMainIdent = newMainIdentifier(topLevel)
         val scope = getCurrentScope(context.cursor.current)
         val (uBindings, uTac) =
           renameMainFunc(scope, topLevel, actualMainIdent, nodes)
@@ -124,7 +159,7 @@ object tacToMips extends Stage {
             identity(_,_)
           }
         val dataAssembler = getData(data)
-        val top: Goal = predef ++ pseudoMain
+        val top: Goal = predef ++ pseudoMain(actualMainIdent)
         val end: Goal = goal ++ dataAssembler
         (contextFinal, top ++ end)
       }
@@ -168,6 +203,17 @@ object tacToMips extends Stage {
           val (context, dest: Register, post) =
             evalVariableDest(startContext, frame, d)
           evalAssigment(context,frame,dest,value,post)
+        case TwoTac(CALL, t: Temporary, Std.`printIntIdentifier`) =>
+          val (tContext, treg: Register) = assignTemporary(startContext,t)
+          val (arg: ASrc, nContext) = tContext.pop
+          val (iContext, inlined) = inlinePrintInt(startContext, frame, arg)
+          val comment =
+            Comment(s"${registers(treg)} for result of inlined print_int")
+          (nContext, comment :: inlined)
+        case TwoTac(CALL, t: Temporary, Std.`readIntIdentifier`) =>
+          val (tContext, treg: Register) = assignTemporary(startContext,t)
+          val move = Move(treg, V0)
+          (tContext, move :: inlineReadInt.reverse)
         case TwoTac(op, d, v) =>
           val (context, dest: Register, post) =
             evalVariableDest(startContext, frame, d)
@@ -176,6 +222,7 @@ object tacToMips extends Stage {
           (context, post ++ resultAndStack)
         case OneTac(RETURN, value) =>
           evalAssigment(startContext,frame,V0,value,List(Jr(Ra)))
+        case OneTac(PUSH_PARAM, a) => (startContext.push(a), Nil)
       }
 
   private def evalAssigment

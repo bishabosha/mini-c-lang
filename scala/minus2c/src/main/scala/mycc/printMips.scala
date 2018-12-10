@@ -131,7 +131,7 @@ object printMips {
       throw UnexpectedAstNode(u.toString)
   }
 
-  private def registers(reg: Register): String = reg match {
+  def registers(reg: Register): String = reg match {
     case t: Temporaries =>
       printEnum(Temporaries.enumValueNamed, t, "$t")
     case s: SavedValues =>

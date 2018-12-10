@@ -426,3 +426,10 @@ int main(void) {
 int bar(function a, int, int c) {
     return 0;
 }
+
+int main(void) {
+    int a; int b; int c;
+    a = read_int() * 2;
+    void v = print_int(a);
+    return 0;
+}

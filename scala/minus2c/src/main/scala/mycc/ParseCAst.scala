@@ -449,21 +449,25 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
       case ident: Identifier =>
         context.genSearch(DeclarationKey(ident)) match {
           case Some((d: Declaration, scope)) =>
-            var currentScope = getCurrentScope(context)
-            if currentScope != scope then {
-                if scope == 0 then {
-                  frames = replaceHead(frames) {
-                    Frame.globalsLens(_ + (ident -> d))
-                  }
-                } else {
-                  var uniqueVar = ident -> scope
-                  if frames.head.locals.get(uniqueVar).isEmpty then {
-                    var declInFrame = uniqueVar -> d
+            d match {
+              case Declaration(_, _, _: Identifier) =>
+                var currentScope = getCurrentScope(context)
+                if currentScope != scope then {
+                  if scope == 0 then {
                     frames = replaceHead(frames) {
-                      Frame.capturesLens(_ + declInFrame)
+                      Frame.globalsLens(_ + (ident -> d))
+                    }
+                  } else {
+                    var uniqueVar = ident -> scope
+                    if frames.head.locals.get(uniqueVar).isEmpty then {
+                      var declInFrame = uniqueVar -> d
+                      frames = replaceHead(frames) {
+                        Frame.capturesLens(_ + declInFrame)
+                      }
                     }
                   }
                 }
+              case _ =>
             }
           case None =>
             throw SemanticError(s"Identifier '${ident.id}' is undefined")

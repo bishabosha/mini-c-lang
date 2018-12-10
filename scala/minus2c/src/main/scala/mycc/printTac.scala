@@ -83,28 +83,20 @@ object printTac {
       indent: String
     ): String = {
       val globals = frame.globals.view.map {
-        case (Identifier(a), Declaration(_,Cint,_)) =>
-          s"${indent}.global %I32 $a$endl"
-        case (Identifier(a), Declaration(_,Cfunction,_)) =>
-          s"${indent}.global %Function $a$endl"
+        case (Identifier(a), Declaration(_,t,_)) =>
+          s"${indent}.global ${evalType(t)} $a$endl"
       }.mkString
       val locals = frame.locals.view.map {
-        case ((Identifier(a), scope), Declaration(_,Cint,_)) =>
-          s"${indent}.local %I32 $a~$scope$endl"
-        case ((Identifier(a), scope), Declaration(_,Cfunction,_)) =>
-          s"${indent}.local %Function $a~$scope$endl"
+        case ((Identifier(a), scope), Declaration(_,t,_)) =>
+          s"${indent}.local ${evalType(t)} $a~$scope$endl"
       }.mkString
       val params = frame.params.view.map {
-        case ((Identifier(a), scope), Declaration(_,Cint,_)) =>
-          s"${indent}.param %I32 $a~$scope$endl"
-        case ((Identifier(a), scope), Declaration(_,Cfunction,_)) =>
-          s"${indent}.param %Function $a~$scope$endl"
+        case ((Identifier(a), scope), Declaration(_,t,_)) =>
+          s"${indent}.param ${evalType(t)} $a~$scope$endl"
       }.mkString
       val captured = frame.captures.view.map {
-        case ((Identifier(a), scope), Declaration(_,Cint,_)) =>
-          s"${indent}.captured %I32 $a~$scope$endl"
-        case ((Identifier(a), scope), Declaration(_,Cfunction,_)) =>
-          s"${indent}.captured %Function $a~$scope$endl"
+        case ((Identifier(a), scope), Declaration(_,t,_)) =>
+          s"${indent}.captured ${evalType(t)} $a~$scope$endl"
       }.mkString
       globals + locals + params + captured
     }
@@ -138,6 +130,7 @@ object printTac {
     (op: OneOperators, value: ASrc): String = {
       val name = op match {
         case RETURN => "return"
+        case PUSH_PARAM => "push"
       }
       s"${indent}$name ${const(value)}$endl"
     }
@@ -146,36 +139,43 @@ object printTac {
     (indent: String )
     (op: TwoOperators, dest: Variable, value: ASrc): String = {
       val name = op match {
-        case ASSIGN => "assign"
-        case NOT => "not"
-        case POSITIVE => "positive"
-        case NEGATIVE => "negative"
+        case ASSIGN => "="
+        case NOT => "= !"
+        case POSITIVE => "= +"
+        case NEGATIVE => "= -"
+        case CALL => "= call"
       }
-      s"${indent}$name ${const(dest)}, ${const(value)}$endl"
+      s"${indent}${const(dest)} $name ${const(value)}$endl"
     }
 
   def threeTac[O]
     (indent: String)
     (op: ThreeOperators, dest: Variable, left: ASrc, right: ASrc): String = {
       val name = op match {
-        case EQUAL => "equal"
-        case NOT_EQUAL => "not_equal"
-        case LT => "less_than"
-        case GT => "greater_than"
-        case GT_EQ => "greater_than_or_equal"
-        case LT_EQ => "less_than_or_equal"
-        case PLUS => "plus"
-        case MINUS => "minus"
-        case MULTIPLY => "multiply"
-        case DIVIDE => "divide"
-        case MODULUS => "modulus"
+        case EQUAL => "=="
+        case NOT_EQUAL => "!="
+        case LT => "<"
+        case GT => ">"
+        case GT_EQ => ">="
+        case LT_EQ => ">="
+        case PLUS => "+"
+        case MINUS => "-"
+        case MULTIPLY => "*"
+        case DIVIDE => "/"
+        case MODULUS => "%"
       }
-      s"${indent}$name ${const(dest)}, ${const(left)}, ${const(right)}$endl"
+      s"${indent}${const(dest)} = ${const(left)} $name ${const(right)}$endl"
     }
 
   private def const(v: ASrc): String = v match {
     case Constant(c) => c.toString
     case Identifier(i) => i
     case t: Temporary => showTemporary(t)
+  }
+
+  private def evalType(types: Types): String = types match {
+    case Cint => "%I32"
+    case Cfunction => "%Function"
+    case Cvoid => "%Void"
   }
 }

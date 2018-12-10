@@ -25,7 +25,7 @@ object normalToTac extends Stage {
           getData(statement).fold(acc)(acc + _)
         }
       val code = nodes.foldLeft(Nil: List[Tac]){ (code, statement) =>
-        topLevelStatement(statement) ++ code
+        topLevelStatement(topLevel, statement) ++ code
       }.reverse
       (topLevel, (data, code))
     }
@@ -39,23 +39,39 @@ object normalToTac extends Stage {
       case _ => None
     }
 
-  private def topLevelStatement(node: Statements): List[Tac] = node match {
-    case Function(Std.`mainIdentifier`, f, body) =>
-      val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
-        evalStatement(statement) ++ code
+  private def topLevelStatement
+    (topLevel: Context, node: Statements): List[Tac] =
+      node match {
+        case Function(Std.`mainIdentifier`, f, body) =>
+          val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
+            evalStatement(statement) ++ code
+          }
+          List(Func(Std.mainIdentifier, f, validated.reverse))
+        case _ => Nil
       }
-      List(Func(Std.mainIdentifier, f, validated.reverse))
-    case _ => Nil
-  }
 
   private def evalStatement(node: Statements): List[Code] =
     node match {
       case Assignment(dest, expr: ExpressionRoot) =>
         evalExpr(dest,expr)
+      case Assignment(dest, Application(id: Identifier, args)) =>
+        evalApplication(dest, id, args)
       case Return((a: ASrc) :: Nil) =>
         List(OneTac(RETURN, a))
       case _ =>
         List()
+    }
+
+  private def evalApplication
+    (dest: Variable, id: Identifier, args: Expressions): List[Code] = {
+      args.foldRight(List[Code](TwoTac(CALL, dest, id))) { (exp, acc) =>
+        exp match {
+          case a: ASrc =>
+            OneTac(PUSH_PARAM, a) :: acc
+          case _ =>
+            acc
+        }
+      }.reverse
     }
 
   private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = {

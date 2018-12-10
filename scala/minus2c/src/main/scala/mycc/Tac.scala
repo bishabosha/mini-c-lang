@@ -15,8 +15,8 @@ object Tac {
   type Global = Constant
 }
 
-enum MiscTwoOperators { case ASSIGN }
-enum MiscOneOperators { case RETURN }
+enum MiscTwoOperators { case ASSIGN, CALL }
+enum MiscOneOperators { case RETURN, PUSH_PARAM }
 case class OneTac(op: OneOperators, a1: ASrc)
 case class TwoTac(op: TwoOperators, dest: Variable, a1: ASrc)
 case class ThreeTac(op: ThreeOperators, dest: Variable, a1: ASrc, a2: ASrc)

@@ -19,23 +19,20 @@
 [x] Definition of func should be in scope for applications,
     [x] whole block must be examined first (bearing in mind forward
         declarations) 
+[x] rename main
+    [x] just add new declaration + isDefined to topLevel,
+    [x] replace Func node with new one with same frame and body but new ident
+        [x] { curr = 0; while (isdeclared(main + curr)) curr += 1; }
 [x] create data segment at Tac stage
-[ ] Type check as an interpreter step
 [>] tac
     [>] variables to be assigned at most once?
         [?] do have key value pairs of scope and identifier
             so that its current register can be recorded
 [!] only use Cursor in a terminal consumer
 [x] function definitions should not be added to bindings, please just a flag
-[>] rename main
-    [x] just add new declaration + isDefined to topLevel,
-    [ ] replace Func node with new one with same frame and body but new ident
-        [ ] { curr = 0; while (isdeclared(main + curr)) curr += 1; }
-        [?] do this at first declaration
 
 --- FEATURE FREEZE ---
 
-[ ] hack in print_int and read_int
 [>] blocks
     [>] reintroduce anon blocks
         [>] associate identifiers with unique scope ids in all exprs
@@ -46,14 +43,23 @@
     [>] if else
         [ ] update check for return in all branches
 
+--- COMPLETED ---
+
+[x] make void a type that contains undefined single word value
+[x] hack in print_int and read_int
+    [x] push params to context and inline the definitions
+
 --- FEATURE EXTEND ---
 
+[ ] Type check applications
 [ ] in addition to recording when a function captures, record when its
     variables are captured
 [>] redo whole memory model for MIPS
     [ ] implement "freeing" temporaries
     [ ] Add temporaries to the frame aot of mips etc.
     [!] move can only copy between registers
+[ ] add reverse register to variable map to context which can be used to then
+    free the variable assignments
 [ ] global variable name conflicts (with mips instructions) please remove
 [ ] fix temporary folding
 

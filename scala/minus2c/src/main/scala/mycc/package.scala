@@ -47,7 +47,7 @@ package object mycc {
     (declarations: List[Declaration]
     ): Map[Bindings.Key, Any] =
       (for (d @ Declaration(_, _, decl) <- declarations)
-        yield (DeclarationKey(extractIdentifier(decl)), d)
+        yield (DeclarationKey(extractIdentifier(decl)), (d,0L))
       ).toMap
 
   private def extractIdentifier(d: Declarator): Identifier = d match {
@@ -60,6 +60,16 @@ package object mycc {
       Declaration(s,t,id)
     case Declaration(s,t,FunctionDeclarator(_,args)) =>
       Declaration(s,t,FunctionDeclarator(id,args))
+  }
+
+  def newMainIdentifier(topLevel: Context): Identifier = {
+    var c = 0;
+    var id = Identifier("main" + c)
+    while (topLevel.genGet(DeclarationKey(id)).isDefined) {
+      c += 1
+      id = Identifier("main" + c)
+    }
+    id
   }
 
   def renameMainFunc
@@ -153,20 +163,34 @@ package object mycc {
     val mainIdentifierKey = DeclarationKey(Std.mainIdentifier)
     val mainDefinitionKey = DefinitionKey(Std.mainIdentifier)
     val mainFunc =
-    Declaration(
-      Auto,
-      Cint,
-      FunctionDeclarator(mainIdentifier, LVoid)
-    )
-    val declarations = List[Declaration](
+      Declaration(
+        Auto,
+        Cint,
+        FunctionDeclarator(mainIdentifier, LVoid)
+      )
+    val printIntIdentifier = Identifier("print_int")
+    val readIntIdentifier = Identifier("read_int")
+    val print_int =
       Declaration(
         Extern,
         Cvoid,
         FunctionDeclarator(
-          Identifier("print_int"),
+          printIntIdentifier,
           LParam(Vector(Cint -> Identifier("value")))
         )
       )
+    val read_int =
+      Declaration(
+        Extern,
+        Cint,
+        FunctionDeclarator(
+          readIntIdentifier,
+          LVoid
+        )
+      )
+    val declarations = List[Declaration](
+      print_int,
+      read_int
     )
   }
 }
