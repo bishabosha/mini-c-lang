@@ -22,9 +22,7 @@ object interpretAst {
     println(s"exit code: $exitCode")
   }
 
-  type Src = Identifier | Temporary
-
-  case class IdentKey(key: Src) extends Bindings.Key {
+  case class IdentKey(key: Variable) extends Bindings.Key {
     type Value = Constant
   }
 }
@@ -87,15 +85,15 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
     }
   }
 
-  private def addValue(k: Src, v: Assignments): Unit = {
+  private def addValue(k: Variable, v: Assignments): Unit = {
     addConstant(k, evalAsConstant(expr(v)))
   }
 
-  private def addRandom(k: Src): Unit = {
+  private def addRandom(k: Variable): Unit = {
      addConstant(k, Constant(random.nextInt))
   }
 
-  private def addConstant(k: Src, c: Constant): Unit = {
+  private def addConstant(k: Variable, c: Constant): Unit = {
      cursor = cursor.withBindings(cursor.current + (IdentKey(k), c))
   }
 

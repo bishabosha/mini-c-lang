@@ -11,8 +11,7 @@ object astToNormal extends Stage {
   type Context  = parseCAst.Context
   type Goal     = List[Statements]
 
-  private type StackVar = Temporary | Assignment
-  private type Stack = List[StackVar]
+  private type Stack = List[Assignment]
 
   def apply(context: Context, source: Source): (Context, Goal) =
     new astToNormal(context).goal(source)
@@ -174,10 +173,10 @@ class astToNormal private (var context: Context) {
     ): Stack =
       foldArgumentsNT(List(l, r)) { mapBinary(f, o) }
 
-  private def foldArgumentsN[O >: StackVar]
+  private def foldArgumentsN
     ( e: Expressions )
-    ( f: (List[Assignments] ) => O
-    ): List[O] =
+    ( f: (List[Assignments] ) => Assignment
+    ): Stack =
       foldArguments(e) { f(_) :: _ }
 
   private def foldArgumentsNT
@@ -237,7 +236,7 @@ class astToNormal private (var context: Context) {
   }
 
   private val constant: FlattenO[Statements, Primary] = {
-    case c: (Constants | Temporary) => c
+    case c: Constants => c
   }
 
   private val node: FlattenO[Statements, Assignments] = {

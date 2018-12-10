@@ -41,10 +41,10 @@ object normalToTac extends Stage {
 
   private def topLevelStatement(node: Statements): List[Tac] = node match {
     case Function(Std.`mainIdentifier`, f, body) =>
-        val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
-          evalStatement(statement) ++ code
-        }
-        List(Func(Std.mainIdentifier, f, validated.reverse))
+      val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
+        evalStatement(statement) ++ code
+      }
+      List(Func(Std.mainIdentifier, f, validated.reverse))
     case _ => Nil
   }
 

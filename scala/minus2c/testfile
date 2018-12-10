@@ -1,9 +1,4 @@
-int yy = 90923;
-int zz = 45;
-int qq = 21;
 int main(void) {
-    int c = 32;
-    zz = qq;
-    yy = 888 + c;
-    return c;
+    int a; int b; int c;
+    return (a + 2 / 4 == 1, b % 3 + 4, 1+ -2 / a);
 }

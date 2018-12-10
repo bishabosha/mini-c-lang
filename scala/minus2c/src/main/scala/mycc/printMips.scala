@@ -77,14 +77,18 @@ object printMips {
           threeAddr(mul,indent)(_.dest,_.l,_.r)
         case div: Div =>
           threeAddr(div,indent)(_.dest,_.l,_.r)
+        case rem: Rem =>
+          threeAddr(rem,indent)(_.dest,_.l,_.r)
         case seq: Seq =>
           threeAddr(seq,indent)(_.dest,_.l,_.r)
-        case sle: Sle =>
-          threeAddr(sle,indent)(_.dest,_.l,_.r)
+        case sne: Sne =>
+          threeAddr(sne,indent)(_.dest,_.l,_.r)
         case slt: Slt =>
           threeAddr(slt,indent)(_.dest,_.l,_.r)
         case sgt: Sgt =>
           threeAddr(sgt,indent)(_.dest,_.l,_.r)
+        case sle: Sle =>
+          threeAddr(sle,indent)(_.dest,_.l,_.r)
         case sge: Sge =>
           threeAddr(sge,indent)(_.dest,_.l,_.r)
         case _ => s"${indent}???$endl"
@@ -96,7 +100,7 @@ object printMips {
     ( r: O => Dest,
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
-      s"${indent}$name ${regOrConstOrLab(r(a))}$endl"
+      s"${indent}$name ${rsrc(r(a))}$endl"
     }
 
   def twoAddr[O]
@@ -105,7 +109,7 @@ object printMips {
       r: O => Dest | Constant
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
-      s"${indent}$name ${registers(d(a))}, ${regOrConstOrLab(r(a))}$endl"
+      s"${indent}$name ${registers(d(a))}, ${rsrc(r(a))}$endl"
     }
 
   def threeAddr[O]
@@ -116,16 +120,18 @@ object printMips {
       r: O => Src
     ): String = {
       val name = a.getClass.getSimpleName.toLowerCase
-      s"${indent}$name ${registers(d(a))}, ${registers(l(a))}, ${regOrConstOrLab(r(a))}$endl"
+      s"${indent}$name ${registers(d(a))}, ${registers(l(a))}, ${rsrc(r(a))}$endl"
     }
 
-  private def regOrConstOrLab(v: Any): String = v match {
+  private def rsrc(v: Constant | Dest): String = v match {
     case Constant(c) => c.toString
     case Label(Identifier(i)) => i
-    case _ => registers(v.asInstanceOf[Register])
+    case r: Register => registers(r)
+    case u =>
+      throw UnexpectedAstNode(u.toString)
   }
 
-  private def registers(reg: Enum): String = reg match {
+  private def registers(reg: Register): String = reg match {
     case t: Temporaries =>
       printEnum(Temporaries.enumValueNamed, t, "$t")
     case s: SavedValues =>

@@ -55,6 +55,7 @@
     [ ] Add temporaries to the frame aot of mips etc.
     [!] move can only copy between registers
 [ ] global variable name conflicts (with mips instructions) please remove
+[ ] fix temporary folding
 
 --- FOR REPORT ---
 
