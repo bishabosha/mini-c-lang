@@ -43,5 +43,7 @@ case class Bindings
 
     def firstChild: Option[Bindings] = children.headOption
 
+    def removeChildren: Bindings = copy(data,stack,Nil)
+
     override def toString = s"Bindings(seen = $data)"
   }

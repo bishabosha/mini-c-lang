@@ -128,8 +128,10 @@ Ast *TokenInt_new(int type, int value) {
 
 Ast *string_literal_new(char *s) {
     int len = strlen(s);
-    char * lexeme = (char *)malloc(strlen(s)-1);
-    strncpy(lexeme, s+1, len-2);
+    char * lexeme = (char *)malloc(len);
+    strcpy(lexeme, s);
+    memmove(lexeme, lexeme+1, len-2);
+    lexeme[len-2]='\0';
     return (Ast *)TokenString_new(STRING_LITERAL, lexeme);
 }
 

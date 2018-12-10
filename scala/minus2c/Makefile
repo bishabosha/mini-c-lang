@@ -37,9 +37,6 @@ run_timed:
 tac:
 	${PARSER} -t
 
-normal:
-	${PARSER} -n
-
 mips:
 	${PARSER} -m > out.asm
 

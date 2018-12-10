@@ -75,8 +75,30 @@ class astToNormal private (var context: Context) {
     jumpStatements
 
   private val function: FlattenO[Statements, Function] = {
-    case Function(i, f, body) => Function(i, f, statementList(body))
+    case Function(i, f, body) => Function(i, f, eliminateTemporaries(statementList(body)))
   }
+
+  private def eliminateTemporaries(statements: Goal): Goal = {
+    var acc = Nil: Goal
+    var left = statements.reverse
+    while (!left.isEmpty) {
+      left match {
+        case (a @ Assignment(id: Identifier, t: Temporary)) :: left1 =>
+          left1 match {
+            case Assignment(`t`, e) :: left2 =>
+              acc = Assignment(id, e) :: acc
+              left = left2
+            case _ =>
+              acc = a :: acc
+              left = left1
+          }
+        case a :: left1 =>
+          acc = a :: acc
+          left = left1
+      }
+    }
+    acc
+  } 
 
   private val declaration: FlattenO[Statements, Declaration] = {
     case d: Declaration => d

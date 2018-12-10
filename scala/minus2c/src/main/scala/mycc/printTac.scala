@@ -177,5 +177,6 @@ object printTac {
     case Cint => "%I32"
     case Cfunction => "%Function"
     case Cvoid => "%Void"
+    case Cstring => "%String"
   }
 }

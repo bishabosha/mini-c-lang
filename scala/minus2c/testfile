@@ -1,5 +1,37 @@
+/* 0 */
 int main(void) {
-    int a = read_int() * 2;
-    void v = print_int(a);
+    /* 1 */
+    int a;
+    {
+        /* 2 */
+        int b;
+        {
+            /* 3 */
+            int c;
+            int d;
+        }
+        /* 2 */
+        int e;
+    }
+    /* 1 */
+    int f;
+    {
+        /* 4 */
+        int g;
+    }
+    /* 1 */
     return 0;
 }
+/* 0 */
+int foo(int h, int i) {
+    /* 5 */
+    int k;
+    {
+        /* 6 */
+        int l;
+    }
+    /* 5 */
+    int m;
+    return 0;
+}
+/* 0 */

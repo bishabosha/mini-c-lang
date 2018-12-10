@@ -169,6 +169,8 @@ class parseCAst private(private val identPool: Map[String, Identifier]) {
           declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
           declareInScope(id, s, d, f, lens).toList
+        case a @ Assignment(Identifier(i), StringLiteral(str)) =>
+          throw SemanticError(s""""$str" can not be assigned to `$i`""")
         case a @ Assignment(i: Identifier, _) =>
           declareInScope(i, s, d, i, lens).toList
             .:+[Declarations, List[Declarations]](a)

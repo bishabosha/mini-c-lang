@@ -138,6 +138,7 @@ object printAst {
     case Cint => "int"
     case Cvoid => "void"
     case Cfunction => "function"
+    case Cstring => "string"
   }
 
   private def getLevel(l: Int): String = " " * l

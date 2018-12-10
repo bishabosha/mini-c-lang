@@ -5,19 +5,20 @@ main:
   move $a0, $v0
   li $v0, 17
   syscall
-# call 17: exit2
+  #call 17: exit2
 main0:
   li $v0, 5
   syscall
-# call 5: read_int
-  move $t0, $v0
-  mul $t1, $t0, 2
-  move $s7, $t1
-  move $a0, $s7
+  #call 5: read_int
+  move $s3, $v0
+  li $v0, 5
+  syscall
+  #call 5: read_int
+  move $s7, $v0
+  mul $t0, $s3, $s7
+  move $a0, $t0
   li $v0, 1
   syscall
-# call 1: print_int
-# $t2 for result of inlined print_int
-  move $s2, $t2
+  #call 1: print_int
   li $v0, 0
   jr $ra

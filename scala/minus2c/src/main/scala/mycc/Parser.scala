@@ -1,8 +1,8 @@
 package mycc
 
 import org.graalvm.polyglot._
-import mycc.exception._
-import mycc.CAst._
+import exception._
+import CAst._
 
 object Parser {
   def main(args: Array[String]): Unit = {
@@ -47,6 +47,7 @@ object Parser {
           old = newtim
         }
         // println(ast)
+        // printScopesOrdered(context)
         val (nContext, astFlattened) = astToNormal(context, ast)
         if doTime then {
           newtim = System.currentTimeMillis

@@ -37,7 +37,8 @@
     [>] reintroduce anon blocks
         [>] associate identifiers with unique scope ids in all exprs
             [ ] possibly make new case class for scoped identifiers,
-                replace operators using Identifier with the new type
+                replace operators using Identifier with the new type.
+                Do the association at TAC level, then bindings may be erased.
         [ ] inlining blocks is ok because variable names are associated to
             unique scope ids
     [>] if else

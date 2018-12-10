@@ -170,9 +170,9 @@ object tacToMips extends Stage {
       statement: Tac
     ): MipsAcc =
       statement match {
-      case Func(id, frame, body) =>
-        evalFunction(nextScope(context))(id, frame, body)
-    }
+        case Func(id, frame, body) =>
+          evalFunction(nextScope(context))(id, frame, body)
+      }
 
   private def evalFunction
     ( context: Context )
@@ -199,30 +199,37 @@ object tacToMips extends Stage {
           val pre = (prer ++ prel): List[Assembler]
           val resultAndStack = result :: pre
           (rContext, post ++ resultAndStack)
+
         case TwoTac(ASSIGN, d, value) =>
           val (context, dest: Register, post) =
             evalVariableDest(startContext, frame, d)
           evalAssigment(context,frame,dest,value,post)
-        case TwoTac(CALL, t: Temporary, Std.`printIntIdentifier`) =>
-          val (tContext, treg: Register) = assignTemporary(startContext,t)
-          val (arg: ASrc, nContext) = tContext.pop
-          val (iContext, inlined) = inlinePrintInt(startContext, frame, arg)
-          val comment =
-            Comment(s"${registers(treg)} for result of inlined print_int")
-          (nContext, comment :: inlined)
-        case TwoTac(CALL, t: Temporary, Std.`readIntIdentifier`) =>
-          val (tContext, treg: Register) = assignTemporary(startContext,t)
-          val move = Move(treg, V0)
-          (tContext, move :: inlineReadInt.reverse)
+
+        case TwoTac(CALL, d, Std.`printIntIdentifier`) =>
+          val (context, dest: Register, post) =
+            evalVariableDest(startContext, frame, d)
+          val (arg: ASrc, nContext) = context.pop
+          val (iContext, inlined) = inlinePrintInt(nContext, frame, arg)
+          (iContext, post ++ inlined)
+
+        case TwoTac(CALL, d, Std.`readIntIdentifier`) =>
+          val (context, dest: Register, post) =
+            evalVariableDest(startContext, frame, d)
+          val move = Move(dest, V0)
+          (context, post ++ (move :: inlineReadInt.reverse))
+
         case TwoTac(op, d, v) =>
           val (context, dest: Register, post) =
             evalVariableDest(startContext, frame, d)
           val (vContext, rreg: Register, prev) = evalASrcL(context, frame, v)
           val resultAndStack = unary(op)(dest,rreg) :: prev
           (context, post ++ resultAndStack)
+
         case OneTac(RETURN, value) =>
           evalAssigment(startContext,frame,V0,value,List(Jr(Ra)))
-        case OneTac(PUSH_PARAM, a) => (startContext.push(a), Nil)
+
+        case OneTac(PUSH_PARAM, a) =>
+          (startContext.push(a), Nil)
       }
 
   private def evalAssigment

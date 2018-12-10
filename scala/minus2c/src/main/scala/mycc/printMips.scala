@@ -42,7 +42,7 @@ object printMips {
         case Text =>
           s"$indent.text$endl"
         case Comment(msg) =>
-          s"# $msg$endl"
+          s"$indent#$msg$endl"
         case Data =>
           s"$indent.data$endl"
         case Globl(Identifier(id)) =>

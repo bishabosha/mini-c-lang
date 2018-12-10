@@ -72,6 +72,15 @@ package object mycc {
     id
   }
 
+  def printScopesOrdered(bindings: Bindings): Unit = {
+    var cursor = Cursor(bindings)
+    while (!cursor.isEmpty) {
+      val scope = getCurrentScope(cursor.current)
+      println(scope)
+      cursor = cursor.next
+    }
+  }
+
   def renameMainFunc
     ( scope: Long,
       bindings: Bindings,

@@ -8,7 +8,7 @@ import AdditiveOperators._
 import MultiplicativeOperators._
 
 enum Types {
-  case Cint, Cvoid, Cfunction
+  case Cint, Cvoid, Cfunction, Cstring
 }
 
 import scala.language.implicitConversions
