@@ -1,0 +1,27 @@
+IfElse(
+    List(
+        Relational(LT,Scoped(Identifier(a),1),Scoped(Identifier(b),1))
+    ),
+    List(
+        Declaration(Auto,Cint,Scoped(Identifier(c),2)),
+        Assignment(Scoped(Identifier(c),2),Constant(0)),
+        Application(
+            Scoped(Identifier(print_int),0),
+            List(
+                Multiplicative(MULTIPLY,Scoped(Identifier(a),1),Scoped(Identifier(b),1))
+            )
+        )
+    ),
+    Some(
+        List(
+            Declaration(Auto,Cint,Scoped(Identifier(d),1)),
+            Assignment(Scoped(Identifier(d),1),Constant(0)),
+            Application(
+                Scoped(Identifier(print_int),0),
+                List(
+                    Additive(MINUS,Scoped(Identifier(a),1),Scoped(Identifier(b),1))
+                )
+            )
+        )
+    )
+)

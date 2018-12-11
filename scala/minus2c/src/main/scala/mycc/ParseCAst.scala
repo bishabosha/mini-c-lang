@@ -84,7 +84,7 @@ class parseCAst private
     assignments .L
 
   private lazy val assignments: Parse[Assignments] =
-    assignment !! existsInScope(_.lvalue) |
+    assignment |
     equalities
 
   private lazy val equalities: Parse[Equalities] =
@@ -118,7 +118,16 @@ class parseCAst private
         stringLiteral))
 
   private lazy val identifierInScope: Parse[Scoped] =
-    identifier !! existsInScope(identity)
+    identifier ->> searchInScope
+
+  private lazy val identifierSearchScope: Parse[Scoped] =
+    identifier ->> searchInScope
+
+  private def identifierWithScope: Parse[Scoped] =
+    identifierWithScopeOf(currentScope)
+
+  private def identifierWithScopeOf(scope: Long): Parse[Scoped] =
+    identifier ->> { scoped(_, scope) }
 
   private lazy val initDeclarators: Parse[List[InitDeclarator]] =
     initDeclaratorList |
@@ -129,7 +138,7 @@ class parseCAst private
     assignment 
 
   private lazy val declarator: Parse[InitDeclarator] =
-    identifier |
+    identifierWithScope |
     functionDeclarator
 
   private lazy val types: Parse[Types] =
@@ -142,7 +151,7 @@ class parseCAst private
   private lazy val parameter: Parse[Parameter] =
     typesAndIdentifier |
     (types |
-      identifier ->> { Cint -> })
+      identifierWithScopeOf(currentScope + 1) ->> { Cint -> })
 
   private lazy val compoundStatements: Parse[List[Statements]] =
     block .L |
@@ -150,7 +159,70 @@ class parseCAst private
     declarationsAndAssignments |
     expressionsStatement |
     jumpStatement |
+    ifElse .L |
     { case value => throw UnimplementedError(s"statement: $value") }
+  
+
+  private def makeIfElse
+    (test: CAst, ifThen: CAst, orElse: Option[CAst]): IfElse = {
+      IfElse(
+        expressions(test),
+        stacked { compoundStatements(ifThen) },
+        orElse.map { stacked { compoundStatements } }
+      )
+    }
+
+  private def makeIfElseEmpty
+    (test: CAst, ifThen: CAst): IfElse = {
+      IfElse(
+        expressions(test),
+        stacked { compoundStatements(ifThen) },
+        Some(Nil)
+      )
+    }
+
+  private def makeIfElseEmptyIf
+    (test: CAst, orElse: Option[CAst]): IfElse = {
+      IfElse(
+        expressions(test),
+        Nil,
+        orElse.map { stacked { compoundStatements } }
+      )
+    }
+
+  private def makeIfElseEmptyAll
+    (test: CAst): IfElse = {
+      IfElse(
+        expressions(test),
+        Nil,
+        Some(Nil)
+      )
+    }
+
+  private val ifElse: Parse[IfElse] = {
+    case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), UnaryNode("B", orElse))) =>
+      makeIfElse(test, ifThen, Some(orElse))
+    case BinaryNode("if", test, BinaryNode("else", Singleton("B"), Singleton("B"))) =>
+      makeIfElseEmptyAll(test)
+    case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), Singleton("B"))) =>
+      makeIfElseEmpty(test, ifThen)
+    case BinaryNode("if", test, BinaryNode("else", Singleton("B"), UnaryNode("B", orElse))) =>
+      makeIfElseEmptyIf(test, Some(orElse))
+    case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), orElse)) =>
+      makeIfElse(test, ifThen, Some(orElse))
+    case BinaryNode("if", test, BinaryNode("else", ifThen, UnaryNode("B", orElse))) =>
+      makeIfElse(test, ifThen, Some(orElse))
+    case BinaryNode("if", test, BinaryNode("else", Singleton("B"), orElse)) =>
+      makeIfElseEmptyIf(test, Some(orElse))
+    case BinaryNode("if", test, BinaryNode("else", ifThen, Singleton("B"))) =>
+      makeIfElseEmpty(test, ifThen)
+    case BinaryNode("if", test, BinaryNode("else", ifThen, orElse)) =>
+      makeIfElse(test, ifThen, Some(orElse))
+    case BinaryNode("if", test, UnaryNode("B", ifThen)) =>
+      makeIfElse(test, ifThen, None)
+    case BinaryNode("if", test, ifThen) =>
+      makeIfElse(test, ifThen, None)
+  } 
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
     case Sequence("E", list) =>
@@ -199,7 +271,7 @@ class parseCAst private
 
   private val assignment: Parse[Assignment] = {
     case BinaryNode("=", id, value) =>
-      Assignment(identifier(id), assignments(value))
+      Assignment(identifierSearchScope(id), assignments(value))
   }
 
   private val equality: Parse[Equality] = {
@@ -249,12 +321,8 @@ class parseCAst private
       Application(postfix(name), Nil)
   }
 
-  private val identifier: Parse[Scoped] = {
-    case TokenString("id", id) =>
-      scopedPool.getOrElseUpdate(
-        (identPool(id), currentScope),
-        { Scoped(identPool(id), currentScope) }
-      )
+  private val identifier: Parse[Identifier] = {
+    case TokenString("id", id) => identPool(id)
   }
 
   private val constant: Parse[Constant] = {
@@ -307,11 +375,11 @@ class parseCAst private
 
   private val functionDeclarator: Parse[FunctionDeclarator] = {
     case UnaryNode("F", name) =>
-      FunctionDeclarator(identifier(name), LAny)
+      FunctionDeclarator(identifierWithScope(name), LAny)
     case UnaryNode("V", name) =>
-      FunctionDeclarator(identifier(name), LVoid)
+      FunctionDeclarator(identifierWithScope(name), LVoid)
     case BinaryNode("F", name, args) =>
-      FunctionDeclarator(identifier(name), LParam(parameters(args).toVector))
+      FunctionDeclarator(identifierWithScope(name), LParam(parameters(args).toVector))
   }
 
   private val parameterList: Parse[List[Parameter]] = {
@@ -321,7 +389,7 @@ class parseCAst private
 
   private val typesAndIdentifier: Parse[Parameter] = {
     case BinaryNode("q", typeSpecifier, ident) =>
-      (types(typeSpecifier), identifier(ident))
+      (types(typeSpecifier), identifierWithScopeOf(currentScope + 1)(ident))
   }
 
   private def functionDef
@@ -366,6 +434,12 @@ class parseCAst private
           }
     }
 
+  private def scoped(id: Identifier, scope: Long): Scoped =
+    scopedPool.getOrElseUpdate(
+      (id, scope),
+      { Scoped(id, scope) }
+    )
+
   private def framed[A](parser: => A): (Frame, A) =
     stacked {
       frames = Frame.Empty :: frames
@@ -406,7 +480,7 @@ class parseCAst private
     ): Option[Declaration] = {
       for (
         Declaration(s, t, existing) <-
-          context.genGet(DeclarationKey(scoped))
+          context.genGet(DeclarationKey(scoped.id))
       ) {
         existing match {
           case _: Scoped => declarator match {
@@ -432,7 +506,7 @@ class parseCAst private
         }
       }
       val declaration = Declaration(storage, types, declarator)
-      context += (DeclarationKey(scoped), declaration)
+      context += (DeclarationKey(scoped.id), declaration)
       for (updater <- frameLens) {
         var declInFrame = scoped -> declaration
         frames = replaceHead(frames) { updater(_ + declInFrame) }
@@ -454,34 +528,61 @@ class parseCAst private
       case _ =>
     }
 
-  private def existsInScope[A](get: A => Variable): A => Unit =
-    get.andThen {
-      case scoped: Scoped =>
-        context.genSearch(DeclarationKey(scoped)) match {
-          case Some(d: Declaration) =>
-            d match {
-              case Declaration(_, _, Scoped(_, scope)) =>
-                if currentScope != scope then {
-                  if scope == 0 then {
+  // private def existsInScope(identifier: Identifier): Scoped =
+  //   context.genSearch(DeclarationKey(identifier)) match {
+  //     case Some(d @ Declaration(_, _, decl)) =>
+  //       decl match {
+  //         case Scoped(_, scope) =>
+  //           val scopedId = scoped(identifier, scope)
+  //             if currentScope != scope then {
+  //               if scope == 0 then {
+  //                 frames = replaceHead(frames) {
+  //                   Frame.globalsLens(_ + (identifier -> d))
+  //                 }
+  //               } else {
+  //                 if frames.head.locals.get(scopedId).isEmpty then {
+  //                   var declInFrame = scopedId -> d
+  //                   frames = replaceHead(frames) {
+  //                     Frame.capturesLens(_ + declInFrame)
+  //                   }
+  //                 }
+  //               }
+  //             }
+  //           scopedId
+  //         case FunctionDeclarator(Scoped(_, scope), _) =>
+  //           scoped(identifier, scope)
+  //       }
+  //     case _ =>
+  //       throw SemanticError(s"Identifier '${identifier.id}~$currentScope' is undefined")
+  // }
+
+  private def searchInScope(identifier: Identifier): Scoped =
+    context.genSearch(DeclarationKey(identifier)) match {
+      case Some(d @ Declaration(_, _, decl)) =>
+        decl match {
+          case Scoped(_, scope) =>
+            val scopedId = scoped(identifier, scope)
+              if currentScope != scope then {
+                if scope == 0 then {
+                  frames = replaceHead(frames) {
+                    Frame.globalsLens(_ + (identifier -> d))
+                  }
+                } else {
+                  if frames.head.locals.get(scopedId).isEmpty then {
+                    var declInFrame = scopedId -> d
                     frames = replaceHead(frames) {
-                      Frame.globalsLens(_ + (scoped.id -> d))
-                    }
-                  } else {
-                    if frames.head.locals.get(scoped).isEmpty then {
-                      var declInFrame = scoped -> d
-                      frames = replaceHead(frames) {
-                        Frame.capturesLens(_ + declInFrame)
-                      }
+                      Frame.capturesLens(_ + declInFrame)
                     }
                   }
                 }
-              case _ =>
-            }
-          case None =>
-            throw SemanticError(s"Identifier '${scoped.id.id}' is undefined")
+              }
+            scopedId
+          case FunctionDeclarator(Scoped(_, scope), _) =>
+            scoped(identifier, scope)
         }
       case _ =>
-    }
+        scoped(identifier, currentScope)
+  }
 
   private def tailYieldsValue(statements: Option[List[Statements]]): Unit = {
     statements match {

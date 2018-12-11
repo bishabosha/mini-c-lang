@@ -54,10 +54,17 @@ object normalToTac extends Stage {
     node match {
       case Assignment(dest, expr: ExpressionRoot) =>
         evalExpr(dest,expr)
-      case Assignment(dest, Application(id: Scoped, args)) =>
-        evalApplication(dest, id, args)
+      case Assignment(dest, Application(id @ Scoped(_, s), args)) =>
+        if s == 0 then
+          evalApplication(dest, id, args)
+        else {
+          throw SemanticError("Can only call global functions")
+        }
       case Return((a: ASrc) :: Nil) =>
         List(OneTac(RETURN, a))
+      case Block(nodes) => nodes.foldLeft[List[Code]](Nil) {
+        (code, statement) => evalStatement(statement) ++ code
+      }
       case _ =>
         List()
     }

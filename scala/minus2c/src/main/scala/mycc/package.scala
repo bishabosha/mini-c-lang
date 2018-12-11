@@ -16,7 +16,7 @@ package object mycc {
     type Value = Long
   }
 
-  case class DeclarationKey(id: Scoped) extends Bindings.Key {
+  case class DeclarationKey(id: Identifier) extends Bindings.Key {
     type Value = Declaration
   }
 
@@ -47,12 +47,12 @@ package object mycc {
     (declarations: List[Declaration]
     ): Map[Bindings.Key, Any] =
       (for (d @ Declaration(_, _, decl) <- declarations)
-        yield (DeclarationKey(extractIdentifier(decl)), (d,0L))
+        yield (DeclarationKey(extractIdentifier(decl)), d)
       ).toMap
 
-  private def extractIdentifier(d: Declarator): Scoped = d match {
-    case s: Scoped => s
-    case _ @ FunctionDeclarator(s, _) => s
+  private def extractIdentifier(d: Declarator): Identifier = d match {
+    case Scoped(id, _) => id
+    case _ @ FunctionDeclarator(Scoped(id, _), _) => id
   }
   
   def printScopesOrdered(bindings: Bindings): Unit = {
@@ -84,7 +84,7 @@ package object mycc {
 
   object Std {
     val mainIdentifier = Scoped(Identifier("main"),0)
-    val mainIdentifierKey = DeclarationKey(Std.mainIdentifier)
+    val mainIdentifierKey = DeclarationKey(Std.mainIdentifier.id)
     val mainDefinitionKey = DefinitionKey(Std.mainIdentifier)
     val mainFunc =
       Declaration(

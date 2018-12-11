@@ -33,18 +33,19 @@
 
 --- FEATURE FREEZE ---
 
-[>] reintroduce anon blocks
+[ ] dont associate Scope with ID until it is checked as declared 
+[>] if else
+[?] update check for return in all branches
+
+--- COMPLETED ---
+
+[x] reintroduce anon blocks
     [x] associate identifiers with unique scope ids in all exprs
     [x] possibly make new case class for scoped identifiers,
         replace operators using Identifier with the new type.
         Do the association at AST level, then bindings may be erased.
     [!] inlining blocks is ok because variable names are associated to
         unique scope ids
-[>] if else
-[?] update check for return in all branches
-
---- COMPLETED ---
-
 [x] make void a type that contains undefined single word value
 [x] hack in print_int and read_int
     [x] push params to context and inline the definitions
@@ -53,6 +54,8 @@
 
 --- FEATURE EXTEND ---
 
+[ ] decouple registers from variable locations, need to have last known store
+    for variable. Try to save last location of label
 [ ] Type check applications
 [ ] in addition to recording when a function captures, record when its
     variables are captured

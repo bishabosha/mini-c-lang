@@ -1,0 +1,27 @@
+BinaryNode(
+    if,
+    BinaryNode(<,
+        TokenString(id,a),
+        TokenString(id,b)
+    ),
+    BinaryNode(else,
+        UnaryNode(B,
+            BinaryNode(apply,
+                TokenString(id,print_int),
+                BinaryNode(*,
+                    TokenString(id,a),
+                    TokenString(id,b)
+                )
+            )
+        ),
+        UnaryNode(B,
+            BinaryNode(apply,
+                TokenString(id,print_int),
+                BinaryNode(-,
+                    TokenString(id,a),
+                    TokenString(id,b)
+                )
+            )
+        )
+    )
+)

@@ -127,7 +127,7 @@ object printMips {
 
   private def rsrc(v: Constant | Dest): String = v match {
     case Constant(c) => c.toString
-    case Label(Scoped(Identifier(i),_)) => i
+    case Label(Scoped(Identifier(i),s)) => s"$i$s"
     case r: Register => registers(r)
     case u =>
       throw UnexpectedAstNode(u.toString)

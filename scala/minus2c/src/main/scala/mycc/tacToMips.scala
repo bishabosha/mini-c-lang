@@ -175,7 +175,7 @@ object tacToMips extends Stage {
       frame: Frame,
       body: List[Code],
     ): MipsAcc =
-      foldCode(evalStatements(frame))(defineLocals(context),body) {
+      foldCode(evalStatements(frame))(defineLocals(context, frame),body) {
         (context,code) => (context, Label(id) :: code.reverse)
       }
 
@@ -365,39 +365,28 @@ object tacToMips extends Stage {
     (contextR, codeR ++ l)
   }
 
-  private def defineLocals(context: Context): Context =
-    context.cursor.current.topView.foldLeft(context) { (c, kv) =>
-      kv match {
-        case (
-          DeclarationKey(i: Scoped), 
-          (Declaration(_, _, _: Scoped), _)
-        ) => 
-          val (register, advanced) = c.advanceSaved
-          add(advanced, RegisterKey(i), register)
-        case _ =>
-          c
-      }
+  private def defineLocals(context: Context, frame: Frame): Context = 
+    frame.locals.keys.foldLeft(context) { (c, s) =>
+      val (register, advanced) = c.advanceSaved
+      add(advanced, RegisterKey(s), register)
     }
 
   private def getRegisterElse
     (f: (Context, Variable) => (Context, Dest))
     (context: Context, frame: Frame, lvalue: Variable): (Context, Dest) =
-      context.cursor.current
-        .genSearch(RegisterKey(lvalue))
-        .map((context,_))
-        .orElse {
-          lvalue match {
-            case s @ Scoped(i, 0) =>
-              frame.globals.get(i).map { _ =>
-                (context, Label(s))
-              }
-            case _ =>
-              None
-          }
-        }
-        .getOrElse {
-          f(context,lvalue)
-        }
+      lvalue match {
+        case s @ Scoped(i, 0) =>
+          frame.globals.get(i).map { _ =>
+            (context, Label(s))
+          } getOrElse { unexpected(lvalue) }
+        case _ =>
+          context.cursor.current
+            .genSearch(RegisterKey(lvalue))
+            .map((context,_))
+            .getOrElse {
+              f(context,lvalue)
+            }
+      }
 
   private def assignTemporary
     (context: Context, lvalue: Variable): (Context, Register) = {

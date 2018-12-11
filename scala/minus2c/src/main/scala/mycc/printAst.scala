@@ -51,6 +51,8 @@ object printAst {
         case Return(v) =>
           val newArgs = v.map(exp).mkString(", ")
           s"${lvl}return $newArgs;$endl"
+        case IfElse(test, ifThen, orElse) =>
+          ifElse(test,ifThen,orElse,level)
         case _ => s"${lvl}???$endl"
       }
     }
@@ -125,6 +127,29 @@ object printAst {
         s"$lvl{}$endl"
       else
         s"$lvl{$endl${astNode(b, inc(level))}$lvl}$endl"
+    }
+
+  private def ifElse
+    ( test: Expressions,
+      ifThen: List[Statements],
+      orElse: Option[List[Statements]],
+      level: Int
+    ): String = {
+      var lvl: String = getLevel(level)
+      val testStr = test.map(expr(_,level)).mkString(", ")
+      val ifThenStr = astNode(ifThen, inc(level))
+      if orElse.isEmpty then
+        s"${lvl}if ($testStr) {$endl$ifThenStr$lvl}$endl"
+      else {
+        val orElseG = orElse.get
+        if orElseG.isEmpty then {
+          s"${lvl}if ($testStr) {$endl$ifThenStr$lvl} else {$endl$lvl}$endl"
+        } else {
+          val orElseStr = astNode(orElseG, inc(level))
+          s"${lvl}if ($testStr) {$endl$ifThenStr$lvl} else {$endl$orElseStr$lvl}$endl"
+        }
+      }
+
     }
 
   private def inc(level: Int) = level + 2

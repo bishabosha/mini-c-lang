@@ -52,6 +52,9 @@ class astToNormal private (var context: Context) {
   private lazy val jumpStatements: Flatten[Statements] =
     jumpStatementsImpl .R
 
+  private lazy val selectionStatements: Flatten[Statements] =
+    selectionStatementsImpl .R
+
   private lazy val arg: FlattenO[Assignments, Assignments] =
     node |
     ex
@@ -72,10 +75,12 @@ class astToNormal private (var context: Context) {
   private lazy val statements: Flatten[Statements] =
     block .L |
     declarations |
-    jumpStatements
+    jumpStatements |
+    selectionStatements
 
   private val function: FlattenO[Statements, Function] = {
-    case Function(i, f, body) => Function(i, f, eliminateTemporaries(statementList(body)))
+    case Function(i, f, body) =>
+      Function(i, f, eliminateTemporaries(statementList(body)))
   }
 
   private def eliminateTemporaries(statements: Goal): Goal = {
@@ -95,6 +100,7 @@ class astToNormal private (var context: Context) {
         case a :: left1 =>
           acc = a :: acc
           left = left1
+        case _ =>
       }
     }
     acc
@@ -121,6 +127,31 @@ class astToNormal private (var context: Context) {
           Return(a :: Nil) :: stack
         case _ =>
           Return(Nil) :: stack
+      }
+
+  private val selectionStatementsImpl: Flatten[Statements] = {
+    case IfElse(test, ifThen, orElse) => foldArguments(test) {
+      mapIfElse(ifThen, orElse)
+    }
+  }
+
+  private def mapIfElse
+    ( ifThen: List[Statements],
+      orElse: Option[List[Statements]] )
+    ( args: List[Assignments],
+      stack: Stack
+    ): List[Statements] =
+      (args.lastOption, stack) match {
+        case (Some(a), _) =>
+          val ifThenMapped = statementList(ifThen)
+          val orElseMapped = orElse.map(statementList).filter(!_.isEmpty)
+          if orElseMapped.isEmpty && ifThenMapped.isEmpty then {
+            stack
+          } else {
+            IfElse(a :: Nil, ifThenMapped, orElseMapped) :: stack
+          }
+        case _ =>
+          throw UnexpectedAstNode("Empty If statement test")
       }
 
   private val assignmentsWithEffects: FlattenO[Statements, Stack] = {

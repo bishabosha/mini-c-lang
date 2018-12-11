@@ -57,7 +57,7 @@ enum ArgList {
 
 object Ast {
   type Parameter = (Types, Scoped) | Types
-  type Statements = Block | Declarations | Assignments | Return
+  type Statements = Block | Declarations | Assignments | Return | IfElse
   type Declarator = Scoped | FunctionDeclarator
   type InitDeclarator = Declarator | Assignment
   type DeclarationSpecifiers = Type | Storage
@@ -103,3 +103,4 @@ case class Assignment(lvalue: Variable, rvalue: Assignments)
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
 case class Function(id: Scoped, frame: Frame, body: List[Statements])
 case class Block(inner: List[Statements])
+case class IfElse(test: Expressions, ifThen: List[Statements], orElse: Option[List[Statements]])

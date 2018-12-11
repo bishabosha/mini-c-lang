@@ -434,40 +434,30 @@ int main(void) {
     return 0;
 }
 
-/* 0 */
+int beq;
 int main(void) {
-    /* 1 */
-    int a;
+    int a = 0;
     {
-        /* 2 */
-        int b;
+        int b = 0;
         {
-            /* 3 */
-            int c;
-            int d;
+            int c = 0;
+            int d = 0;
+            beq = 23;
+            print_int(beq);
         }
-        /* 2 */
-        int e;
+        int e = 0;
     }
-    /* 1 */
-    int f;
+    int f = 0;
     {
-        /* 4 */
-        int g;
+        int g = 0;
     }
-    /* 1 */
     return 0;
 }
-/* 0 */
 int foo(int h, int i) {
-    /* 5 */
-    int k;
+    int k = 0;
     {
-        /* 6 */
-        int l;
+        int l = 0;
     }
-    /* 5 */
-    int m;
+    int m = 0;
     return 0;
 }
-/* 0 */

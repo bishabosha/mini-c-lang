@@ -40,8 +40,8 @@ object printTac {
       data: DataMap,
       indent: String
     ): String = data.view.map {
-        case (Scoped(Identifier(i),_),Constant(c)) =>
-          s"$i:$endl${indent}.const %I32 $c$endl"
+        case (Scoped(Identifier(i),s),Constant(c)) =>
+          s"$i~$s:$endl${indent}.const %I32 $c$endl"
     }.mkString
 
   private def evalNodes
@@ -84,7 +84,7 @@ object printTac {
     ): String = {
       val globals = frame.globals.view.map {
         case (Identifier(a), Declaration(_,t,_)) =>
-          s"${indent}.global ${evalType(t)} $a$endl"
+          s"${indent}.global ${evalType(t)} $a~0$endl"
       }.mkString
       val locals = frame.locals.view.map {
         case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
