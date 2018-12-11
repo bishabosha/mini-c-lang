@@ -13,6 +13,8 @@ import exception._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
+import TwoControlOperators._
+import OneControlOperators._
 import normalToTac._
 
 object printTac {
@@ -122,6 +124,12 @@ object printTac {
           twoTac(indent)(op,d,v)
         case OneTac(op,v) =>
           oneTac(indent)(op,v)
+        case OneControl(op, dest) =>
+          oneControl(indent)(op, dest)
+        case TwoControl(op, src, dest) =>
+          twoControl(indent)(op, src, dest)
+        case l: LabelIds =>
+          labels(l)
       }
     }
 
@@ -148,6 +156,24 @@ object printTac {
       s"${indent}${const(dest)} $name ${const(value)}$endl"
     }
 
+  def oneControl[O]
+    (indent: String )
+    (op: OneControlOperators, value: LabelIds): String = {
+      val name = op match {
+        case JUMP => "jump"
+      }
+      s"${indent}$name ${evalLabels(value)}$endl"
+    }
+
+  def twoControl[O]
+    (indent: String )
+    (op: TwoControlOperators, dest: ASrc, value: LabelIds): String = {
+      val name = op match {
+        case JUMP_IF_ZERO => "jump_if_zero"
+      }
+      s"${indent}$name ${const(dest)} ${evalLabels(value)}$endl"
+    }
+
   def threeTac[O]
     (indent: String)
     (op: ThreeOperators, dest: Variable, left: ASrc, right: ASrc): String = {
@@ -172,6 +198,14 @@ object printTac {
     case Scoped(Identifier(i),s) => s"$i~$s"
     case t: Temporary => showTemporary(t)
   }
+
+  def evalLabels(v: LabelIds): String = v match {
+    case ElseLabel(c) => s"else$c"
+    case PostSelection(ic, _) => s"post$ic"
+  }
+
+  private def labels(v: LabelIds): String =
+    s"${evalLabels(v)}:$endl"
 
   private def evalType(types: Types): String = types match {
     case Cint => "%I32"

@@ -1,13 +1,16 @@
 package mycc
 
 import MIPS._
+import Tac._
 
 object MIPS {
+  type Labels = Label | ControlLabel
   type Src = Register | Constant
   type Register = Results | Arguments | Temporaries | SavedValues | Trap | Misc
-  type Addresses = OffsetAddress | Label
+  type Addresses = OffsetAddress | Labels
   type Dest = Addresses | Register
-  type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero | PseudoUnary | Label
+  type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero |
+       PseudoUnary | Labels
 }
 
 enum Results {
@@ -39,12 +42,13 @@ enum ZeroAddr {
 }
 
 enum OneAddr {
-  case Jal(dest: Label)
+  case Jal(dest: Labels)
   case Jr(dest: Register)
-  case J(dest: Label)
+  case J(dest: Labels)
 }
 
 enum TwoAddr {
+  case Beqz(source: Register, breakTo: Labels)
   case Move(dest: Register, source: Register)
   case Li(dest: Register, source: Constant)
   case Lw(dest: Register, source: Addresses)
@@ -55,7 +59,6 @@ enum TwoAddr {
 }
 
 enum ThreeAddr {
-  case Beq(l: Register, r: Register, breakTo: Scoped)
   case Add(dest: Register, l: Register, r: Src)
   case Sub(dest: Register, l: Register, r: Src)
   case Mul(dest: Register, l: Register, r: Src)
@@ -69,6 +72,7 @@ enum ThreeAddr {
   case Sge(dest: Register, l: Register, r: Src)
 }
 
+case class ControlLabel(id: LabelIds)
 case class Label(id: Scoped)
 case class OffsetAddress(address: Register, offset: Constant)
 

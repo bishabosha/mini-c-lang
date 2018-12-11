@@ -104,7 +104,7 @@ class astToNormal private (var context: Context) {
       }
     }
     acc
-  } 
+  }
 
   private val declaration: FlattenO[Statements, Declaration] = {
     case d: Declaration => d
@@ -130,25 +130,30 @@ class astToNormal private (var context: Context) {
       }
 
   private val selectionStatementsImpl: Flatten[Statements] = {
-    case IfElse(test, ifThen, orElse) => foldArguments(test) {
-      mapIfElse(ifThen, orElse)
+    case IfElse(If(ic, test, ifThen), orElse) => foldArguments(test) {
+      mapIfElse(ic, ifThen, orElse)
     }
   }
 
   private def mapIfElse
-    ( ifThen: List[Statements],
-      orElse: Option[List[Statements]] )
+    ( ifCount: Long,
+      ifThen: List[Statements],
+      orElse: Option[Else] )
     ( args: List[Assignments],
       stack: Stack
     ): List[Statements] =
       (args.lastOption, stack) match {
         case (Some(a), _) =>
           val ifThenMapped = statementList(ifThen)
-          val orElseMapped = orElse.map(statementList).filter(!_.isEmpty)
+          val elseMapped = orElse.map {
+            case Else(ec, cont) =>
+              Else(ec, statementList(cont))
+          }.filter(!_._2.isEmpty)
+          val orElseMapped = elseMapped.map(_.cont)
           if orElseMapped.isEmpty && ifThenMapped.isEmpty then {
             stack
           } else {
-            IfElse(a :: Nil, ifThenMapped, orElseMapped) :: stack
+            IfElse(If(ifCount, a :: Nil, ifThenMapped), elseMapped) :: stack
           }
         case _ =>
           throw UnexpectedAstNode("Empty If statement test")

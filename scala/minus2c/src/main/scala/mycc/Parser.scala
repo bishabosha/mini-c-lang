@@ -66,7 +66,8 @@ object Parser {
           }
         }
         if doInterpret then {
-          val (intContext, intCode) = normalToInterpreter(nContext, astFlattened)
+          val (intContext, intCode) =
+            normalToInterpreter(nContext, astFlattened)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"FILTER_NORMAL_TO_INTERPRETER: ${newtim - old}ms")

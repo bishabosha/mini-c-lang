@@ -23,6 +23,8 @@ import UnaryOperators._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
+import TwoControlOperators._
+import OneControlOperators._
 import printMips._
 
 object tacToMips extends Stage {
@@ -225,6 +227,17 @@ object tacToMips extends Stage {
 
         case OneTac(PUSH_PARAM, a) =>
           (startContext.push(a), Nil)
+
+        case OneControl(JUMP, dest) =>
+          (startContext, J(ControlLabel(dest)) :: Nil)
+
+        case TwoControl(JUMP_IF_ZERO, src, dest) =>
+          val (dContext, dreg: Register, prev) =
+            evalASrcL(startContext, frame, src)
+          (dContext, Beqz(dreg,ControlLabel(dest)) :: Nil)
+
+        case l: LabelIds =>
+          (startContext, ControlLabel(l) :: Nil)
       }
 
   private def evalAssigment

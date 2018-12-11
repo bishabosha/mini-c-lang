@@ -35,6 +35,7 @@ class parseCAst private
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
+  private var ifCount = 0L
   private var scopeCount = 0L
   private var currentScope = scopeCount
   private var context: Context =
@@ -159,69 +160,103 @@ class parseCAst private
     declarationsAndAssignments |
     expressionsStatement |
     jumpStatement |
-    ifElse .L |
+    selections .L |
     { case value => throw UnimplementedError(s"statement: $value") }
   
+  private def makeIf
+    (test: CAst, ifThen: CAst): IfElse = {
+      val id = ifCount
+      ifCount += 1
+      IfElse(
+        If(
+          id,
+          expressions(test),
+          stacked { compoundStatements(ifThen) },
+        ),
+        None
+      )
+    }
 
   private def makeIfElse
-    (test: CAst, ifThen: CAst, orElse: Option[CAst]): IfElse = {
+    (test: CAst, ifThen: CAst, orElse: CAst): IfElse = {
+      val id = ifCount
+      ifCount += 1
       IfElse(
-        expressions(test),
-        stacked { compoundStatements(ifThen) },
-        orElse.map { stacked { compoundStatements } }
+        If(
+          id,
+          expressions(test),
+          stacked { compoundStatements(ifThen) }
+        ),
+        Some(Else(id, stacked { compoundStatements(orElse) }))
       )
     }
 
   private def makeIfElseEmpty
     (test: CAst, ifThen: CAst): IfElse = {
-      IfElse(
-        expressions(test),
-        stacked { compoundStatements(ifThen) },
-        Some(Nil)
+      val id = ifCount
+      ifCount += 1
+      IfElse (
+        If(
+          id,
+          expressions(test),
+          stacked { compoundStatements(ifThen) }
+        ),
+        Some(Else(id, Nil))
       )
     }
 
   private def makeIfElseEmptyIf
-    (test: CAst, orElse: Option[CAst]): IfElse = {
+    (test: CAst, orElse: CAst): IfElse = {
+      val id = ifCount
+      ifCount += 1
       IfElse(
-        expressions(test),
-        Nil,
-        orElse.map { stacked { compoundStatements } }
+        If (
+          id,
+          expressions(test),
+          Nil
+        ),
+        Some(Else(id, { stacked { compoundStatements(orElse) } }))
       )
     }
 
-  private def makeIfElseEmptyAll
-    (test: CAst): IfElse = {
-      IfElse(
+  private def makeIfElseEmptyAll(test: CAst): IfElse = {
+    val id = ifCount
+    ifCount += 1
+    IfElse(
+      If(
+        id,
         expressions(test),
         Nil,
-        Some(Nil)
-      )
-    }
+      ),
+      None
+    )
+  }
 
-  private val ifElse: Parse[IfElse] = {
+  private lazy val selections: Parse[IfElse] = ifElse 
+
+  private val ifElse: Parse[Selections] = {
     case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), UnaryNode("B", orElse))) =>
-      makeIfElse(test, ifThen, Some(orElse))
+      makeIfElse(test, ifThen, orElse)
     case BinaryNode("if", test, BinaryNode("else", Singleton("B"), Singleton("B"))) =>
       makeIfElseEmptyAll(test)
     case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), Singleton("B"))) =>
       makeIfElseEmpty(test, ifThen)
     case BinaryNode("if", test, BinaryNode("else", Singleton("B"), UnaryNode("B", orElse))) =>
-      makeIfElseEmptyIf(test, Some(orElse))
+      makeIfElseEmptyIf(test, orElse)
     case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), orElse)) =>
-      makeIfElse(test, ifThen, Some(orElse))
+      makeIfElse(test, ifThen, orElse)
     case BinaryNode("if", test, BinaryNode("else", ifThen, UnaryNode("B", orElse))) =>
-      makeIfElse(test, ifThen, Some(orElse))
+      makeIfElse(test, ifThen, orElse)
     case BinaryNode("if", test, BinaryNode("else", Singleton("B"), orElse)) =>
-      makeIfElseEmptyIf(test, Some(orElse))
+      makeIfElseEmptyIf(test, orElse)
     case BinaryNode("if", test, BinaryNode("else", ifThen, Singleton("B"))) =>
       makeIfElseEmpty(test, ifThen)
     case BinaryNode("if", test, BinaryNode("else", ifThen, orElse)) =>
-      makeIfElse(test, ifThen, Some(orElse))
+      makeIfElse(test, ifThen, orElse)
     case BinaryNode("if", test, UnaryNode("B", ifThen)) =>
-      makeIfElse(test, ifThen, None)
+      makeIf(test, ifThen)
     case BinaryNode("if", test, ifThen) =>
-      makeIfElse(test, ifThen, None)
+      makeIf(test, ifThen)
   } 
 
   private val externalDeclarationList: Parse[List[Declarations]] = {

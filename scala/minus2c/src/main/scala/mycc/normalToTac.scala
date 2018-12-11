@@ -10,6 +10,8 @@ import Types._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
+import TwoControlOperators._
+import OneControlOperators._
 
 object normalToTac extends Stage {
   type Source   = astToNormal.Goal
@@ -43,10 +45,10 @@ object normalToTac extends Stage {
     (node: Statements): List[Tac] =
       node match {
         case Function(Std.`mainIdentifier`, f, body) =>
-          val validated = body.foldLeft(Nil: List[Code]){ (code, statement) =>
-            evalStatement(statement) ++ code
+          val validated = body.foldLeft(Nil: List[Code]) {
+            (code, statement) => evalStatement(statement) ++ code
           }
-          List(Func(Std.mainIdentifier, f, validated.reverse))
+          List(Func(Std.mainIdentifier, f, eliminateJumps(validated)))
         case _ => Nil
       }
 
@@ -65,9 +67,63 @@ object normalToTac extends Stage {
       case Block(nodes) => nodes.foldLeft[List[Code]](Nil) {
         (code, statement) => evalStatement(statement) ++ code
       }
+      case IfElse(If(ifCount,(isOne: ASrc) :: Nil, ifTrue), elsePart) =>
+        val ifOne = ifTrue.foldLeft[List[Code]](Nil) {
+          (code, statement) => evalStatement(statement) ++ code
+        }
+        val elseMapped = elsePart.map {
+          case Else(ec, cont) =>
+            val code = cont.foldLeft[List[Code]](Nil) {
+              (code, statement) => evalStatement(statement) ++ code
+            }
+            (ec, code)
+        }
+        val elseLabel = elseMapped.map(_._1).map(ElseLabel)
+        val postSelection = PostSelection(ifCount, elseLabel)
+        val ifZero: LabelIds =
+          (elseLabel: Option[LabelIds]).getOrElse(postSelection)
+        val jumpIfZero = TwoControl(JUMP_IF_ZERO, isOne, ifZero)
+        val jumpContinue = OneControl(JUMP, postSelection)
+        val code: Option[List[Code]] = for {
+          elseL <- elseLabel
+          elseCode <- elseMapped.map(_._2)
+        } yield {
+          val endIf: List[Code]   = (jumpContinue :: ifOne).reverse
+          val endElse: List[Code] = elseL :: (jumpContinue :: elseCode).reverse
+          val both: List[Code]    = endIf ++ endElse
+          (jumpIfZero :: both) :+ postSelection
+        }
+        val finalCode: List[Code] = code getOrElse {
+          val endIf: List[Code]   = (jumpContinue :: ifOne).reverse
+          (jumpIfZero :: endIf) :+ postSelection
+        }
+        finalCode.reverse
       case _ =>
         List()
     }
+
+  private def eliminateJumps(code: List[Code]): List[Code] = {
+    var acc = Nil: List[Code]
+    var left = code
+    while (!left.isEmpty) {
+      left match {
+        case (l: LabelIds) :: left1 =>
+          left1 match {
+            case OneControl(JUMP, `l`) :: left2 =>
+              acc = l :: acc
+              left = left2
+            case _ =>
+              acc = l :: acc
+              left = left1
+          }
+        case a :: left1 =>
+          acc = a :: acc
+          left = left1
+        case _ =>
+      }
+    }
+    acc
+  }
 
   private def evalApplication
     (dest: Variable, id: Scoped, args: Expressions): List[Code] = {

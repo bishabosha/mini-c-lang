@@ -18,6 +18,7 @@ import ZeroAddr._
 import OneAddr._
 import TwoAddr._
 import ThreeAddr._
+import printTac._
 import exception._
 
 object printMips {
@@ -49,6 +50,8 @@ object printMips {
           s"$indent.globl $id$endl"
         case Label(Scoped(Identifier(i),-1)) =>
           s"$i:$endl"
+        case ControlLabel(id) =>
+          s"${evalLabels(id)}:$endl"
         case Label(Scoped(Identifier(i),s)) =>
           s"$i$s:$endl"
         case Word(Constant(w)) =>
@@ -59,6 +62,8 @@ object printMips {
           oneAddr(jal,indent)(_.dest)
         case jr: Jr =>
           oneAddr(jr,indent)(_.dest)
+        case j: J =>
+          oneAddr(j,indent)(_.dest)
         case li: Li =>
           twoAddr(li,indent)(_.dest,_.source)
         case lw: Lw =>
@@ -69,6 +74,8 @@ object printMips {
           twoAddr(not,indent)(_.dest,_.r)
         case move: Move =>
           twoAddr(move,indent)(_.dest,_.source)
+        case beqz: Beqz =>
+          twoAddr(beqz,indent)(_.source,_.breakTo)
         case sw: Sw =>
           twoAddr(sw,indent)(_.source,_.dest)
         case add: Add =>
@@ -128,6 +135,7 @@ object printMips {
   private def rsrc(v: Constant | Dest): String = v match {
     case Constant(c) => c.toString
     case Label(Scoped(Identifier(i),s)) => s"$i$s"
+    case ControlLabel(id) => evalLabels(id)
     case r: Register => registers(r)
     case u =>
       throw UnexpectedAstNode(u.toString)

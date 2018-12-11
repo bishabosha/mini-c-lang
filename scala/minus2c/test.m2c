@@ -434,6 +434,27 @@ int main(void) {
     return 0;
 }
 
+int main(void) {
+    int a = read_int();
+    int b = read_int();
+    if (a < b) {
+        a = 11;
+        b = 12;
+    } else if (a > 25) {
+        if (a < 30) {
+            a = 13;
+            b = 14;
+        } else {
+            a = 15;
+            b = 16;
+        }
+    } else {
+        a = 17;
+        b = 18;
+    }
+    return 0;
+}
+
 int beq;
 int main(void) {
     int a = 0;
