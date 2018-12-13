@@ -9,31 +9,24 @@ import astToNormal._
 object astToNormal extends Stage {
   type Source   = parseCAst.Goal
   type Context  = parseCAst.Context
-  type Goal     = List[Statements]
-
-  private type Stack = List[Assignment]
-
-  def apply(context: Context, source: Source): (Context, Goal) =
-    new astToNormal(context).goal(source)
-
-  private def identity[A]: PartialFunction[A, A] = {
-    case x => x
-  }
-}
-
-class astToNormal private (var context: Context) {
+  type Goal     = parseCAst.Goal
 
   private type FlattenO[T, O] = PartialFunction[T, O]
   private type FlattenL[T, O] = FlattenO[T, List[O]]
   private type Flatten[T] = FlattenL[T, T]
+  private type Stack = List[Assignment]
 
-  private lazy val goal: FlattenO[Source, (Context, Goal)] =
-    declarationsList ->> { goal => context -> goal }
+  def apply(context: Context, source: Source): (Context, Goal) =
+    mainDefined(context) { _ -> declarationsList(source) }
+
+  private def identity[A]: PartialFunction[A, A] = {
+    case x => x
+  }
 
   private lazy val declarationsList: FlattenO[Source, Goal] = 
     identity >>- declarations
 
-  private lazy val declarations: Flatten[Statements] = 
+  private lazy val declarations: Flatten[Declarations] = 
     function .L |
     declaration .L |
     assignments
@@ -74,7 +67,9 @@ class astToNormal private (var context: Context) {
 
   private lazy val statements: Flatten[Statements] =
     block .L |
-    declarations |
+    function .L |
+    declaration .L |
+    assignments |
     jumpStatements |
     selectionStatements
 
@@ -83,8 +78,8 @@ class astToNormal private (var context: Context) {
       Function(i, f, eliminateTemporaries(statementList(body)))
   }
 
-  private def eliminateTemporaries(statements: Goal): Goal = {
-    var acc = Nil: Goal
+  private def eliminateTemporaries(statements: List[Statements]): List[Statements] = {
+    var acc = Nil: List[Statements]
     var left = statements.reverse
     while (!left.isEmpty) {
       left match {
@@ -119,7 +114,7 @@ class astToNormal private (var context: Context) {
   }
 
   private def mapReturn
-    ( args: List[Assignments],
+    ( args: Expressions,
       stack: Stack
     ): List[Statements] =
       (args.lastOption, stack) match {
@@ -130,7 +125,7 @@ class astToNormal private (var context: Context) {
       }
 
   private val selectionStatementsImpl: Flatten[Statements] = {
-    case IfElse(If(ic, test, ifThen), orElse) => foldArguments(test) {
+    case IfElse(ic, test, ifThen, orElse) => foldArguments(test) {
       mapIfElse(ic, ifThen, orElse)
     }
   }
@@ -138,22 +133,18 @@ class astToNormal private (var context: Context) {
   private def mapIfElse
     ( ifCount: Long,
       ifThen: List[Statements],
-      orElse: Option[Else] )
-    ( args: List[Assignments],
+      orElse: Option[List[Statements]] )
+    ( args: Expressions,
       stack: Stack
     ): List[Statements] =
       (args.lastOption, stack) match {
         case (Some(a), _) =>
           val ifThenMapped = statementList(ifThen)
-          val elseMapped = orElse.map {
-            case Else(ec, cont) =>
-              Else(ec, statementList(cont))
-          }.filter(!_._2.isEmpty)
-          val orElseMapped = elseMapped.map(_.cont)
-          if orElseMapped.isEmpty && ifThenMapped.isEmpty then {
+          val elseMapped = orElse.map(statementList).filter(!_.isEmpty)
+          if elseMapped.isEmpty && ifThenMapped.isEmpty then {
             stack
           } else {
-            IfElse(If(ifCount, a :: Nil, ifThenMapped), elseMapped) :: stack
+            IfElse(ifCount, a :: Nil, ifThenMapped, elseMapped) :: stack
           }
         case _ =>
           throw UnexpectedAstNode("Empty If statement test")
@@ -205,7 +196,7 @@ class astToNormal private (var context: Context) {
 
   private def mapAssignment
     ( dest: Variable )
-    ( args: List[Assignments],
+    ( args: Expressions,
       stack: Stack
     ): Stack =
       (args, stack) match {
@@ -233,20 +224,20 @@ class astToNormal private (var context: Context) {
 
   private def foldArgumentsN
     ( e: Expressions )
-    ( f: (List[Assignments] ) => Assignment
+    ( f: Expressions => Assignment
     ): Stack =
       foldArguments(e) { f(_) :: _ }
 
   private def foldArgumentsNT
     ( e: Expressions )
-    ( f: (List[Assignments]) => Assignments
+    ( f: Expressions => Assignments
     ): Stack =
       foldArgumentsN(e) { temporaryAssignment.compose(f) }
 
   private def mapUnary[Op <: UnaryOp, A >: Primary, O >: Assignments]
     ( f: (Op, A) => O,
       o: Op
-    ): PartialFunction[List[Assignments], O] = {
+    ): PartialFunction[Expressions, O] = {
       case Constant(a) :: _ =>
         Constant(o.op(a))
       case a :: _ =>
@@ -256,7 +247,7 @@ class astToNormal private (var context: Context) {
   private def mapBinary[Op <: BinaryOp, A >: Primary, B >: Primary]
     ( f: (Op, A, B) => Assignments,
       o: Op
-    ): PartialFunction[List[Assignments], Assignments] = {
+    ): PartialFunction[Expressions, Assignments] = {
       case Constant(a) :: Constant(b) :: _ =>
         Constant(o.op(a, b))
       case a :: b :: _ =>
@@ -266,7 +257,7 @@ class astToNormal private (var context: Context) {
 
   private def foldArguments[A]
     ( ex: Expressions )
-    ( fn: (List[Assignments], Stack) => A
+    ( fn: (Expressions, Stack) => A
     ): A = {
       val (args, repush, stack) =
         ex.map(tryReduce)
@@ -274,7 +265,7 @@ class astToNormal private (var context: Context) {
       fn(args, repush ++ stack)
     }
 
-  private type StackAcc = (List[Assignments], Stack, Stack)
+  private type StackAcc = (Expressions, Stack, Stack)
 
   private def mapArguments(acc: StackAcc, argStack: Stack): StackAcc =
     acc match {

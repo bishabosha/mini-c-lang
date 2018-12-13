@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "vector.h"
 
 char *named(Ast *ast) {
   int token = ast->type;
@@ -63,12 +62,6 @@ char *named(Ast *ast) {
 }
 
 POLYGLOT_DECLARE_STRUCT(ast);
-
-extern void vector_init(Vector *);
-extern bool vector_empty(Vector *);
-extern void vector_push(Vector *, Ast *);
-extern Ast *vector_pop(Vector *);
-extern void vector_free(Vector *vector);
 
 extern void *get_SymbTable_inst();
 void print_tree(UnaryNode *, int);
@@ -271,65 +264,6 @@ void *acc_List(int type, BinaryNode *node) {
 
 void *Node_to_Scala(Ast *ast) {
   return acc_stack(ast);
-}
-
-void *acc_stack(Ast *ast) {
-  BinaryNode *binary;
-  UnaryNode *unary;
-  Vector vector_working;
-  Vector vector_ast;
-  vector_init(&vector_ast);
-  vector_init(&vector_working);
-  vector_push(&vector_working, ast);
-  while (!vector_empty(&vector_working)) {
-    ast = vector_pop(&vector_working);
-    vector_push(&vector_ast, ast);
-    switch (ast->tag) {
-      case BINARY_NODE:
-        binary = (BinaryNode *)ast;
-        vector_push(&vector_working, binary->a2);
-        vector_push(&vector_working, binary->a1);
-        break;
-      case UNARY_NODE:
-        unary = (UnaryNode *)ast;
-        vector_push(&vector_working, unary->a1);
-        break;
-      default:
-        break;
-    }
-  }
-  void *stack_values = ARRAYDEQUE_NEW();
-  void *a1;
-  void *a2;
-  void *kind;
-  while (!vector_empty(&vector_ast)) {
-    ast = vector_pop(&vector_ast);
-    switch (ast->tag) {
-    case UNARY_NODE:
-      a1 = POP(stack_values);
-      kind = JAVA_STRING(named(ast));
-      PUSH(mycc_CAst$UnaryNode(kind, a1), stack_values);
-      free(ast);
-      break;
-    case BINARY_NODE:
-      a1 = POP(stack_values);
-      a2 = POP(stack_values);
-      kind = JAVA_STRING(named(ast));
-      PUSH(mycc_CAst$BinaryNode(kind, a1, a2), stack_values);
-      free(ast);
-      break;
-    case TOKEN_INT:
-      PUSH(TokenInt_to_Scala((TokenInt *)ast), stack_values);
-      break;
-    case TOKEN_STRING:
-      PUSH(TokenString_to_Scala((TokenString *)ast), stack_values);
-      break;
-    case SINGLETON:
-      PUSH(Singleton_to_Scala(ast), stack_values);
-      break;
-    }
-  }
-  return POP(stack_values);
 }
 
 void *BinaryNode_to_Scala(BinaryNode *node) {

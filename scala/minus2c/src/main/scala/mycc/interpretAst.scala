@@ -31,16 +31,16 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
 
-  private def evalProgram: Int = parseMain(topLevel) { () =>
+  private def evalProgram: Int = {
     println("interpreting:")
     nodes.foldLeft(None: Option[Int]){ (code, statement) =>
-      code.orElse(topLevelStatement(statement))
+      code.orElse(topLevelDeclaration(statement))
     } getOrElse {
       throw SemanticError("Program does not terminate")
     }
   }
 
-  private def topLevelStatement(node: Statements): Option[Int] = node match {
+  private def topLevelDeclaration(node: Declarations): Option[Int] = node match {
     case Function(Std.`mainIdentifier`, _, body) =>
       stacked {
         body.foldLeft(None: Option[Int]){ (code, statement) =>
@@ -50,11 +50,13 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
     case Declaration(_, _, id: Scoped) =>
       addRandom(id)
       None
-    case _ : Declaration =>
-      None
     case Assignment(dest, value) =>
-      addValue(dest, value)
-      None
+      if cursor.current.genSearch(IdentKey(dest)).isDefined then {
+        addValue(dest, value)
+        None
+      } else {
+        unexpected(dest)
+      }
     case _ => None
   }
 
@@ -68,15 +70,16 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
       case Declaration(_, _, id: Scoped) =>
         addRandom(id)
         None
-      case _: Declaration =>
-        None
-      case Assignment(dest, value) =>
+      case Assignment(dest: Temporary, value) =>
         addValue(dest, value)
         None
-      case _: Function =>
-        None
-      case _: Block =>
-        None
+      case Assignment(dest: Scoped, value) =>
+        if cursor.current.genSearch(IdentKey(dest)).isDefined then {
+          addValue(dest, value)
+          None
+        } else {
+          unexpected(dest)
+        }
       case Return(Nil) =>
         None
       case Return(v) =>
@@ -105,7 +108,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
 
   private def expr(node: Assignments): Option[Int] = {
     node match {
-      case Application(i, args) =>
+      case _ : Application =>
         None
       case Equality(op, l, r) =>
         binary(op, l, r)
@@ -122,7 +125,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
       case StringLiteral(str) =>
         None
       case i: Scoped =>
-        cursor.current.genSearch(IdentKey(i)).map(_.value)
+        cursor.current.genSearch(IdentKey(i)).map(_.value).orElse {
+          unexpected(i)
+        }
       case t: Temporary =>
         cursor.current.genSearch(IdentKey(t)).map(_.value)
       case x =>

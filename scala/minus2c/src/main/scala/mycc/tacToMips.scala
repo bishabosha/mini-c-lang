@@ -46,14 +46,14 @@ object tacToMips extends Stage {
   )
 
   private def inlinePrintInt
-    (context: Context, frame: Frame, value: ASrc): MipsAcc = {
+    (context: Context, value: ASrc): MipsAcc = {
       val post: Goal =
         List(
           Li(V0,printInt),
           Syscall,
           Comment("call 1: print_int")
         )
-      evalAssigment(context,frame,A0,value,post.reverse)
+      evalAssigment(context,A0,value,post.reverse)
     }
 
   private val inlineReadInt: Goal = List(
@@ -75,12 +75,9 @@ object tacToMips extends Stage {
     case TwoOperators => PartialFunction[Op,UnaryArgs]
   }
 
-  case class RegisterKey(key: Variable) extends Bindings.Key {
-    type Value = Register
-  }
-
   case class MipsContext
-    ( cursor: Cursor,
+    ( current: Map[Variable, Register],
+      frame: Frame,
       private val stack: List[ASrc],
       private val _temporary: Option[Temporaries],
       private val saved: Set[SavedValues],
@@ -125,73 +122,64 @@ object tacToMips extends Stage {
         (stack.head, copy(stack = stack.tail))
     }
 
-  private def nextScope(context: Context): Context =
-    context.copy(context.cursor.next)
-
-  private def updateBindings(context: Context, bindings: Bindings): Context =
-    context.copy(context.cursor.withBindings(bindings))
+  private def nextFrame(frame: Frame): Context =
+    MipsContext(Map(), frame, Nil, None, Set())
 
   private def add
-    (context: Context, key: Bindings.Key, value: key.Value): Context =
-      updateBindings(context, context.cursor.current + (key, value))
+    (context: Context, key: Variable, value: Register): Context =
+      context.copy(context.current + (key -> value))
 
   def apply
-    ( context: Bindings,
-      tac: (DataMap, List[Tac])
-    ): (Context, Goal) = {
-      val cursor = Cursor(context)
-      val mipsContext = MipsContext(cursor,Nil,None,Set())
-      goal(mipsContext, tac)
+    ( context: DataMap,
+      tac: List[Tac]
+    ): Goal = {
+      val mipsContext = nextFrame(Frame.Empty)
+      goal(mipsContext, context, tac)
     }
 
   private def goal
     ( context: Context,
-      tac: (DataMap, List[Tac])
-    ): (Context, Goal) = {
-      val (data, nodes) = tac
-      val topLevel = context.cursor.current
-      parseMain(topLevel) { () =>
-        val (contextFinal, goal) =
-          foldCode(topLevelStatements)(context,nodes) {
-            identity(_,_)
-          }
-        val dataAssembler = getData(data)
-        val top: Goal = predef ++ pseudoMain
-        val end: Goal = goal ++ dataAssembler
-        (contextFinal, top ++ end)
-      }
+      data: DataMap,
+      nodes: List[Tac]
+    ): Goal = {
+      val dataAssembler = getData(data)
+      val (contextFinal, goal) =
+        foldCode(topLevelDeclarations)(context,nodes) {
+          identity(_,_)
+        }
+      val top: Goal = predef ++ pseudoMain
+      val end: Goal = goal ++ dataAssembler
+      top ++ end
     }
 
-  private def topLevelStatements
+  private def topLevelDeclarations
     ( context: Context,
       statement: Tac
     ): MipsAcc =
       statement match {
         case Func(id, frame, body) =>
-          evalFunction(nextScope(context))(id, frame, body)
+          evalFunction(nextFrame(frame))(id, body)
       }
 
   private def evalFunction
     ( context: Context )
     ( id: Scoped,
-      frame: Frame,
       body: List[Code],
     ): MipsAcc =
-      foldCode(evalStatements(frame))(defineLocals(context, frame),body) {
+      foldCode(evalStatements)(defineLocals(context),body) {
         (context,code) => (context, Label(id) :: code.reverse)
       }
 
   private def evalStatements
-    ( frame: Frame )
     ( startContext: Context,
       code: Code
     ): MipsAcc =
       code match {
         case ThreeTac(op, d, l, r) =>
           val (context, dest: Register, post) =
-            evalVariableDest(startContext, frame, d)
-          val (lContext, lreg: Register, prel) = evalASrcL(context, frame, l)
-          val (rContext, rreg: Src, prer) = evalASrcR(lContext, frame, r)
+            evalVariableDest(startContext, d)
+          val (lContext, lreg: Register, prel) = evalASrcL(context, l)
+          val (rContext, rreg: Src, prer) = evalASrcR(lContext, r)
           val result: Assembler = binaryOperators(op)(dest, lreg, rreg)
           val pre = (prer ++ prel): List[Assembler]
           val resultAndStack = result :: pre
@@ -199,33 +187,33 @@ object tacToMips extends Stage {
 
         case TwoTac(ASSIGN, d, value) =>
           val (context, dest: Register, post) =
-            evalVariableDest(startContext, frame, d)
-          evalAssigment(context,frame,dest,value,post)
+            evalVariableDest(startContext, d)
+          evalAssigment(context,dest,value,post)
 
         case TwoTac(CALL, d, Std.`printIntIdentifier`) =>
           val (context, dest: Register, post) =
-            evalVariableDest(startContext, frame, d)
+            evalVariableDest(startContext, d)
           val (arg: ASrc, nContext) = context.pop
-          val (iContext, inlined) = inlinePrintInt(nContext, frame, arg)
+          val (iContext, inlined) = inlinePrintInt(nContext, arg)
           (iContext, post ++ inlined)
 
         case TwoTac(CALL, d, Std.`readIntIdentifier`) =>
           val (context, dest: Register, post) =
-            evalVariableDest(startContext, frame, d)
+            evalVariableDest(startContext, d)
           val move = Move(dest, V0)
           (context, post ++ (move :: inlineReadInt.reverse))
 
         case TwoTac(op, d, v) =>
           val (context, dest: Register, post) =
-            evalVariableDest(startContext, frame, d)
-          val (vContext, rreg: Register, prev) = evalASrcL(context, frame, v)
+            evalVariableDest(startContext, d)
+          val (vContext, rreg: Register, prev) = evalASrcL(context, v)
           val resultAndStack = unary(op)(dest,rreg) :: prev
           (context, post ++ resultAndStack)
 
         case OneTac(RETURN, value) =>
-          evalAssigment(startContext,frame,V0,value,List(Jr(Ra)))
+          evalAssigment(startContext,V0,value,List(Jr(Ra)))
 
-        case OneTac(PUSH_PARAM, a) =>
+        case OneTac(PUSH, a) =>
           (startContext.push(a), Nil)
 
         case OneControl(JUMP, dest) =>
@@ -233,7 +221,7 @@ object tacToMips extends Stage {
 
         case TwoControl(JUMP_IF_ZERO, src, dest) =>
           val (dContext, dreg: Register, prev) =
-            evalASrcL(startContext, frame, src)
+            evalASrcL(startContext, src)
           (dContext, Beqz(dreg,ControlLabel(dest)) :: Nil)
 
         case l: LabelIds =>
@@ -242,7 +230,6 @@ object tacToMips extends Stage {
 
   private def evalAssigment
     ( context: Context,
-      frame: Frame,
       destReg: Register,
       src: ASrc,
       post: List[Assembler]
@@ -252,7 +239,7 @@ object tacToMips extends Stage {
           (context, post :+ Li(destReg, c))
         case v: Variable =>
           val (vContext, vreg: Register, prev) =
-            evalVariableSrc(context, frame, v)
+            evalVariableSrc(context, v)
           val ans = Move(destReg, vreg) :: prev
           (vContext, post ++ ans)
       }
@@ -260,7 +247,6 @@ object tacToMips extends Stage {
 
   private def evalASrcL
     ( context: Context,
-      frame: Frame,
       dest: ASrc
     ): (Context, Register, List[Assembler]) = {
       dest match {
@@ -269,28 +255,26 @@ object tacToMips extends Stage {
             assignTemporary(context, new Temporary)
             (tContext, treg, List(Li(treg,c)))
         case v: Variable =>
-          evalVariableSrc(context, frame, v)
+          evalVariableSrc(context, v)
       }
     }
 
   private def evalASrcR
     ( context: Context,
-      frame: Frame,
       dest: ASrc
     ): (Context, Src, List[Assembler]) = {
       dest match {
         case c: Constant => (context, c, Nil)
-        case v: Variable => evalVariableSrc(context, frame, v)
+        case v: Variable => evalVariableSrc(context, v)
       }
     }
 
   private def evalVariableSrc
     ( context: Context,
-      frame: Frame,
       variable: Variable
     ): (Context, Register, List[Assembler]) = {
       val (vContext, dest: Dest) =
-        getRegisterElse(unexpectedInContext)(context,frame,variable)
+        getRegisterElse(unexpectedInContext)(context,variable)
       dest match {
         case r: Register =>
           (vContext, r, Nil)
@@ -305,11 +289,10 @@ object tacToMips extends Stage {
   
   private def evalVariableDest
     ( context: Context,
-      frame: Frame,
       variable: Variable
     ): (Context, Register, List[Assembler]) = {
       val (vContext, dest: Dest) =
-        getRegisterElse(assignTemporary)(context, frame, variable)
+        getRegisterElse(assignTemporary)(context, variable)
       dest match {
         case r: Register =>
           (vContext, r, Nil: Goal)
@@ -378,23 +361,23 @@ object tacToMips extends Stage {
     (contextR, codeR ++ l)
   }
 
-  private def defineLocals(context: Context, frame: Frame): Context = 
-    frame.locals.keys.foldLeft(context) { (c, s) =>
+  private def defineLocals(context: Context): Context = 
+    context.frame.locals.keys.foldLeft(context) { (c, s) =>
       val (register, advanced) = c.advanceSaved
-      add(advanced, RegisterKey(s), register)
+      add(advanced, s, register)
     }
 
   private def getRegisterElse
     (f: (Context, Variable) => (Context, Dest))
-    (context: Context, frame: Frame, lvalue: Variable): (Context, Dest) =
+    (context: Context, lvalue: Variable): (Context, Dest) =
       lvalue match {
         case s @ Scoped(i, 0) =>
-          frame.globals.get(i).map { _ =>
+          context.frame.globals.get(i).map { _ =>
             (context, Label(s))
           } getOrElse { unexpected(lvalue) }
         case _ =>
-          context.cursor.current
-            .genSearch(RegisterKey(lvalue))
+          context.current
+            .get(lvalue)
             .map((context,_))
             .getOrElse {
               f(context,lvalue)
@@ -404,7 +387,7 @@ object tacToMips extends Stage {
   private def assignTemporary
     (context: Context, lvalue: Variable): (Context, Register) = {
       val advanced = context.advanceTemporary
-      val added = add(advanced, RegisterKey(lvalue), advanced.temporary)
+      val added = add(advanced, lvalue, advanced.temporary)
       (added, advanced.temporary)
     }
 

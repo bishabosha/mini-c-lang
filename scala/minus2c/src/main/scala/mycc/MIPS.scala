@@ -10,7 +10,7 @@ object MIPS {
   type Addresses = OffsetAddress | Labels
   type Dest = Addresses | Register
   type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero |
-       PseudoUnary | Labels
+       PseudoUnary | Labels | Comment
 }
 
 enum Results {
@@ -84,5 +84,6 @@ enum PseudoUnary {
   case Word(size: Constant)
   case Globl(name: Scoped)
   case Asciiz(value: String)
-  case Comment(msg: String)
 }
+
+case class Comment(msg: String)

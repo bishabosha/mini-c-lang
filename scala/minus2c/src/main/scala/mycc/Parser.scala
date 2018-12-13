@@ -89,7 +89,7 @@ object Parser {
             old = newtim
           }
         } else {
-          val (tContext2, tac2) = normalToTac(nContext, astFlattened)
+          val (tContext2, tac2) = normalToTac(astFlattened)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"NORMAL_TO_TAC: ${newtim - old}ms")
@@ -106,7 +106,7 @@ object Parser {
               old = newtim
             }
           }
-          val (mContext2, mips2) = tacToMips(tContext2, tac2)
+          val mips2 = tacToMips(tContext2, tac2)
           if doTime then {
             newtim = System.currentTimeMillis
             println(s"TAC_TO_MIPS: ${newtim - old}ms")

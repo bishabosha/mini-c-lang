@@ -168,11 +168,9 @@ class parseCAst private
       val id = ifCount
       ifCount += 1
       IfElse(
-        If(
-          id,
-          expressions(test),
-          stacked { compoundStatements(ifThen) },
-        ),
+        id,
+        expressions(test),
+        stacked { compoundStatements(ifThen) },
         None
       )
     }
@@ -182,12 +180,10 @@ class parseCAst private
       val id = ifCount
       ifCount += 1
       IfElse(
-        If(
-          id,
-          expressions(test),
-          stacked { compoundStatements(ifThen) }
-        ),
-        Some(Else(id, stacked { compoundStatements(orElse) }))
+        id,
+        expressions(test),
+        stacked { compoundStatements(ifThen) },
+        Some(stacked { compoundStatements(orElse) })
       )
     }
 
@@ -196,12 +192,10 @@ class parseCAst private
       val id = ifCount
       ifCount += 1
       IfElse (
-        If(
-          id,
-          expressions(test),
-          stacked { compoundStatements(ifThen) }
-        ),
-        Some(Else(id, Nil))
+        id,
+        expressions(test),
+        stacked { compoundStatements(ifThen) },
+        Some(Nil)
       )
     }
 
@@ -210,12 +204,10 @@ class parseCAst private
       val id = ifCount
       ifCount += 1
       IfElse(
-        If (
-          id,
-          expressions(test),
-          Nil
-        ),
-        Some(Else(id, { stacked { compoundStatements(orElse) } }))
+        id,
+        expressions(test),
+        Nil,
+        Some({ stacked { compoundStatements(orElse) } })
       )
     }
 
@@ -223,11 +215,9 @@ class parseCAst private
     val id = ifCount
     ifCount += 1
     IfElse(
-      If(
-        id,
-        expressions(test),
-        Nil,
-      ),
+      id,
+      expressions(test),
+      Nil,
       None
     )
   }
@@ -235,18 +225,24 @@ class parseCAst private
   private lazy val selections: Parse[IfElse] = ifElse 
 
   private val ifElse: Parse[Selections] = {
-    case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), UnaryNode("B", orElse))) =>
-      makeIfElse(test, ifThen, orElse)
-    case BinaryNode("if", test, BinaryNode("else", Singleton("B"), Singleton("B"))) =>
-      makeIfElseEmptyAll(test)
-    case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), Singleton("B"))) =>
-      makeIfElseEmpty(test, ifThen)
-    case BinaryNode("if", test, BinaryNode("else", Singleton("B"), UnaryNode("B", orElse))) =>
-      makeIfElseEmptyIf(test, orElse)
-    case BinaryNode("if", test, BinaryNode("else", UnaryNode("B", ifThen), orElse)) =>
-      makeIfElse(test, ifThen, orElse)
-    case BinaryNode("if", test, BinaryNode("else", ifThen, UnaryNode("B", orElse))) =>
-      makeIfElse(test, ifThen, orElse)
+    case BinaryNode("if", test, 
+      BinaryNode("else", UnaryNode("B", ifThen), UnaryNode("B", orElse))) =>
+        makeIfElse(test, ifThen, orElse)
+    case BinaryNode("if", test,
+      BinaryNode("else", Singleton("B"), Singleton("B"))) =>
+        makeIfElseEmptyAll(test)
+    case BinaryNode("if", test,
+      BinaryNode("else", UnaryNode("B", ifThen), Singleton("B"))) =>
+        makeIfElseEmpty(test, ifThen)
+    case BinaryNode("if", test,
+      BinaryNode("else", Singleton("B"), UnaryNode("B", orElse))) =>
+        makeIfElseEmptyIf(test, orElse)
+    case BinaryNode("if", test,
+      BinaryNode("else", UnaryNode("B", ifThen), orElse)) =>
+        makeIfElse(test, ifThen, orElse)
+    case BinaryNode("if", test,
+      BinaryNode("else", ifThen, UnaryNode("B", orElse))) =>
+        makeIfElse(test, ifThen, orElse)
     case BinaryNode("if", test, BinaryNode("else", Singleton("B"), orElse)) =>
       makeIfElseEmptyIf(test, orElse)
     case BinaryNode("if", test, BinaryNode("else", ifThen, Singleton("B"))) =>
@@ -414,7 +410,8 @@ class parseCAst private
     case UnaryNode("V", name) =>
       FunctionDeclarator(identifierWithScope(name), LVoid)
     case BinaryNode("F", name, args) =>
-      FunctionDeclarator(identifierWithScope(name), LParam(parameters(args).toVector))
+      FunctionDeclarator(
+        identifierWithScope(name), LParam(parameters(args).toVector))
   }
 
   private val parameterList: Parse[List[Parameter]] = {

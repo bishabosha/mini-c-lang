@@ -482,3 +482,14 @@ int foo(int h, int i) {
     int m = 0;
     return 0;
 }
+
+int main(void) {
+    int a = read_int();
+    int b = read_int();
+    if (a < b) {
+        print_int(a * b);
+    } else if (a > 25) {
+        print_int(a - b);
+    }
+    return 0;
+}

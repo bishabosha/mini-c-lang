@@ -15,24 +15,23 @@ import OneControlOperators._
 
 object normalToTac extends Stage {
   type Source   = astToNormal.Goal
-  type Context  = astToNormal.Context
-  type Goal     = (DataMap, List[Tac])
+  type Context  = DataMap
+  type Goal     = List[Tac]
 
   type DataMap = Map[Scoped, Global]
 
-  def apply(topLevel: Context, nodes: List[Statements]): (Context, Goal) =
-    parseMain(topLevel) { () =>
+  def apply(nodes: List[Declarations]): (Context, Goal) = {
       val data = nodes.foldLeft(Map(): DataMap) {
-        (acc, statement) =>
-          getData(statement).fold(acc)(acc + _)
+        (acc, declaration) =>
+          getData(declaration).fold(acc)(acc + _)
         }
-      val code = nodes.foldLeft(Nil: List[Tac]){ (code, statement) =>
-        topLevelStatement(statement) ++ code
-      }.reverse
-      (topLevel, (data, code))
+      val code = nodes.foldRight(Nil: List[Tac]) {
+        topLevelDeclaration(_) ++ _
+      }
+      (data, code)
     }
 
-  private def getData(node: Statements): Option[(Scoped, Global)] =
+  private def getData(node: Declarations): Option[(Scoped, Global)] =
     node match {
       case Declaration(_, _, i: Scoped) =>
         Some((i, zero))
@@ -41,8 +40,8 @@ object normalToTac extends Stage {
       case _ => None
     }
 
-  private def topLevelStatement
-    (node: Statements): List[Tac] =
+  private def topLevelDeclaration
+    (node: Declarations): List[Tac] =
       node match {
         case Function(Std.`mainIdentifier`, f, body) =>
           val validated = body.foldLeft(Nil: List[Code]) {
@@ -67,35 +66,32 @@ object normalToTac extends Stage {
       case Block(nodes) => nodes.foldLeft[List[Code]](Nil) {
         (code, statement) => evalStatement(statement) ++ code
       }
-      case IfElse(If(ifCount,(isOne: ASrc) :: Nil, ifTrue), elsePart) =>
+      case IfElse(ifCount,(isOne: ASrc) :: Nil, ifTrue, elsePart) =>
+        val joinLabel = Join(ifCount)
+        val elseLabel: Option[LabelIds] = elsePart.map(_ => ElseLabel(ifCount))
+        val ifZero: LabelIds = elseLabel.getOrElse(joinLabel)
+        val jumpIfZero = TwoControl(JUMP_IF_ZERO, isOne, ifZero)
+        val joinCommand = OneControl(JUMP, joinLabel)
         val ifOne = ifTrue.foldLeft[List[Code]](Nil) {
           (code, statement) => evalStatement(statement) ++ code
         }
-        val elseMapped = elsePart.map {
-          case Else(ec, cont) =>
-            val code = cont.foldLeft[List[Code]](Nil) {
-              (code, statement) => evalStatement(statement) ++ code
-            }
-            (ec, code)
+        val orElse = elsePart.map {
+          _.foldLeft[List[Code]](Nil) {
+            (code, statement) => evalStatement(statement) ++ code
+          }
         }
-        val elseLabel = elseMapped.map(_._1).map(ElseLabel)
-        val postSelection = PostSelection(ifCount, elseLabel)
-        val ifZero: LabelIds =
-          (elseLabel: Option[LabelIds]).getOrElse(postSelection)
-        val jumpIfZero = TwoControl(JUMP_IF_ZERO, isOne, ifZero)
-        val jumpContinue = OneControl(JUMP, postSelection)
         val code: Option[List[Code]] = for {
           elseL <- elseLabel
-          elseCode <- elseMapped.map(_._2)
+          elseCode <- orElse
         } yield {
-          val endIf: List[Code]   = (jumpContinue :: ifOne).reverse
-          val endElse: List[Code] = elseL :: (jumpContinue :: elseCode).reverse
+          val endIf: List[Code]   = (joinCommand :: ifOne).reverse
+          val endElse: List[Code] = elseL :: (joinCommand :: elseCode).reverse
           val both: List[Code]    = endIf ++ endElse
-          (jumpIfZero :: both) :+ postSelection
+          (jumpIfZero :: both) :+ joinLabel
         }
         val finalCode: List[Code] = code getOrElse {
-          val endIf: List[Code]   = (jumpContinue :: ifOne).reverse
-          (jumpIfZero :: endIf) :+ postSelection
+          val endIf: List[Code]   = (joinCommand :: ifOne).reverse
+          (jumpIfZero :: endIf) :+ joinLabel
         }
         finalCode.reverse
       case _ =>
@@ -130,7 +126,7 @@ object normalToTac extends Stage {
       args.foldRight(List[Code](TwoTac(CALL, dest, id))) { (exp, acc) =>
         exp match {
           case a: ASrc =>
-            OneTac(PUSH_PARAM, a) :: acc
+            OneTac(PUSH, a) :: acc
           case _ =>
             acc
         }

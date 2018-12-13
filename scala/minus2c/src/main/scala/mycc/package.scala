@@ -29,23 +29,22 @@ package object mycc {
   def replaceHead[A](list: List[A])(f: A => A): List[A] =
     f(list.head) :: list.tail
 
-  def parseMain[A](topLevel: Bindings)(f: () => A): A =
+  def mainDefined[A](topLevel: Bindings)(f: Bindings => A): A =
     topLevel.genGet(Std.mainIdentifierKey) match {
-        case Some(Std.`mainFunc`) =>
-          if topLevel.genGet(Std.mainDefinitionKey) isDefined then
-            f()
-          else {
-            throw SemanticError(
-              "function definition for `int main(void)` not found.")
-          }
-        case _ =>
+      case Some(Std.`mainFunc`) =>
+        if topLevel.genGet(Std.mainDefinitionKey) isDefined then
+          f(topLevel)
+        else {
           throw SemanticError(
-            "function declaration for `int main(void)` not found.")
+            "function definition for `auto int main(void)` not found.")
+        }
+      case _ =>
+        throw SemanticError(
+          "function declaration for `auto int main(void)` not found.")
     }
 
   def extractDeclarations
-    (declarations: List[Declaration]
-    ): Map[Bindings.Key, Any] =
+    (declarations: List[Declaration]): Map[Bindings.Key, Any] =
       (for (d @ Declaration(_, _, decl) <- declarations)
         yield (DeclarationKey(extractIdentifier(decl)), d)
       ).toMap
@@ -65,7 +64,7 @@ package object mycc {
   }
 
   def unexpected(lvalue: Variable): Nothing = {
-    throw UnexpectedAstNode(s"unknown variable ${showVariable(lvalue)}")
+    throw SemanticError(s"unknown variable ${showVariable(lvalue)}")
   }
   
   def showVariable(lvalue: Variable): String =

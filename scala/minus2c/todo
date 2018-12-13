@@ -31,6 +31,11 @@
 [!] only use Cursor in a terminal consumer
 [x] function definitions should not be added to bindings, please just a flag
 
+[!] please please check that identifiers without being declared is not
+    broken
+    [!] need to add context flags for if currently in a declaration or a use
+        of an identifier
+
 --- FEATURE FREEZE ---
 
 [ ] dont associate Scope with ID until it is checked as declared 
@@ -54,6 +59,8 @@
 
 --- FEATURE EXTEND ---
 
+
+[?] declare functions that are called in the frame, to eliminate lookups
 [ ] decouple registers from variable locations, need to have last known store
     for variable. Try to save last location of label
 [ ] Type check applications

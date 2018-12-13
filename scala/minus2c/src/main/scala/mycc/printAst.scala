@@ -15,7 +15,7 @@ object printAst {
 
   private val endl = System.lineSeparator
 
-  def apply(nodes: List[Statements]): Unit =
+  def apply(nodes: List[Declarations]): Unit =
     print(astNode(nodes, 0))
 
   private def astNode
@@ -51,8 +51,8 @@ object printAst {
         case Return(v) =>
           val newArgs = v.map(exp).mkString(", ")
           s"${lvl}return $newArgs;$endl"
-        case IfElse(If(ifC, test, ifThen), orElse) =>
-          ifElse(ifC,test,ifThen,orElse,level)
+        case IfElse(_, test, ifThen, orElse) =>
+          ifElse(test,ifThen,orElse,level)
         case _ => s"${lvl}???$endl"
       }
     }
@@ -130,24 +130,23 @@ object printAst {
     }
 
   private def ifElse
-    ( ifCount: Long,
-      test: Expressions,
+    ( test: Expressions,
       ifThen: List[Statements],
-      orElse: Option[Else],
+      orElse: Option[List[Statements]],
       level: Int
     ): String = {
       var lvl: String = getLevel(level)
       val testStr = test.map(expr(_,level)).mkString(", ")
       val ifThenStr = astNode(ifThen, inc(level))
       if orElse.isEmpty then
-        s"${lvl}if~$ifCount ($testStr) {$endl$ifThenStr$lvl}$endl"
+        s"${lvl}if ($testStr) {$endl$ifThenStr$lvl}$endl"
       else {
         val orElseG = orElse.get
-        if orElseG.cont.isEmpty then {
-          s"${lvl}if~$ifCount ($testStr) {$endl$ifThenStr$lvl} else~${orElseG.id} {$endl$lvl}$endl"
+        if orElseG.isEmpty then {
+          s"${lvl}if ($testStr) {$endl$ifThenStr$lvl} else {$endl$lvl}$endl"
         } else {
-          val orElseStr = astNode(orElseG.cont, inc(level))
-          s"${lvl}if~$ifCount ($testStr) {$endl$ifThenStr$lvl} else~${orElseG.id} {$endl$orElseStr$lvl}$endl"
+          val orElseStr = astNode(orElseG, inc(level))
+          s"${lvl}if ($testStr) {$endl$ifThenStr$lvl} else {$endl$orElseStr$lvl}$endl"
         }
       }
 

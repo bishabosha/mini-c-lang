@@ -21,25 +21,23 @@ object printTac {
 
   private val endl = System.lineSeparator
 
-  def apply(context: Bindings, src: (DataMap, List[Tac])): Unit =
+  def apply(context: DataMap, src: List[Tac]): Unit =
     print(tac(context, src, "  "))
 
   private def tac
-    ( context: Bindings,
-      src: (DataMap, List[Tac]),
+    ( data: DataMap,
+      src: List[Tac],
       indent: String
     ): String = {
-      val (data, nodes) = src
       val dataString = s"$indent.static$endl"
       val codeString = s"$indent.code$endl"
-      val dataAll = evalData(context, data, indent)
-      val codeAll = evalNodes(context, nodes, indent)
+      val dataAll = evalData(data, indent)
+      val codeAll = evalNodes(src, indent)
       dataString + dataAll + codeString + codeAll
     }
 
   private def evalData
-    ( context: Bindings,
-      data: DataMap,
+    ( data: DataMap,
       indent: String
     ): String = data.view.map {
         case (Scoped(Identifier(i),s),Constant(c)) =>
@@ -47,41 +45,37 @@ object printTac {
     }.mkString
 
   private def evalNodes
-    ( context: Bindings,
-      nodes: List[Tac],
+    ( nodes: List[Tac],
       indent: String
     ): String =
       (for (node <- nodes.view)
-          yield evalNode(context, node, indent)
+          yield evalNode(node, indent)
       ).mkString
   
   private def evalNode
-    ( context: Bindings,
-      node: Tac,
+    ( node: Tac,
       indent: String
     ): String =
       node match {
         case Func(scoped, frame, codes) =>
-          evalFunction(context, scoped, frame, codes, indent)
+          evalFunction(scoped, frame, codes, indent)
       }
 
   private def evalFunction
-    ( context: Bindings,
-      scoped: Scoped,
+    ( scoped: Scoped,
       frame: Frame,
       codes: List[Code],
       indent: String
     ): String = {
       s"${scoped.id.id}~${scoped.scope}:$endl" +
       s"$indent.begin_function$endl" +
-      evalFrame(context, frame, indent) +
-      evalCodes(context, codes, indent) +
+      evalFrame(frame, indent) +
+      evalCodes(codes, indent) +
       s"$indent.end_function$endl"
     }
     
   private def evalFrame
-    ( context: Bindings,
-      frame: Frame,
+    ( frame: Frame,
       indent: String
     ): String = {
       val globals = frame.globals.view.map {
@@ -104,17 +98,15 @@ object printTac {
     }
 
   private def evalCodes
-    ( context: Bindings,
-      nodes: List[Code],
+    ( nodes: List[Code],
       indent: String
     ): String =
       (for (code <- nodes.view)
-          yield evalCode(context, code, indent)
+          yield evalCode(code, indent)
       ).mkString
 
   private def evalCode
-    ( context: Bindings,
-      node: Code,
+    ( node: Code,
       indent: String
     ): String = {
       node match {
@@ -138,7 +130,7 @@ object printTac {
     (op: OneOperators, value: ASrc): String = {
       val name = op match {
         case RETURN => "return"
-        case PUSH_PARAM => "push"
+        case PUSH => "push"
       }
       s"${indent}$name ${const(value)}$endl"
     }
@@ -201,7 +193,7 @@ object printTac {
 
   def evalLabels(v: LabelIds): String = v match {
     case ElseLabel(c) => s"else$c"
-    case PostSelection(ic, _) => s"post$ic"
+    case Join(ic) => s"join$ic"
   }
 
   private def labels(v: LabelIds): String =

@@ -64,15 +64,15 @@ object Ast {
   type DeclarationSpecifiers = Type | Storage
   type Declarations = Declaration | Function | Assignment
   type Expressions = List[Assignments]
-  type Assignments = Assignment | Equalities
-  type Equalities = Equality | Relationals
-  type Relationals = Relational | Additives
-  type Additives = Additive | Multiplicatives
-  type Multiplicatives = Multiplicative | Unaries
-  type Unaries = Unary | Postfix
-  type Postfix = Application | Primary
   type Constants = Scoped | Constant | StringLiteral
   type Primary = Constants | LazyExpressions | Temporary
+  type Postfix = Primary | Application
+  type Unaries = Postfix | Unary
+  type Multiplicatives = Unaries | Multiplicative
+  type Additives = Multiplicatives | Additive
+  type Relationals = Additives | Relational
+  type Equalities = Relationals | Equality
+  type Assignments = Equalities | Assignment
   type Node = Equality | Relational | Additive | Multiplicative | Unary
   type Variable = Scoped | Temporary
   type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
@@ -93,7 +93,7 @@ case class StringLiteral(value: String)
 case class Type(id: Types)
 case class Storage(id: StorageTypes)
 case class Return(value: Expressions)
-case class Application(Operand: Postfix, args: Expressions)
+case class Application(operand: Postfix, args: Expressions)
 case class LazyExpressions(value: Expressions)
 case class Unary(op: UnaryOperators, value: Unaries)
 case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries)
@@ -104,6 +104,4 @@ case class Assignment(lvalue: Variable, rvalue: Assignments)
 case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
 case class Function(id: Scoped, frame: Frame, body: List[Statements])
 case class Block(inner: List[Statements])
-case class If(id: Long, test: Expressions, ifThen: List[Statements])
-case class IfElse(ifPart: If, orElse: Option[Else])
-case class Else(id: Long, cont: List[Statements])
+case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: Option[List[Statements]])
