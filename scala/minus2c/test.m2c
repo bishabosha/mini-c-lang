@@ -455,6 +455,15 @@ int main(void) {
     return 0;
 }
 
+int main(void) {
+    return 0;
+}
+int y;
+int foo(int a, int) {
+    int c = y;
+    return 0;
+}
+
 int beq;
 int main(void) {
     int a = 0;
@@ -491,5 +500,10 @@ int main(void) {
     } else if (a > 25) {
         print_int(a - b);
     }
+    return 0;
+}
+
+int main(void) {
+    a = 0;
     return 0;
 }

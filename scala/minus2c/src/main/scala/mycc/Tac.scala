@@ -4,11 +4,9 @@ import Tac._
 import Ast._
 
 object Tac {
-  type ThreeOperators = EqualityOperators | RelationalOperators |
-    AdditiveOperators | MultiplicativeOperators
+  type ThreeOperators = BinaryOperators
   type TwoOperators = UnaryOperators | MiscTwoOperators
   type OneOperators = MiscOneOperators
-
   type LabelIds = ElseLabel | Join
   type ASrc = Variable | Constant
   type Code = OneTac | TwoTac | ThreeTac | OneControl | TwoControl | LabelIds
@@ -26,6 +24,5 @@ case class ThreeTac(op: ThreeOperators, dest: Variable, a1: ASrc, a2: ASrc)
 case class TwoControl(op: TwoControlOperators, a1: ASrc, label: LabelIds)
 case class OneControl(op: OneControlOperators, label: LabelIds)
 case class Func(id: Scoped, frame: Frame, body: List[Code])
-
 case class ElseLabel(id: Long)
 case class Join(id: Long)

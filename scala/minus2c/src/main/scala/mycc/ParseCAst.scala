@@ -35,6 +35,7 @@ class parseCAst private
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]
+  private var inDecl = false
   private var ifCount = 0L
   private var scopeCount = 0L
   private var currentScope = scopeCount
@@ -113,13 +114,10 @@ class parseCAst private
     primary
 
   private lazy val primary: Parse[Primary] =
-    identifierInScope |
+    identifierSearchScope |
     (constant |
       (lazyExpressions |
         stringLiteral))
-
-  private lazy val identifierInScope: Parse[Scoped] =
-    identifier ->> searchInScope
 
   private lazy val identifierSearchScope: Parse[Scoped] =
     identifier ->> searchInScope
@@ -128,7 +126,7 @@ class parseCAst private
     identifierWithScopeOf(currentScope)
 
   private def identifierWithScopeOf(scope: Long): Parse[Scoped] =
-    identifier ->> { scoped(_, scope) }
+    identifier ->> { decld { scoped(_, scope) } }
 
   private lazy val initDeclarators: Parse[List[InitDeclarator]] =
     initDeclaratorList |
@@ -136,7 +134,7 @@ class parseCAst private
 
   private lazy val initDeclarator: Parse[InitDeclarator] =
     declarator |
-    assignment 
+    declassignment 
 
   private lazy val declarator: Parse[InitDeclarator] =
     identifierWithScope |
@@ -298,6 +296,11 @@ class parseCAst private
   private val multiList: Parse[List[Statements]] = {
     case Sequence(";", statements) =>
       statements.flatMap[Statements,List[Statements]](compoundStatements)
+  }
+
+  private val declassignment: Parse[Assignment] = {
+    case BinaryNode("=", id, value) =>
+      Assignment(identifierWithScope(id), assignments(value))
   }
 
   private val assignment: Parse[Assignment] = {
@@ -492,6 +495,19 @@ class parseCAst private
     result
   }
 
+  private def decld[A](parser: => A): A = {
+    if inDecl then {
+      throw SemanticError("already in decl!")
+    }
+    inDecl = true
+    val result = parser
+    if !inDecl then {
+      throw SemanticError("no longer in decl!")
+    }
+    inDecl = false
+    result
+  }
+
   private def declareParamsInScope(args: Vector[Parameter]): Unit = {
     for (p <- args) {
       p match {
@@ -560,34 +576,6 @@ class parseCAst private
       case _ =>
     }
 
-  // private def existsInScope(identifier: Identifier): Scoped =
-  //   context.genSearch(DeclarationKey(identifier)) match {
-  //     case Some(d @ Declaration(_, _, decl)) =>
-  //       decl match {
-  //         case Scoped(_, scope) =>
-  //           val scopedId = scoped(identifier, scope)
-  //             if currentScope != scope then {
-  //               if scope == 0 then {
-  //                 frames = replaceHead(frames) {
-  //                   Frame.globalsLens(_ + (identifier -> d))
-  //                 }
-  //               } else {
-  //                 if frames.head.locals.get(scopedId).isEmpty then {
-  //                   var declInFrame = scopedId -> d
-  //                   frames = replaceHead(frames) {
-  //                     Frame.capturesLens(_ + declInFrame)
-  //                   }
-  //                 }
-  //               }
-  //             }
-  //           scopedId
-  //         case FunctionDeclarator(Scoped(_, scope), _) =>
-  //           scoped(identifier, scope)
-  //       }
-  //     case _ =>
-  //       throw SemanticError(s"Identifier '${identifier.id}~$currentScope' is undefined")
-  // }
-
   private def searchInScope(identifier: Identifier): Scoped =
     context.genSearch(DeclarationKey(identifier)) match {
       case Some(d @ Declaration(_, _, decl)) =>
@@ -613,7 +601,11 @@ class parseCAst private
             scoped(identifier, scope)
         }
       case _ =>
-        scoped(identifier, currentScope)
+        if (inDecl) {
+          scoped(identifier, currentScope)
+        } else {
+          throw SemanticError(s"Identifier '${identifier.id}~$currentScope' is undefined")
+        }
   }
 
   private def tailYieldsValue(statements: Option[List[Statements]]): Unit = {

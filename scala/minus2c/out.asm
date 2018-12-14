@@ -1,37 +1,50 @@
   .globl main
   .text
 main:
-  jal main0
+  jal L1
   move $a0, $v0
+  #call 17: exit2
   li $v0, 17
   syscall
-  #call 17: exit2
-main0:
+L1: #debug: main~0
+  #call 5: read_int
   li $v0, 5
   syscall
+  move $s7, $v0
   #call 5: read_int
-  move $s5, $v0
   li $v0, 5
   syscall
-  #call 5: read_int
-  move $s3, $v0
-  slt $t0, $s5, $s3
+  move $s1, $v0
+  sgt $t0, $s7, 30
   beqz $t0, else0
-  mul $t1, $s5, $s3
-  move $a0, $t1
+  li $a0, 1
+  #call 1: print_int
   li $v0, 1
   syscall
-  #call 1: print_int
-  j post0
+  j join0
 else0:
-  sgt $t3, $s5, 25
-  beqz $t3, post1
-  sub $t4, $s5, $s3
-  move $a0, $t4
+  slt $t2, $s1, 50
+  beqz $t2, else1
+  sle $t3, $s7, 20
+  beqz $t3, else2
+  li $a0, 2
+  #call 1: print_int
   li $v0, 1
   syscall
+  j join2
+else2:
+  li $a0, 3
   #call 1: print_int
-post1:
-post0:
+  li $v0, 1
+  syscall
+join2:
+  j join1
+else1:
+  li $a0, 4
+  #call 1: print_int
+  li $v0, 1
+  syscall
+join1:
+join0:
   li $v0, 0
   jr $ra
