@@ -28,7 +28,7 @@ object normalToInterpreter extends Stage {
 
   private def evalStatement(node: Statements): List[Statements] = {
     node match {
-      case d @ Declaration(_, _, _: Identifier) =>
+      case d @ Declaration(_, _, _: Scoped) =>
         List(d)
       case a @ Assignment(_, _: ExpressionRoot) =>
         List(a)

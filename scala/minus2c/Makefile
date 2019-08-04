@@ -2,8 +2,6 @@ OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc mycc.bc
 SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mycc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
-DOTTY_VERSION = 0.11
-SUFFIX = 0-RC1
 BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
 LLVM_HOME = /usr/local/opt/llvm/bin
@@ -12,12 +10,33 @@ GRAALVM_HOME = /Library/Java/JavaVirtualMachines/graalvm-ee-1.0.0-rc10/Contents/
 GRAAL_CC = clang -I${GRAALVM_HOME}/jre/languages/llvm -emit-llvm -O1
 GRAAL_CC_SANDBOXED = ${GRAALVM_HOME}/bin/clang-sandboxed
 LLVM_LINK = ${LLVM_HOME}/llvm-link
+
 TARGET = src/main/resources/mycclib
-CP = /Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_${DOTTY_VERSION}/jars/dotty-library_${DOTTY_VERSION}-${DOTTY_VERSION}.${SUFFIX}.jar:/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-${DOTTY_VERSION}.${SUFFIX}.jar:/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar:target/scala-${DOTTY_VERSION}/classes/:
+
+DOTTY_VERSION = 0.11
 JAR = target/scala-${DOTTY_VERSION}/minus2c_${DOTTY_VERSION}-0.1.0.jar
-PARSER = cat testfile | dotr -cp ${CP}:${JAR} mycc.Parser
+TAIL = ${DOTTY_VERSION}.0-RC1
+DOTTY_LIB = dotty-library_${DOTTY_VERSION}
+IVY = /Users/jamie/.ivy2/cache
+
+CP = ${IVY}/ch.epfl.lamp/${DOTTY_LIB}/jars/${DOTTY_LIB}-${TAIL}.jar:$\
+${IVY}/ch.epfl.lamp/scala-library/jars/scala-library-${TAIL}.jar:$\
+${IVY}/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar
+
+MYCC = dotr -cp ${CP}:${JAR} mycc.Parser
+
+PARSER = cat testfile | ${MYCC}
 
 all:  ${TARGET}
+
+cp:
+	echo "${CP}" | pbcopy
+
+mips:
+	${PARSER} -m > out.asm
+
+run:
+	${PARSER} -i
 
 pkg: ${TARGET}
 	sbt package
@@ -28,17 +47,11 @@ normal:
 parse:
 	${PARSER} -n -m -t -sep
 
-run:
-	${PARSER} -i
-
 run_timed:
 	${PARSER} -i -time -sep
 
 tac:
 	${PARSER} -t
-
-mips:
-	${PARSER} -m > out.asm
 
 timed:
 	${PARSER} -time -n -m -t -sep

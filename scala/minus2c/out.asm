@@ -10,41 +10,44 @@ L1: #debug: main~0
   #call 5: read_int
   li $v0, 5
   syscall
-  move $s7, $v0
+  move $s8, $v0
   #call 5: read_int
   li $v0, 5
   syscall
-  move $s1, $v0
-  sgt $t0, $s7, 30
+  move $s0, $v0
+  slt $t0, $s8, $s0
   beqz $t0, else0
-  li $a0, 1
+  sgt $t1, $s8, 0
+  beqz $t1, else1
+  mul $t2, $s8, $s0
+  move $a0, $t2
   #call 1: print_int
   li $v0, 1
   syscall
-  j join0
-else0:
-  slt $t2, $s1, 50
-  beqz $t2, else1
-  sle $t3, $s7, 20
-  beqz $t3, else2
-  li $a0, 2
+  j join1
+else1:
+  slt $t4, $s0, 0
+  beqz $t4, else2
+  add $t5, $s8, $s0
+  move $a0, $t5
   #call 1: print_int
   li $v0, 1
   syscall
   j join2
 else2:
-  li $a0, 3
+  li $a0, 909
   #call 1: print_int
   li $v0, 1
   syscall
 join2:
-  j join1
-else1:
-  li $a0, 4
+join1:
+  j join0
+else0:
+  rem $t8, $s8, $s0
+  move $a0, $t8
   #call 1: print_int
   li $v0, 1
   syscall
-join1:
 join0:
   li $v0, 0
   jr $ra

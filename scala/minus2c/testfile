@@ -1,23 +1,17 @@
 int main(void) {
-  int a = 0;
-  {
-    int b = 0;
-    {
-      int c = 0;
+    int a, b;
+    a = read_int();
+    b = read_int();
+    if (a < b) {
+        if (a > 0) {
+            print_int(a * b);
+        } else if (b < 0) {
+            print_int(a + b);
+        } else {
+            print_int(909);
+        }
+    } else {
+        print_int(a % b);
     }
-    int d = 0;
-  }
-  int e = 0;
-  {
-    int f = 0;
-  }
-  return 0;
-}
-int foo(void) {
-  int g = 0;
-  {
-    int h = 0;
-  }
-  int i = 0;
-  return 0;
+    return 0;
 }
