@@ -35,7 +35,7 @@ object MyCCLib {
               myCCLib.getMember("get_SymbTable_inst")
                      .execute()
                      .as(classOf[SymbTable])
-             val symbols = symbTable.export
+             val symbols = symbTable.toMap
              symbTable.clear()
              symbols
            })

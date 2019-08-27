@@ -1,8 +1,0 @@
-[ {
-  "id" : "root/compile",
-  "compilerVersion" : "0.12.0-RC1",
-  "compilerArguments" : [ ],
-  "sourceDirectories" : [ "/Users/jamie/Workspace/BathAdvancedCompilers/scala/examples/src/main/scala-0.12", "/Users/jamie/Workspace/BathAdvancedCompilers/scala/examples/src/main/scala", "/Users/jamie/Workspace/BathAdvancedCompilers/scala/examples/src/main/java", "/Users/jamie/Workspace/BathAdvancedCompilers/scala/examples/target/scala-0.12/src_managed/main" ],
-  "dependencyClasspath" : [ "/Users/jamie/.ivy2/cache/ch.epfl.lamp/scala-library/jars/scala-library-0.12.0-RC1.jar", "/Users/jamie/.ivy2/cache/ch.epfl.lamp/dotty-library_0.12/jars/dotty-library_0.12-0.12.0-RC1.jar", "/Users/jamie/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.8.jar", "/Users/jamie/.ivy2/cache/org.graalvm.sdk/graal-sdk/jars/graal-sdk-1.0.0-rc11.jar", "/Users/jamie/.ivy2/cache/com.oracle.substratevm/svm/jars/svm-1.0.0-rc11.jar", "/Users/jamie/.ivy2/cache/com.oracle.substratevm/objectfile/jars/objectfile-1.0.0-rc11.jar", "/Users/jamie/.ivy2/cache/com.oracle.substratevm/pointsto/jars/pointsto-1.0.0-rc11.jar", "/Users/jamie/.ivy2/cache/org.graalvm.compiler/compiler/jars/compiler-1.0.0-rc11.jar", "/Users/jamie/.ivy2/cache/org.graalvm.truffle/truffle-api/jars/truffle-api-1.0.0-rc11.jar", "/Users/jamie/.ivy2/cache/org.graalvm.truffle/truffle-nfi/jars/truffle-nfi-1.0.0-rc11.jar" ],
-  "classDirectory" : "/Users/jamie/Workspace/BathAdvancedCompilers/scala/examples/target/scala-0.12/classes"
-} ]

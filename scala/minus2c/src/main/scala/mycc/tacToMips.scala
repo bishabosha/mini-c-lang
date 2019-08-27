@@ -82,10 +82,10 @@ object tacToMips extends Stage {
     ) {
       def advanceTemporary: MipsContext = {
         val temp = _temporary.map { t =>
-          if t.enumTag == Temporaries.enumValue.size -1 then {
+          if t.ordinal == Temporaries.values.length -1 then {
             throw SemanticError("Too many temporaries!")
           }
-          Temporaries.enumValue(t.enumTag + 1)
+          Temporaries.values.find(_.ordinal == t.ordinal + 1).get
         } orElse {
           Some(T0)
         }
@@ -94,7 +94,7 @@ object tacToMips extends Stage {
 
       def freeTemporary: MipsContext = {
         val temp = _temporary.map { t =>
-          Temporaries.enumValue(t.enumTag - 1)
+          Temporaries.values.find(_.ordinal == t.ordinal - 1).get
         } orElse {
           throw SemanticError("No temporary to free!")
         }
@@ -102,7 +102,7 @@ object tacToMips extends Stage {
       }
 
       def advanceSaved: (SavedValues, MipsContext) = {
-        val savedValues = SavedValues.enumValues.toSet
+        val savedValues = SavedValues.values.toSet
         val newSet = savedValues &~ saved
         if newSet.isEmpty then {
           throw SemanticError("Too many saved variables!")
@@ -242,7 +242,6 @@ object tacToMips extends Stage {
             case Some(r: Register) => (context, post :+ Move(destReg, r))
             case Some(a: Addresses) => (context, post :+ Lw(destReg, a))
             case None => unexpected(v)
-            case u => throw UnexpectedAstNode(s"Not register or label: $u")
           }
       }
 
@@ -280,7 +279,6 @@ object tacToMips extends Stage {
         case Some(r: Register) => (context, r, Nil)
         case Some(a: Addresses) => ifAddress(context, a)
         case None => ifNone(context, variable) ++ Tuple1(Nil)
-        case u => throw UnexpectedAstNode(s"Not register or label: $u")
       }
     }
 
@@ -304,31 +302,31 @@ object tacToMips extends Stage {
   }
 
   private val additive: MipsFor[AdditiveOperators] = {
-    case PLUS => Add
-    case MINUS => Sub
+    case PLUS => Add(_,_,_)
+    case MINUS => Sub(_,_,_)
   }
 
   private val equality: MipsFor[EqualityOperators] = {
-    case EQUAL => Seq
-    case NOT_EQUAL => Sne
+    case EQUAL => Seq(_,_,_)
+    case NOT_EQUAL => Sne(_,_,_)
   }
 
   private val relational: MipsFor[RelationalOperators] = {
-    case LT => Slt
-    case GT => Sgt
-    case LT_EQ => Sle
-    case GT_EQ => Sge
+    case LT => Slt(_,_,_)
+    case GT => Sgt(_,_,_)
+    case LT_EQ => Sle(_,_,_)
+    case GT_EQ => Sge(_,_,_)
   }
 
   private val multiplicative: MipsFor[MultiplicativeOperators] = {
-    case MULTIPLY => Mul
-    case DIVIDE => Div
-    case MODULUS => Rem
+    case MULTIPLY => Mul(_,_,_)
+    case DIVIDE => Div(_,_,_)
+    case MODULUS => Rem(_,_,_)
   }
 
   private val unary: MipsFor[TwoOperators] = {
-    case NOT => Not
-    case NEGATIVE => Neg
+    case NOT => Not(_,_)
+    case NEGATIVE => Neg(_,_)
   }
 
   private def foldCode[O,A]

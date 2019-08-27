@@ -14,6 +14,7 @@ import exception._
 import PartialFunctionConversions._
 import parseCAst._
 import scala.collection.mutable
+import scala.util.control.NonLocalReturns._
 
 object parseCAst extends Stage {
   type Source   = CAst
@@ -525,7 +526,7 @@ class parseCAst private
       types: Types,
       declarator: Declarator,
       frameLens: Option[FrameLens]
-    ): Option[Declaration] = {
+    ): Option[Declaration] = returning {
       for (
         Declaration(s, t, existing) <-
           context.genGet(DeclarationKey(scoped.id))
@@ -541,7 +542,7 @@ class parseCAst private
           case _: FunctionDeclarator => declarator match {
             case f: FunctionDeclarator =>
               if existing == f && s == storage && t == types then {
-                return None
+                throwReturn(Option.empty)
               } else {
                 throw new SemanticError(
                   s"Redefinition of function '${scoped.id.id}' with "+

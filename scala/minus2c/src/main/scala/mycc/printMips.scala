@@ -147,13 +147,13 @@ object printMips {
 
     def registers(reg: Register): String = reg match {
       case t: Temporaries =>
-        printEnum(Temporaries.enumValueNamed, t, "$t")
+        printEnum(Temporaries.valueOf, t, "$t")
       case s: SavedValues =>
-        printEnum(SavedValues.enumValueNamed, s, "$s")
+        printEnum(SavedValues.valueOf, s, "$s")
       case r: Results =>
-        printEnum(Results.enumValueNamed, r, "$v")
+        printEnum(Results.valueOf, r, "$v")
       case a: Arguments =>
-        printEnum(Arguments.enumValueNamed, a, "$a")
+        printEnum(Arguments.valueOf, a, "$a")
       case Ra =>
         "$ra"
       case _ =>
@@ -166,8 +166,8 @@ object printMips {
     def getScopedLabel(s: Scoped): String =
       "L" + getScopedId(s)
 
-    def printEnum[E](e: Map[String,Enum], t: E, code: String) = {
-      val num = e(t.toString).enumTag
+    def printEnum[E](e: String => Enum, t: E, code: String) = {
+      val num = e(t.toString).ordinal
         s"$code$num"
     }
   }

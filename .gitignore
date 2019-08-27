@@ -1,4 +1,9 @@
+.dotty-ide-artifact
+.dotty-ide.json
+.vscode
 target
+.metals
+.bloop
 *.class
 .DS_Store
 .vscode

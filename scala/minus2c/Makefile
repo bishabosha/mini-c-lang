@@ -6,14 +6,14 @@ BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
 LLVM_HOME = /usr/local/opt/llvm/bin
 OPT = ${LLVM_HOME}/opt
-GRAALVM_HOME = /Library/Java/JavaVirtualMachines/graalvm-ee-1.0.0-rc10/Contents/Home
-GRAAL_CC = clang -I${GRAALVM_HOME}/jre/languages/llvm -emit-llvm -O1
+GRAALVM_HOME = /Library/Java/JavaVirtualMachines/graalvm-ce-19.2.0/Contents/Home
+GRAAL_CC = clang -I${GRAALVM_HOME}/jre/languages/llvm/include -emit-llvm -O1
 GRAAL_CC_SANDBOXED = ${GRAALVM_HOME}/bin/clang-sandboxed
 LLVM_LINK = ${LLVM_HOME}/llvm-link
 
 TARGET = src/main/resources/mycclib
 
-DOTTY_VERSION = 0.11
+DOTTY_VERSION = 0.17
 JAR = target/scala-${DOTTY_VERSION}/minus2c_${DOTTY_VERSION}-0.1.0.jar
 TAIL = ${DOTTY_VERSION}.0-RC1
 DOTTY_LIB = dotty-library_${DOTTY_VERSION}

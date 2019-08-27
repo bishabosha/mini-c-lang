@@ -1,0 +1,4 @@
+-J-Xms512M
+-J-Xmx3536M
+-J-Xss1M
+-J-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
