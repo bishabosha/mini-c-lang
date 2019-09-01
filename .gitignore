@@ -16,4 +16,5 @@ C.output
 C.tab.c
 C.tab.h
 lex.yy.c
-mycclib
+mmclib
+local
