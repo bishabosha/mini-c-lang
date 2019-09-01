@@ -17,9 +17,8 @@ object mmclib {
 
   case class AstKind(tag: AstTag, tpe: String)
 
-  object Ast {
+  object CAst {
     given {
-
       def (value: CAst) ast: AstInfo =
         if value.hasMember("ast") then
           value.getMember("ast")
@@ -30,9 +29,10 @@ object mmclib {
         val ast = value.ast
         AstKind(ast.tag, ast.tpe)
       }
-
     }
+  }
 
+  object AstInfo {
     given {
       def (ast: AstInfo) tpe: String = get_type.execute(ast).asString
       def (ast: AstInfo) tag: AstTag = {
