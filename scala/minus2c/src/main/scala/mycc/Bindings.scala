@@ -16,7 +16,7 @@ case class Bindings
       data.get(id).map(_.asInstanceOf[id.Value])
 
     def genSearch(id: Key): Option[id.Value] =
-      (Stream(this) ++: stack.view)
+      (LazyList(this) ++: stack.view)
         .map(_.data.get(id))
         .collectFirst { case Some(o) => o.asInstanceOf[id.Value] }
 

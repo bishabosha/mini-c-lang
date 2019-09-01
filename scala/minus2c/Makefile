@@ -13,15 +13,18 @@ LLVM_LINK = ${LLVM_HOME}/llvm-link
 
 TARGET = src/main/resources/mycclib
 
-DOTTY_VERSION = 0.17
+SCALA_LIB_VERSION = 2.13.0
+DOTTY_VERSION     = 0.18
+DOTTY_MINOR       = 1
+DOTTY_SUFFIX      = RC1
 JAR = target/scala-${DOTTY_VERSION}/minus2c_${DOTTY_VERSION}-0.1.0.jar
-TAIL = ${DOTTY_VERSION}.0-RC1
+TAIL = ${DOTTY_VERSION}.${DOTTY_MINOR}-${DOTTY_SUFFIX}
 DOTTY_LIB = dotty-library_${DOTTY_VERSION}
 IVY = /Users/jamie/.ivy2/cache
 
 CP = ${IVY}/ch.epfl.lamp/${DOTTY_LIB}/jars/${DOTTY_LIB}-${TAIL}.jar:$\
 ${IVY}/ch.epfl.lamp/scala-library/jars/scala-library-${TAIL}.jar:$\
-${IVY}/org.scala-lang/scala-library/jars/scala-library-2.12.7.jar
+${IVY}/org.scala-lang/scala-library/jars/scala-library-${SCALA_LIB_VERSION}.jar
 
 MYCC = dotr -cp ${CP}:${JAR} mycc.Parser
 
@@ -48,7 +51,7 @@ parse:
 	${PARSER} -n -m -t -sep
 
 run_timed:
-	${PARSER} -i -time -sep
+	${PARSER} -i -time -sep -p
 
 tac:
 	${PARSER} -t
@@ -83,7 +86,7 @@ lex.yy.c: C.flex
 C.tab.c: C.y
 	${BISON} -d -t -v C.y
 
-depend:	
+depend:
 	${CC} -M $(SRCS) > .deps
 	cat Makefile .deps > makefile
 

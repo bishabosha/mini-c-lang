@@ -1,7 +1,7 @@
 package mycc
 
-import CAst._
-import Ast._
+import MyCCLib._
+import mycc.Ast._
 import Types._
 import ArgList._
 import StorageTypes._
@@ -51,7 +51,7 @@ class parseCAst private
   private lazy val translationUnit: Parse[Goal] =
     externalDeclarationList |
     externalDeclaration
-    
+
   private lazy val externalDeclaration: Parse[List[Declarations]] =
     functionDefinition |
     declarationsAndAssignments !! noAssign
@@ -135,7 +135,7 @@ class parseCAst private
 
   private lazy val initDeclarator: Parse[InitDeclarator] =
     declarator |
-    declassignment 
+    declassignment
 
   private lazy val declarator: Parse[InitDeclarator] =
     identifierWithScope |
@@ -161,9 +161,9 @@ class parseCAst private
     jumpStatement |
     selections .L |
     { case value => throw UnimplementedError(s"statement: $value") }
-  
+
   private def makeIf
-    (test: CAst, ifThen: CAst): IfElse = {
+    (test: Source, ifThen: Source): IfElse = {
       val id = ifCount
       ifCount += 1
       IfElse(
@@ -175,7 +175,7 @@ class parseCAst private
     }
 
   private def makeIfElse
-    (test: CAst, ifThen: CAst, orElse: CAst): IfElse = {
+    (test: Source, ifThen: Source, orElse: Source): IfElse = {
       val id = ifCount
       ifCount += 1
       IfElse(
@@ -187,7 +187,7 @@ class parseCAst private
     }
 
   private def makeIfElseEmpty
-    (test: CAst, ifThen: CAst): IfElse = {
+    (test: Source, ifThen: Source): IfElse = {
       val id = ifCount
       ifCount += 1
       IfElse (
@@ -199,7 +199,7 @@ class parseCAst private
     }
 
   private def makeIfElseEmptyIf
-    (test: CAst, orElse: CAst): IfElse = {
+    (test: Source, orElse: Source): IfElse = {
       val id = ifCount
       ifCount += 1
       IfElse(
@@ -210,7 +210,7 @@ class parseCAst private
       )
     }
 
-  private def makeIfElseEmptyAll(test: CAst): IfElse = {
+  private def makeIfElseEmptyAll(test: Source): IfElse = {
     val id = ifCount
     ifCount += 1
     IfElse(
@@ -221,10 +221,10 @@ class parseCAst private
     )
   }
 
-  private lazy val selections: Parse[IfElse] = ifElse 
+  private lazy val selections: Parse[IfElse] = ifElse
 
   private val ifElse: Parse[Selections] = {
-    case BinaryNode("if", test, 
+    case BinaryNode("if", test,
       BinaryNode("else", UnaryNode("B", ifThen), UnaryNode("B", orElse))) =>
         makeIfElse(test, ifThen, orElse)
     case BinaryNode("if", test,
@@ -252,11 +252,11 @@ class parseCAst private
       makeIf(test, ifThen)
     case BinaryNode("if", test, ifThen) =>
       makeIf(test, ifThen)
-  } 
+  }
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
     case Sequence("E", list) =>
-      list.flatMap[Declarations, List[Declarations]](externalDeclaration)
+      list.flatMap(externalDeclaration)
   }
 
   private val functionDefinition: Parse[List[Declarations]] = {
@@ -270,7 +270,7 @@ class parseCAst private
     case BinaryNode("q", specifiers, expr) =>
       val (s, d) = declarationSpecifiersSpecific(specifiers)
       val lens = if frames.isEmpty then None else Some(Frame.localsLens)
-      initDeclarators(expr).flatMap[Declarations, List[Declarations]] {
+      initDeclarators(expr).flatMap {
         case i: Scoped =>
           declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
@@ -278,8 +278,7 @@ class parseCAst private
         case a @ Assignment(Scoped(Identifier(i),s), StringLiteral(str)) =>
           throw SemanticError(s""""$str" can not be assigned to `$i~s`""")
         case a @ Assignment(i: Scoped, _) =>
-          declareInScope(i, s, d, i, lens).toList
-            .:+[Declarations, List[Declarations]](a)
+          declareInScope(i, s, d, i, lens).toList :+ a
         case _ =>
           Nil
       }
@@ -296,7 +295,7 @@ class parseCAst private
 
   private val multiList: Parse[List[Statements]] = {
     case Sequence(";", statements) =>
-      statements.flatMap[Statements,List[Statements]](compoundStatements)
+      statements.flatMap(compoundStatements)
   }
 
   private val declassignment: Parse[Assignment] = {
@@ -370,7 +369,7 @@ class parseCAst private
 
   private val expressionList: Parse[Expressions] = {
     case Sequence(",", assigns) =>
-      assigns.map[Assignments,Expressions](assignments); 
+      assigns.map(assignments)
   }
 
   private val stringLiteral: Parse[StringLiteral] = {
@@ -388,13 +387,12 @@ class parseCAst private
 
   private val initDeclaratorList: Parse[List[InitDeclarator]] = {
     case Sequence(",", decls) =>
-      decls.map[InitDeclarator,List[InitDeclarator]](initDeclarator)
+      decls.map(initDeclarator)
   }
 
   private val declarationSpecifierList: Parse[List[DeclarationSpecifiers]] = {
     case Sequence("~", specifiers) =>
-      specifiers.map[DeclarationSpecifiers, 
-        List[DeclarationSpecifiers]](declarationSpecifier)
+      specifiers.map(declarationSpecifier)
   }
 
   private val storage: Parse[Storage] = {
@@ -420,7 +418,7 @@ class parseCAst private
 
   private val parameterList: Parse[List[Parameter]] = {
     case Sequence(",", params) =>
-      params.map[Parameter,List[Parameter]](parameter)
+      params.map(parameter)
   }
 
   private val typesAndIdentifier: Parse[Parameter] = {
@@ -445,29 +443,28 @@ class parseCAst private
     (bodyOp: Option[Source])
     : PartialFunction[FunctionDeclarator, List[Declarations]] = {
       case f @ FunctionDeclarator(i, args) =>
-        declareInScope(i, storage, types, f, None).toList
-          .:+[Declarations, List[Declarations]] {
-            val bodyParsed =
-              for (b <- bodyOp) yield {
-                framed {
-                  args match {
-                    case LParam(l) => declareParamsInScope(l)
-                    case _ =>
-                  }
-                  compoundStatements(b)
+        declareInScope(i, storage, types, f, None).toList :+ {
+          val bodyParsed =
+            for (b <- bodyOp) yield {
+              framed {
+                args match {
+                  case LParam(l) => declareParamsInScope(l)
+                  case _ =>
                 }
+                compoundStatements(b)
               }
-            if types != Cvoid then {
-              tailYieldsValue(bodyParsed.map(_._2))
             }
-            define {
-              bodyParsed.map {
-                Function(i,_,_)
-              } getOrElse { 
-                Function(i, Frame.Empty, Nil)
-              }
+          if types != Cvoid then {
+            tailYieldsValue(bodyParsed.map(_._2))
+          }
+          define {
+            bodyParsed.map {
+              Function(i,_,_)
+            } getOrElse {
+              Function(i, Frame.Empty, Nil)
             }
           }
+        }
     }
 
   private def scoped(id: Identifier, scope: Long): Scoped =
@@ -622,7 +619,7 @@ class parseCAst private
     : (StorageTypes, Types) = {
       val (storages, types) =
           declarationSpecifiers.partition(_.isInstanceOf[Storage])
-        
+
       val storage: StorageTypes = storages match {
         case Nil => Auto
         case (s: Storage) :: Nil => s.id

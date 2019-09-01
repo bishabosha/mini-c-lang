@@ -124,7 +124,7 @@ object tacToMips extends Stage {
   private def add(context: Context, key: Variable, value: Register): Context =
     context.copy(context.current + (key -> value))
 
-  def apply( context: DataMap, tac: List[Tac]): Goal = 
+  def apply( context: DataMap, tac: List[Tac]): Goal =
     goal(nextFrame(Frame.Empty), context, tac)
 
   private def goal
@@ -265,7 +265,7 @@ object tacToMips extends Stage {
   private def evalVariableSrc:
     (Context, Variable) => (Context, Register, List[Assembler]) =
       evalVariable(evalAddressSrc)(unexpectedInContext)
-  
+
   private def evalVariableDest:
     (Context, Variable) => (Context, Register, List[Assembler]) =
       evalVariable(evalAddressDest)(assignTemporary)
@@ -349,7 +349,7 @@ object tacToMips extends Stage {
     case (context, codeR) => (context, codeR ++ l)
   }
 
-  private def defineLocals(context: Context): Context = 
+  private def defineLocals(context: Context): Context =
     context.frame.locals.keys.foldLeft(context) { (c, s) =>
       val (register, advanced) = c.advanceSaved
       add(advanced, s, register)
@@ -379,7 +379,7 @@ object tacToMips extends Stage {
       dataMap.view.map {
         case (i, c) => List(Label(i), Word(c)): Goal
       }
-      .flatMap[Assembler,Iterable[Assembler]](identity)
+      .flatMap[Assembler](identity)
       .toList
     if data.isEmpty then
       Nil

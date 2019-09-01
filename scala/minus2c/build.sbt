@@ -1,4 +1,4 @@
-val dottyVersion = "0.17.0-RC1"
+val dottyVersion = "0.18.1-RC1"
 // val dottyVersion = dottyLatestNightlyBuild.get
 val graalvmVersion = "19.2.0"
 
@@ -7,6 +7,8 @@ lazy val root = project
   .settings(
     name := "minus2c",
     version := "0.1.0",
+
+    scalacOptions ++= Seq("-noindent"),
 
     scalaVersion := dottyVersion,
 
