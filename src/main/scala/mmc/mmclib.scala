@@ -6,7 +6,8 @@ import org.graalvm.polyglot._
 
 object mmclib {
   import AstTag._
-  import given Ast._
+  import given CAst._
+  import given AstInfo._
 
   private val polyglot = Context.newBuilder().allowAllAccess(true).build
   private val source   = Source.newBuilder("llvm", getClass.getResource("/mmclib")).build
@@ -47,18 +48,18 @@ object mmclib {
   object BinaryNode {
     def unapply(ast: CAst): Option[(String, CAst, CAst)] = ast.kind match {
       case AstKind(BINARY_NODE, tpe) if !sequenceTpes.contains(tpe) =>
-        Some((tpe, poly(ast.getMember("a1")), poly(ast.getMember("a2"))))
+        Some((tpe, ast.a1, ast.a2))
       case _ => None
     }
   }
 
   object BinaryNodeOpt {
-    def unapply(ast: CAst): (CAst, CAst) = (poly(ast.getMember("a1")), poly(ast.getMember("a2")))
+    def unapply(ast: CAst): (CAst, CAst) = (ast.a1, ast.a2)
   }
 
   object UnaryNode {
     def unapply(ast: CAst): Option[(String, CAst)] = ast.kind match {
-      case AstKind(UNARY_NODE, tpe) => Some((tpe, poly(ast.getMember("a1"))))
+      case AstKind(UNARY_NODE, tpe) => Some((tpe, ast.a1))
       case _ => None
     }
   }
@@ -72,28 +73,28 @@ object mmclib {
 
   object TokenInt {
     def unapply(ast: CAst): Option[(String, Int)] = ast.kind match {
-      case AstKind(TOKEN_INT, tpe) => Some((tpe, value(ast)))
+      case AstKind(TOKEN_INT, tpe) => Some((tpe, ast.value))
       case _ => None
     }
   }
 
   object TokenString {
     def unapply(ast: CAst): Option[(String, String)] = ast.kind match {
-      case AstKind(TOKEN_STRING, tpe) => Some((tpe, lexeme(ast)))
+      case AstKind(TOKEN_STRING, tpe) => Some((tpe, ast.lexeme))
       case _ => None
     }
   }
 
   object Sequence {
     def unapply(ast: CAst): Option[(String, List[CAst])] = ast.kind match {
-      case AstKind(BINARY_NODE, tpe) if sequenceTpes.contains(tpe) => Some((tpe, sequence(tpe, ast)))
+      case AstKind(BINARY_NODE, tpe) if sequenceTpes.contains(tpe) => Some((tpe, ast.sequence(tpe)))
       case _ => None
     }
   }
 
-  val sequenceTpes = Set("E", ";", ",", "~")
+  private val sequenceTpes = Set("E", ";", ",", "~")
 
-  private def sequence(tpe: String, ast: CAst): List[CAst] = {
+  private def (ast: CAst) sequence(tpe: String): List[CAst] = {
     var node = ast
     var list = List.empty[CAst]
     var reverse = false
@@ -180,34 +181,35 @@ object mmclib {
 
   private def printTree(node: CAst, level: Int): Unit = {
     print(s"${node.ast.tpe}\n")
-    printAst0(poly(node.getMember("a1")), level + 2)
+    printAst0(node.a1, level + 2)
   }
 
   private def printBinaryTree(node: CAst, level: Int): Unit = {
     print(s"${node.ast.tpe}\n")
-    printAst0(poly(node.getMember("a1")), level + 2)
-    printAst0(poly(node.getMember("a2")), level + 2)
+    printAst0(node.a1, level + 2)
+    printAst0(node.a2, level + 2)
   }
 
   private def printTokenString(token: CAst) = {
     val info = token.ast
     info.tpe match {
       case "string" =>
-        print("" + '"' + lexeme(token) + '"' + '\n')
+        print("" + '"' + token.lexeme + '"' + '\n')
       case _ =>
-        print(s"${lexeme(token)}\n")
+        print(s"${token.lexeme}\n")
     }
   }
 
-  private def printTokenInt(token: CAst) = print(s"${value(token)}\n")
+  private def printTokenInt(token: CAst) = print(s"${token.value}\n")
 
   private def printSingleton(ast: CAst) = print(s"${ast.ast.tpe}\n")
 
   private def printLevel(level: Int): Unit = print(" " * level)
 
-  private def poly(ast: CAst): CAst = ast_to_poly.execute(ast)
-  private def lexeme(ast: CAst): String = get_lexeme.execute(ast).asString
-  private def value(ast: CAst): Int = get_value.execute(ast).asInt
+  private def (ast: CAst) a1: CAst = ast_to_poly.execute(ast.getMember("a1"))
+  private def (ast: CAst) a2: CAst = ast_to_poly.execute(ast.getMember("a2"))
+  private def (ast: CAst) lexeme: String = get_lexeme.execute(ast).asString
+  private def (ast: CAst) value: Int = get_value.execute(ast).asInt
 
   private val get_tag = mmclib.getMember("get_tag")
   private val get_type = mmclib.getMember("get_type")

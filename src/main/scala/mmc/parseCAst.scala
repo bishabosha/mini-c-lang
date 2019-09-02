@@ -1,7 +1,7 @@
 package mmc
 
 import mmclib._
-import mmc.Ast._
+import Ast._
 import Types._
 import ArgList._
 import StorageTypes._
@@ -17,9 +17,9 @@ import scala.collection.mutable
 import scala.util.control.NonLocalReturns._
 
 object parseCAst extends Stage {
-  type Source   = CAst
-  type Context  = Bindings
-  type Goal     = List[Declarations]
+  type Source  = CAst
+  type Context = Bindings
+  type Goal    = List[Declarations]
 
   def apply
     ( source: Source,
@@ -49,25 +49,25 @@ class parseCAst private
     translationUnit ->> { context -> _ }
 
   private lazy val translationUnit: Parse[Goal] =
-    externalDeclarationList |
-    externalDeclaration
+    externalDeclarationList
+    | externalDeclaration
 
   private lazy val externalDeclaration: Parse[List[Declarations]] =
-    functionDefinition |
-    declarationsAndAssignments !! noAssign
+    functionDefinition
+    | declarationsAndAssignments !! noAssign
 
   private lazy val declarationsAndAssignments: Parse[List[Declarations]] =
-    variableDeclaration |
-    functionDefinition |
-    declarationSpecifier .E
+    variableDeclaration
+    | functionDefinition
+    | declarationSpecifier .E
 
   private lazy val declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
-    declarationSpecifierList |
-    declarationSpecifier .L
+    declarationSpecifierList
+    | declarationSpecifier .L
 
   private lazy val declarationSpecifier: Parse[DeclarationSpecifiers] =
-    `type` |
-    storage
+    `type`
+    | storage
 
   private lazy val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
     declarationSpecifiers ->> reduceDeclarationSpecifiers
@@ -76,49 +76,49 @@ class parseCAst private
     `return` .L
 
   private lazy val expressionsStatement: Parse[Expressions] =
-    empty |
-    expressions
+    empty
+    | expressions
 
   private lazy val expressions: Parse[Expressions] =
-    expressionList |
-    assignmentsAsExpressions
+    expressionList
+    | assignmentsAsExpressions
 
   private lazy val assignmentsAsExpressions: Parse[Expressions] =
     assignments .L
 
   private lazy val assignments: Parse[Assignments] =
-    assignment |
-    equalities
+    assignment
+    | equalities
 
   private lazy val equalities: Parse[Equalities] =
-    equality |
-    relationals
+    equality
+    | relationals
 
   private lazy val relationals: Parse[Relationals] =
-    relational |
-    additives
+    relational
+    | additives
 
   private lazy val additives: Parse[Additives] =
-    additive |
-    multiplicatives
+    additive
+    | multiplicatives
 
   private lazy val multiplicatives: Parse[Multiplicatives] =
-    multiplicative |
-    unaries
+    multiplicative
+    | unaries
 
   private lazy val unaries: Parse[Unaries] =
-    unary |
-    postfix
+    unary
+    | postfix
 
   private lazy val postfix: Parse[Postfix] =
-    application |
-    primary
+    application
+    | primary
 
   private lazy val primary: Parse[Primary] =
-    identifierSearchScope |
-    (constant |
-      (lazyExpressions |
-        stringLiteral))
+    identifierSearchScope
+    | (constant
+      | (lazyExpressions
+        | stringLiteral))
 
   private lazy val identifierSearchScope: Parse[Scoped] =
     identifier ->> searchInScope
@@ -130,37 +130,37 @@ class parseCAst private
     identifier ->> { decld { scoped(_, scope) } }
 
   private lazy val initDeclarators: Parse[List[InitDeclarator]] =
-    initDeclaratorList |
-    initDeclarator .L
+    initDeclaratorList
+    | initDeclarator .L
 
   private lazy val initDeclarator: Parse[InitDeclarator] =
-    declarator |
-    declassignment
+    declarator
+    | declassignment
 
   private lazy val declarator: Parse[InitDeclarator] =
-    identifierWithScope |
-    functionDeclarator
+    identifierWithScope
+    | functionDeclarator
 
   private lazy val types: Parse[Types] =
     `type` ->> { _.id }
 
   private lazy val parameters: Parse[List[Parameter]] =
-    parameterList |
-    parameter .L
+    parameterList
+    | parameter .L
 
   private lazy val parameter: Parse[Parameter] =
-    typesAndIdentifier |
-    (types |
-      identifierWithScopeOf(currentScope + 1) ->> { Cint -> })
+    typesAndIdentifier
+    | (types
+      | identifierWithScopeOf(currentScope + 1) ->> { Cint -> })
 
   private lazy val compoundStatements: Parse[List[Statements]] =
-    block .L |
-    multiList |
-    declarationsAndAssignments |
-    expressionsStatement |
-    jumpStatement |
-    selections .L |
-    { case value => throw UnimplementedError(s"statement: $value") }
+    block .L
+    | multiList
+    | declarationsAndAssignments
+    | expressionsStatement
+    | jumpStatement
+    | selections .L
+    | { case value => throw UnimplementedError(s"statement: $value") }
 
   private def makeIf
     (test: Source, ifThen: Source): IfElse = {

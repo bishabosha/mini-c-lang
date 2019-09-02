@@ -14,9 +14,9 @@ import TwoControlOperators._
 import OneControlOperators._
 
 object normalToTac extends Stage {
-  type Source   = astToNormal.Goal
-  type Context  = DataMap
-  type Goal     = List[Tac]
+  type Source  = astToNormal.Goal
+  type Context = DataMap
+  type Goal    = List[Tac]
 
   type DataMap = Map[Scoped, Global]
 

@@ -56,29 +56,29 @@ enum ArgList {
 }
 
 object Ast {
-  type Parameter = (Types, Scoped) | Types
-  type Selections = IfElse
-  type Statements = Block | Declarations | Assignments | Return | Selections
-  type Declarator = Scoped | FunctionDeclarator
-  type InitDeclarator = Declarator | Assignment
-  type DeclarationSpecifiers = Type | Storage
-  type Declarations = Declaration | Function | Assignment
-  type Expressions = List[Assignments]
-  type Constants = Scoped | Constant | StringLiteral
-  type Primary = Constants | LazyExpressions | Temporary
-  type Postfix = Primary | Application
-  type Unaries = Postfix | Unary
-  type Multiplicatives = Unaries | Multiplicative
-  type Additives = Multiplicatives | Additive
-  type Relationals = Additives | Relational
-  type Equalities = Relationals | Equality
-  type Assignments = Equalities | Assignment
-  type Node = Equality | Relational | Additive | Multiplicative | Unary
-  type Variable = Scoped | Temporary
-  type ExpressionRoot = Equality | Relational | Additive | Multiplicative |
-     Unary | Constant | StringLiteral | Variable
-  type BinaryOperators = EqualityOperators | RelationalOperators |
-    AdditiveOperators | MultiplicativeOperators
+  type Parameter              = (Types, Scoped) | Types
+  type Selections             = IfElse
+  type Statements             = Block | Declarations | Assignments | Return | Selections
+  type Declarator             = Scoped | FunctionDeclarator
+  type InitDeclarator         = Declarator | Assignment
+  type DeclarationSpecifiers  = Type | Storage
+  type Declarations           = Declaration | Function | Assignment
+  type Expressions            = List[Assignments]
+  type Constants              = Scoped | Constant | StringLiteral
+  type Primary                = Constants | LazyExpressions | Temporary
+  type Postfix                = Primary | Application
+  type Unaries                = Postfix | Unary
+  type Multiplicatives        = Unaries | Multiplicative
+  type Additives              = Multiplicatives | Additive
+  type Relationals            = Additives | Relational
+  type Equalities             = Relationals | Equality
+  type Assignments            = Equalities | Assignment
+  type Node                   = Equality | Relational | Additive | Multiplicative | Unary
+  type Variable               = Scoped | Temporary
+  type ExpressionRoot         = Equality | Relational | Additive | Multiplicative |
+                                  Unary | Constant | StringLiteral | Variable
+  type BinaryOperators        = EqualityOperators | RelationalOperators |
+                                  AdditiveOperators | MultiplicativeOperators
 
   def temporaryAssignment(value: Assignments): Assignment =
     Assignment(new Temporary, value)

@@ -5,13 +5,13 @@ import Ast._
 
 object Tac {
   type ThreeOperators = BinaryOperators
-  type TwoOperators = UnaryOperators | MiscTwoOperators
-  type OneOperators = MiscOneOperators
-  type LabelIds = ElseLabel | Join
-  type ASrc = Variable | Constant
-  type Code = OneTac | TwoTac | ThreeTac | OneControl | TwoControl | LabelIds
-  type Tac = Func
-  type Global = Constant
+  type TwoOperators   = UnaryOperators | MiscTwoOperators
+  type OneOperators   = MiscOneOperators
+  type LabelIds       = ElseLabel | Join
+  type ASrc           = Variable | Constant
+  type Code           = OneTac | TwoTac | ThreeTac | OneControl | TwoControl | LabelIds
+  type Tac            = Func
+  type Global         = Constant
 }
 
 enum OneControlOperators { case JUMP }

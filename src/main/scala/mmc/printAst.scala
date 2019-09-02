@@ -156,14 +156,14 @@ object printAst {
 
   private def storageToString(s: StorageTypes) = s match {
     case Auto => ""
-    case _ => s"$s "
+    case _    => s"$s "
   }
 
   private def typesToString(s: Types) = s match {
-    case Cint => "int"
-    case Cvoid => "void"
-    case Cfunction => "function"
-    case Cstring => "string"
+    case Cint       => "int"
+    case Cvoid      => "void"
+    case Cfunction  => "function"
+    case Cstring    => "string"
   }
 
   private def getLevel(l: Int): String = " " * l

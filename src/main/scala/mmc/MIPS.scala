@@ -4,13 +4,13 @@ import MIPS._
 import Tac._
 
 object MIPS {
-  type Labels = Label | ControlLabel
-  type Src = Register | Constant
-  type Register = Results | Arguments | Temporaries | SavedValues | Trap | Misc
-  type Addresses = OffsetAddress | Labels
-  type Dest = Addresses | Register
-  type Assembler = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero |
-       PseudoUnary | Labels | Comment
+  type Labels     = Label | ControlLabel
+  type Src        = Register | Constant
+  type Register   = Results | Arguments | Temporaries | SavedValues | Trap | Misc
+  type Addresses  = OffsetAddress | Labels
+  type Dest       = Addresses | Register
+  type Assembler  = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero |
+                      PseudoUnary | Labels | Comment
 }
 
 enum Results {

@@ -7,9 +7,9 @@ import EqualityOperators._
 import astToNormal._
 
 object astToNormal extends Stage {
-  type Source   = parseCAst.Goal
-  type Context  = parseCAst.Context
-  type Goal     = parseCAst.Goal
+  type Source  = parseCAst.Goal
+  type Context = parseCAst.Context
+  type Goal    = parseCAst.Goal
 
   private type FlattenO[T, O] = PartialFunction[T, O]
   private type FlattenL[T, O] = FlattenO[T, List[O]]

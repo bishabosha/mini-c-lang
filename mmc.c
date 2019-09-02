@@ -71,30 +71,20 @@ POLYGLOT_DECLARE_STRUCT(token_string);
 
 extern void *get_SymbTable_inst();
 extern void init_SymbTable(void);
+void *ast_to_poly(Ast *ast);
 
 extern int yydebug;
 extern int yyparse(Ast **);
 
 void set_debug(bool debug) { yydebug = debug ? 1 : 0; }
 
-void* *get_ast() {
+void **get_ast() {
   Ast *ast = NULL;
   yyparse(&ast);
-  switch (ast->tag) {
-  case UNARY_NODE:
-    return polyglot_from_unary_node((UnaryNode*)ast);
-  case BINARY_NODE:
-    return polyglot_from_binary_node((BinaryNode*)ast);
-  case TOKEN_STRING:
-    return polyglot_from_token_string((TokenString*)ast);
-  case TOKEN_INT:
-    return polyglot_from_token_int((TokenInt*)ast);
-  case SINGLETON:
-    return polyglot_from_ast(ast);
-  }
+  return ast_to_poly(ast);
 }
 
-void *ast_to_poly(Ast* ast) {
+void *ast_to_poly(Ast *ast) {
   switch (ast->tag) {
   case UNARY_NODE:
     return polyglot_from_unary_node((UnaryNode *)ast);
@@ -111,9 +101,9 @@ void *ast_to_poly(Ast* ast) {
 
 AstTag get_tag(Ast *ast) { return ast->tag; }
 
-void* get_type(Ast *ast) { return JAVA_STRING(named(ast)); }
+void *get_type(Ast *ast) { return JAVA_STRING(named(ast)); }
 
-void* get_lexeme(TokenString *ast) { return JAVA_STRING(ast->lexeme); }
+void *get_lexeme(TokenString *ast) { return JAVA_STRING(ast->lexeme); }
 
 int get_value(TokenInt *ast) { return ast->value; }
 

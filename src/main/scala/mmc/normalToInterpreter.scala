@@ -8,9 +8,9 @@ import StorageTypes._
 import Types._
 
 object normalToInterpreter extends Stage {
-  type Source   = astToNormal.Goal
-  type Context  = astToNormal.Context
-  type Goal     = astToNormal.Goal
+  type Source  = astToNormal.Goal
+  type Context = astToNormal.Context
+  type Goal    = astToNormal.Goal
 
   def apply(context: Context, nodes: Source): (Context, Goal) =
     context -> nodes.foldRight(Nil: Goal) { topLevelStatement(_) ++ _ }
