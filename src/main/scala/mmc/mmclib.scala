@@ -25,16 +25,24 @@ object mmclib {
 
     def getAst: Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
-    def (ast: CAst) nonEmpty: Boolean = (ast ne null) && !ast.isNull
+    object CAst {
+      given {
+        def (value: CAst) ast: AstInfo =
+          if value.hasMember("ast") then
+            value.getMember("ast")
+          else
+            value
 
-    def (ast: CAst) ast: AstInfo =
-      if ast.hasMember("ast") then
-        ast.getMember("ast")
-      else
-        ast
+        def (value: CAst) nonEmpty: Boolean = (value ne null) && !value.isNull
+      }
+    }
 
-    def (ast: AstInfo) tpe: String = get_type.execute(ast).asString
-    def (ast: AstInfo) tag: AstTag = AstTags(get_tag.execute(ast).asInt)
+    object AstInfo {
+      given {
+        def (ast: AstInfo) tpe: String = get_type.execute(ast).asString
+        def (ast: AstInfo) tag: AstTag = AstTags(get_tag.execute(ast).asInt)
+      }
+    }
 
     def (ast: CAst) a1: CAst = ast_to_poly.execute(ast.getMember("a1"))
     def (ast: CAst) a2: CAst = ast_to_poly.execute(ast.getMember("a2"))
@@ -45,20 +53,6 @@ object mmclib {
   }
 
   export opaques.{CAst, AstInfo, getAst, free}
-
-  object CAst {
-    given {
-      def (value: CAst) ast: AstInfo   = opaques.ast(value)
-      def (value: CAst) nonEmpty: Boolean = opaques.nonEmpty(value)
-    }
-  }
-
-  object AstInfo {
-    given {
-      def (ast: AstInfo) tpe: String = opaques.tpe(ast)
-      def (ast: AstInfo) tag: AstTag = opaques.tag(ast)
-    }
-  }
 
   enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING }
 
