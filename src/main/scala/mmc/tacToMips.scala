@@ -25,7 +25,6 @@ import MiscTwoOperators._
 import MiscOneOperators._
 import TwoControlOperators._
 import OneControlOperators._
-import printMips._
 
 object tacToMips extends Stage {
   type Source   = normalToTac.Goal
