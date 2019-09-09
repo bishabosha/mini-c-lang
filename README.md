@@ -14,4 +14,3 @@ A MIPS compiler for a C-like language using Scala and GraalVM Polyglot runtime w
 - Add while loops and functions to TAC and MIPS
 - Add stack memory and registers
 - Add heap memory
-- Refactor so that Scala compiler doesn't take 10 minutes for pattern matching logic.
