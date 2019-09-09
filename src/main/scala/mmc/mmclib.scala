@@ -4,7 +4,13 @@ import java.io._
 
 import org.graalvm.polyglot._
 
+/**Wrapper around llvm bitcode library of same name.
+ *
+ * Exports opaque type [[CAst]] which is simply a polyglot value with a type safe api, representing the AST built by
+ * the Yacc parser.
+ */
 object mmclib {
+  import opaques._
   import AstTag._
   import given CAst._
   import given AstInfo._
@@ -13,82 +19,115 @@ object mmclib {
   private val source   = Source.newBuilder("llvm", getClass.getResource("/mmclib")).build
   private val mmclib   = polyglot.eval(source)
 
-  opaque type CAst = org.graalvm.polyglot.Value
-  opaque type AstInfo = org.graalvm.polyglot.Value
+  private object opaques {
+    opaque type CAst = org.graalvm.polyglot.Value
+    opaque type AstInfo = org.graalvm.polyglot.Value
 
-  case class AstKind(tag: AstTag, tpe: String)
+    def getAst: Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
+
+    def (ast: CAst) nonEmpty: Boolean = (ast ne null) && !ast.isNull
+
+    def (ast: CAst) ast: AstInfo =
+      if ast.hasMember("ast") then
+        ast.getMember("ast")
+      else
+        ast
+
+    def (ast: AstInfo) tpe: String = get_type.execute(ast).asString
+    def (ast: AstInfo) tag: AstTag = AstTags(get_tag.execute(ast).asInt)
+
+    def (ast: CAst) a1: CAst = ast_to_poly.execute(ast.getMember("a1"))
+    def (ast: CAst) a2: CAst = ast_to_poly.execute(ast.getMember("a2"))
+    def (ast: CAst) lexeme: String = get_lexeme.execute(ast).asString
+    def (ast: CAst) value: Int = get_value.execute(ast).asInt
+
+    def free(ast: CAst): Unit = free_pointer.executeVoid(ast)
+  }
+
+  export opaques.{CAst, AstInfo, getAst, free}
 
   object CAst {
     given {
-      def (value: CAst) ast: AstInfo =
-        if value.hasMember("ast") then
-          value.getMember("ast")
-        else
-          value
-
-      def (value: CAst) kind: AstKind = {
-        val ast = value.ast
-        AstKind(ast.tag, ast.tpe)
-      }
+      def (value: CAst) ast: AstInfo   = opaques.ast(value)
+      def (value: CAst) nonEmpty: Boolean = opaques.nonEmpty(value)
     }
   }
 
   object AstInfo {
     given {
-      def (ast: AstInfo) tpe: String = get_type.execute(ast).asString
-      def (ast: AstInfo) tag: AstTag = {
-        val ordinal = get_tag.execute(ast).asInt
-        AstTag.values.find(_.ordinal == ordinal).get
-      }
+      def (ast: AstInfo) tpe: String = opaques.tpe(ast)
+      def (ast: AstInfo) tag: AstTag = opaques.tag(ast)
     }
   }
 
   enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING }
 
+  private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
+
   object BinaryNode {
-    def unapply(ast: CAst): Option[(String, CAst, CAst)] = ast.kind match {
-      case AstKind(BINARY_NODE, tpe) if !sequenceTpes.contains(tpe) =>
-        Some((tpe, ast.a1, ast.a2))
-      case _ => None
+    def unapply(node: CAst): Option[(String, CAst, CAst)] = {
+      val ast = node.ast
+      val tpe = ast.tpe
+      ast.tag match {
+        case BINARY_NODE if !sequenceTpes.contains(tpe) =>
+          Some((tpe, node.a1, node.a2))
+        case _ => None
+      }
     }
   }
 
   object BinaryNodeOpt {
-    def unapply(ast: CAst): (CAst, CAst) = (ast.a1, ast.a2)
+    def unapply(node: CAst): (CAst, CAst) = (node.a1, node.a2)
   }
 
   object UnaryNode {
-    def unapply(ast: CAst): Option[(String, CAst)] = ast.kind match {
-      case AstKind(UNARY_NODE, tpe) => Some((tpe, ast.a1))
-      case _ => None
+    def unapply(node: CAst): Option[(String, CAst)] = {
+      val ast = node.ast
+      ast.tag match {
+        case UNARY_NODE => Some((ast.tpe, node.a1))
+        case _          => None
+      }
     }
   }
 
   object Singleton {
-    def unapply(ast: CAst): Option[String] = ast.kind match {
-      case AstKind(SINGLETON, tpe) => Some(tpe)
-      case _ => None
+    def unapply(node: CAst): Option[String] = {
+      val ast = node.ast
+      ast.tag match {
+        case SINGLETON => Some(ast.tpe)
+        case _         => None
+      }
     }
   }
 
   object TokenInt {
-    def unapply(ast: CAst): Option[(String, Int)] = ast.kind match {
-      case AstKind(TOKEN_INT, tpe) => Some((tpe, ast.value))
-      case _ => None
+    def unapply(node: CAst): Option[(String, Int)] = {
+      val ast = node.ast
+      ast.tag match {
+        case TOKEN_INT => Some((ast.tpe, node.value))
+        case _         => None
+      }
     }
   }
 
   object TokenString {
-    def unapply(ast: CAst): Option[(String, String)] = ast.kind match {
-      case AstKind(TOKEN_STRING, tpe) => Some((tpe, ast.lexeme))
-      case _ => None
+    def unapply(node: CAst): Option[(String, String)] = {
+      val ast = node.ast
+      ast.tag match {
+        case TOKEN_STRING => Some((ast.tpe, node.lexeme))
+        case _            => None
+      }
     }
   }
 
   object Sequence {
-    def unapply(ast: CAst): Option[(String, List[CAst])] = ast.kind match {
-      case AstKind(BINARY_NODE, tpe) if sequenceTpes.contains(tpe) => Some((tpe, ast.sequence(tpe)))
-      case _ => None
+    def unapply(node: CAst): Option[(String, List[CAst])] = {
+      val ast = node.ast
+      val tpe = ast.tpe
+      ast.tag match {
+        case BINARY_NODE if sequenceTpes.contains(tpe) => Some((tpe, node.sequence(tpe)))
+        case _                                         => None
+      }
     }
   }
 
@@ -137,18 +176,11 @@ object mmclib {
     if reverse then list.reverse else list
   }
 
-  private def free(ast: CAst): Unit = {
-    free_pointer.executeVoid(ast)
-  }
-
   def initSymbTable(): Unit =
     init_SymbTable.executeVoid()
 
   def setDebug(value: Boolean): Unit =
     set_debug.executeVoid(Boolean.box(value))
-
-  def getAst: Option[CAst] =
-    Option(get_ast.execute()).filter(!_.isNull)
 
   def identPool: Map[String, Identifier] = {
     val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
@@ -162,7 +194,7 @@ object mmclib {
   def printAst(ast: CAst): Unit = printAst0(ast, 0)
 
   private def printAst0(ast: CAst, level: Int): Unit =
-    if (ast ne null) && !ast.isNull then {
+    if ast.nonEmpty then {
       printLevel(level)
       val astInfo = ast.ast
       astInfo.tag match {
@@ -175,7 +207,7 @@ object mmclib {
         case TOKEN_INT =>
           printTokenInt(ast)
         case SINGLETON =>
-          printSingleton(astInfo)
+          printSingleton(ast)
       }
     }
 
@@ -205,11 +237,6 @@ object mmclib {
   private def printSingleton(ast: CAst) = print(s"${ast.ast.tpe}\n")
 
   private def printLevel(level: Int): Unit = print(" " * level)
-
-  private def (ast: CAst) a1: CAst = ast_to_poly.execute(ast.getMember("a1"))
-  private def (ast: CAst) a2: CAst = ast_to_poly.execute(ast.getMember("a2"))
-  private def (ast: CAst) lexeme: String = get_lexeme.execute(ast).asString
-  private def (ast: CAst) value: Int = get_value.execute(ast).asInt
 
   private val get_tag = mmclib.getMember("get_tag")
   private val get_type = mmclib.getMember("get_type")

@@ -1,16 +1,6 @@
 package mmc
 
-import Ast._
-import StorageTypes._
-import Types._
-import RelationalOperators._
-import AdditiveOperators._
-import EqualityOperators._
-import MultiplicativeOperators._
-import UnaryOperators._
-import ArgList._
 import MIPS._
-import tacToMips._
 import Misc._
 import PseudoZero._
 import PseudoUnary._
@@ -61,79 +51,97 @@ object printMips {
             s"$indent.word $w$endl"
           case Syscall =>
             s"${indent}syscall$endl"
-          case jal: Jal =>
-            oneAddr(jal,indent)(_.dest)
-          case jr: Jr =>
-            oneAddr(jr,indent)(_.dest)
-          case j: J =>
-            oneAddr(j,indent)(_.dest)
-          case li: Li =>
-            twoAddr(li,indent)(_.dest,_.source)
-          case lw: Lw =>
-            twoAddr(lw,indent)(_.dest,_.source)
-          case neg: Neg =>
-            twoAddr(neg,indent)(_.dest,_.r)
-          case not: Not =>
-            twoAddr(not,indent)(_.dest,_.r)
-          case move: Move =>
-            twoAddr(move,indent)(_.dest,_.source)
-          case beqz: Beqz =>
-            twoAddr(beqz,indent)(_.source,_.breakTo)
-          case sw: Sw =>
-            twoAddr(sw,indent)(_.source,_.dest)
-          case add: Add =>
-            threeAddr(add,indent)(_.dest,_.l,_.r)
-          case sub: Sub =>
-            threeAddr(sub,indent)(_.dest,_.l,_.r)
-          case mul: Mul =>
-            threeAddr(mul,indent)(_.dest,_.l,_.r)
-          case div: Div =>
-            threeAddr(div,indent)(_.dest,_.l,_.r)
-          case rem: Rem =>
-            threeAddr(rem,indent)(_.dest,_.l,_.r)
-          case seq: Seq =>
-            threeAddr(seq,indent)(_.dest,_.l,_.r)
-          case sne: Sne =>
-            threeAddr(sne,indent)(_.dest,_.l,_.r)
-          case slt: Slt =>
-            threeAddr(slt,indent)(_.dest,_.l,_.r)
-          case sgt: Sgt =>
-            threeAddr(sgt,indent)(_.dest,_.l,_.r)
-          case sle: Sle =>
-            threeAddr(sle,indent)(_.dest,_.l,_.r)
-          case sge: Sge =>
-            threeAddr(sge,indent)(_.dest,_.l,_.r)
+          case oa: OneAddr =>
+            oneAddrNodes(oa, indent)
+          case ta: TwoAddr =>
+            twoAddrNodes(ta, indent)
+          case ta: ThreeAddr =>
+            threeAddrNodes(ta, indent)
           case _ => s"${indent}???$endl"
         }
       }
 
+    def oneAddrNodes
+      ( node: OneAddr, indent: String )
+      : String = node match {
+        case op: Jal =>
+          oneAddr(op,indent)(_.prefixStr,_.dest)
+        case op: Jr =>
+          oneAddr(op,indent)(_.prefixStr,_.dest)
+        case op: J =>
+          oneAddr(op,indent)(_.prefixStr,_.dest)
+      }
+
+    def twoAddrNodes
+      ( node: TwoAddr, indent: String )
+      : String = node match {
+        case op: Li =>
+          twoAddr(op,indent)(_.prefixStr,_.dest,_.source)
+        case op: Lw =>
+          twoAddr(op,indent)(_.prefixStr,_.dest,_.source)
+        case op: Neg =>
+          twoAddr(op,indent)(_.prefixStr,_.dest,_.r)
+        case op: Not =>
+          twoAddr(op,indent)(_.prefixStr,_.dest,_.r)
+        case op: Move =>
+          twoAddr(op,indent)(_.prefixStr,_.dest,_.source)
+        case op: Beqz =>
+          twoAddr(op,indent)(_.prefixStr,_.source,_.breakTo)
+        case op: Sw =>
+          twoAddr(op,indent)(_.prefixStr,_.source,_.dest)
+      }
+
+    def threeAddrNodes
+      ( node: ThreeAddr, indent: String )
+      : String = node match {
+        case op: Add =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Sub =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Mul =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Div =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Rem =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Seq =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Sne =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Slt =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Sle =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Sgt =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+        case op: Sge =>
+          threeAddr(op,indent)(_.prefixStr,_.dest,_.l,_.r)
+      }
+
     def oneAddr[O]
       ( a: O, indent: String)
-      ( r: O => Dest,
-      ): String = {
-        val name = a.getClass.getSimpleName.toLowerCase
-        s"${indent}$name ${rsrc(r(a))}$endl"
-      }
+      ( n: O => String,
+        r: O => Dest,
+      ): String =
+        s"${indent}${n(a)} ${rsrc(r(a))}$endl"
 
     def twoAddr[O]
       ( a: O, indent: String)
-      ( d: O => Register,
+      ( n: O => String,
+        d: O => Register,
         r: O => Dest | Constant
-      ): String = {
-        val name = a.getClass.getSimpleName.toLowerCase
-        s"${indent}$name ${registers(d(a))}, ${rsrc(r(a))}$endl"
-      }
+      ): String =
+        s"${indent}${n(a)} ${registers(d(a))}, ${rsrc(r(a))}$endl"
 
     def threeAddr[O]
       ( a: O,
         indent: String )
-      ( d: O => Register,
+      ( n: O => String,
+        d: O => Register,
         l: O => Register,
         r: O => Src
-      ): String = {
-        val name = a.getClass.getSimpleName.toLowerCase
-        s"${indent}$name ${registers(d(a))}, ${registers(l(a))}, ${rsrc(r(a))}$endl"
-      }
+      ): String =
+        s"${indent}${n(a)} ${registers(d(a))}, ${registers(l(a))}, ${rsrc(r(a))}$endl"
 
     def rsrc(v: Constant | Dest): String = v match {
       case Constant(c) => c.toString
@@ -147,13 +155,13 @@ object printMips {
 
     def registers(reg: Register): String = reg match {
       case t: Temporaries =>
-        printEnum(Temporaries.valueOf, t, "$t")
+        printRegister(t,'t')
       case s: SavedValues =>
-        printEnum(SavedValues.valueOf, s, "$s")
+        printRegister(s,'s')
       case r: Results =>
-        printEnum(Results.valueOf, r, "$v")
+        printRegister(r,'v')
       case a: Arguments =>
-        printEnum(Arguments.valueOf, a, "$a")
+        printRegister(a,'a')
       case Ra =>
         "$ra"
       case _ =>
@@ -166,9 +174,10 @@ object printMips {
     def getScopedLabel(s: Scoped): String =
       "L" + getScopedId(s)
 
-    def printEnum[E](e: String => Enum, t: E, code: String) = {
-      val num = e(t.toString).ordinal
-        s"$code$num"
+    def printRegister[E <: Register](t: E, code: Char) = {
+      "$" + code + t.ordinal
     }
+
+    def (p: Product) prefixStr = p.productPrefix.toLowerCase
   }
 }

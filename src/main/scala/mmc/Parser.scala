@@ -1,6 +1,5 @@
 package mmc
 
-import org.graalvm.polyglot._
 import exception._
 
 @main def Parser(args: String*) = {
