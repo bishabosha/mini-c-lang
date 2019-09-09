@@ -70,10 +70,6 @@ object mmclib {
     }
   }
 
-  object BinaryNodeOpt {
-    def unapply(node: CAst): (CAst, CAst) = (node.a1, node.a2)
-  }
-
   object UnaryNode {
     def unapply(node: CAst): Option[(String, CAst)] = {
       val ast = node.ast
@@ -132,9 +128,8 @@ object mmclib {
     var list = List.empty[CAst]
     var reverse = false
     var decided = false
-    val BinaryNodeOpt(left0, right0) = node
-    var left  = left0
-    var right = right0
+    var left  = node.a1
+    var right = node.a2
     var break = false
     while (!break) {
       val leftinfo = left.ast
@@ -143,21 +138,19 @@ object mmclib {
         if (!decided) {
           decided = true;
         }
-        list = right :: list
-        node = left
-        val BinaryNodeOpt(left0, right0) = node
-        left  = left0
-        right = right0
+        list  = right :: list
+        node  = left
+        left  = node.a1
+        right = node.a2
       } else if (rightinfo.tag == BINARY_NODE && rightinfo.tpe == tpe) {
         if (!decided) {
           decided = true
           reverse = true
         }
-        list = left :: list
-        node = right
-        val BinaryNodeOpt(left0, right0) = node
-        left = left0
-        right = right0
+        list  = left :: list
+        node  = right
+        left  = node.a1
+        right = node.a2
       } else {
         if (reverse) {
           list = right :: left :: list
