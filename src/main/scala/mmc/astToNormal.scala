@@ -1,6 +1,7 @@
 package mmc
 
 import Ast._
+import Constants._
 import exception._
 import PartialFunctionConversions._
 import EqualityOperators._
@@ -36,11 +37,11 @@ object astToNormal extends Stage {
 
   private lazy val assignmentsImpl: FlattenO[Statements, Stack] =
     assignmentsWithEffects |
-    constant .E
+    literals .E
 
   private lazy val tryReduce: FlattenO[Assignments, Stack] =
     assignmentsWithEffects |
-    (constant ->> temporaryAssignment) .L
+    (literals ->> temporaryAssignment) .L
 
   private lazy val jumpStatements: Flatten[Statements] =
     jumpStatementsImpl .R
@@ -53,7 +54,7 @@ object astToNormal extends Stage {
     ex
 
   private lazy val ex: FlattenO[Assignments, Primary] =
-    constant |
+    literals |
     assignment ->> { _.lvalue }
 
   private lazy val statementList: FlattenO[List[Statements], List[Statements]] =
@@ -238,8 +239,8 @@ object astToNormal extends Stage {
     ( f: (Op, A) => O,
       o: Op
     ): PartialFunction[Expressions, O] = {
-      case Constant(a) :: _ =>
-        Constant(o.op(a))
+      case Constant(a: IntLiteral) :: _ =>
+        Constant(IntLiteral(o.op(a.value)))
       case a :: _ =>
         f(o, a.asInstanceOf[A])
     }
@@ -248,8 +249,8 @@ object astToNormal extends Stage {
     ( f: (Op, A, B) => Assignments,
       o: Op
     ): PartialFunction[Expressions, Assignments] = {
-      case Constant(a) :: Constant(b) :: _ =>
-        Constant(o.op(a, b))
+      case Constant(a: IntLiteral) :: Constant(b: IntLiteral) :: _ =>
+        Constant(IntLiteral(o.op(a.value, b.value)))
       case a :: b :: _ =>
         f(o, a.asInstanceOf[A], b.asInstanceOf[B])
     }
@@ -271,7 +272,7 @@ object astToNormal extends Stage {
     acc match {
       case (args, repush, stack) =>
         argStack match {
-          case Assignment(_: Temporary, c: Constants) :: (rest: Stack) =>
+          case Assignment(_: Temporary, c: Literals) :: (rest: Stack) =>
             (args :+ c, repush, rest ++ stack)
           case s :: (rest: Stack) =>
             (args :+ arg(s), s :: repush, rest ++ stack)
@@ -284,8 +285,8 @@ object astToNormal extends Stage {
     case a: Assignment => a
   }
 
-  private val constant: FlattenO[Statements, Primary] = {
-    case c: Constants => c
+  private val literals: FlattenO[Statements, Primary] = {
+    case c: Literals => c
   }
 
   private val node: FlattenO[Statements, Assignments] = {

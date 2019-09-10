@@ -1,11 +1,12 @@
 package mmc
 
 import MIPS._
+import Constants._
 import Tac._
 
 object MIPS {
   type Labels     = Label | ControlLabel
-  type Src        = Register | Constant
+  type Src        = Register | IntLiteral
   type Register   = Results | Arguments | Temporaries | SavedValues | Trap | Misc
   type Addresses  = OffsetAddress | Labels
   type Dest       = Addresses | Register
@@ -50,7 +51,7 @@ enum OneAddr {
 enum TwoAddr {
   case Beqz(source: Register, breakTo: Labels)
   case Move(dest: Register, source: Register)
-  case Li(dest: Register, source: Constant)
+  case Li(dest: Register, source: IntLiteral)
   case Lw(dest: Register, source: Addresses)
   case La(dest: Register, source: Addresses)
   case Sw(source: Register, dest: Addresses)
@@ -74,14 +75,14 @@ enum ThreeAddr {
 
 case class ControlLabel(id: LabelIds)
 case class Label(id: Scoped)
-case class OffsetAddress(address: Register, offset: Constant)
+case class OffsetAddress(address: Register, offset: IntLiteral)
 
 enum PseudoZero {
   case Text, Data
 }
 
 enum PseudoUnary {
-  case Word(size: Constant)
+  case Word(size: IntLiteral)
   case Globl(name: Scoped)
   case Asciiz(value: String)
 }

@@ -169,9 +169,9 @@ object mmclib {
   def setDebug(value: Boolean): Unit =
     set_debug.executeVoid(Boolean.box(value))
 
-  def identPool: Map[String, Identifier] = {
+  def identPool: Set[Identifier] = {
     val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
-    val symbols = symbTable.toMap
+    val symbols   = symbTable.toSet
     symbTable.clear()
     symbols
   }

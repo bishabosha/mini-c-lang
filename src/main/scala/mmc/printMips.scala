@@ -1,6 +1,8 @@
 package mmc
 
 import MIPS._
+import tacToMips._
+import Constants._
 import Misc._
 import PseudoZero._
 import PseudoUnary._
@@ -39,15 +41,15 @@ object printMips {
             s"$indent#$msg$endl"
           case Data =>
             s"$indent.data$endl"
-          case Globl(Scoped(Identifier(id),_)) =>
+          case Globl(Scoped(id,_)) =>
             s"$indent.globl $id$endl"
-          case Label(Scoped(Identifier(i),-1)) =>
+          case Label(Scoped(i,-1)) =>
             s"$i:$endl"
-          case Label(s @ Scoped(Identifier(i), id)) =>
+          case Label(s @ Scoped(i, id)) =>
             s"${getScopedLabel(s)}: #debug: $i~$id$endl"
           case ControlLabel(id) =>
             s"${evalLabels(id)}:$endl"
-          case Word(Constant(w)) =>
+          case Word(w) =>
             s"$indent.word $w$endl"
           case Syscall =>
             s"${indent}syscall$endl"
@@ -76,6 +78,8 @@ object printMips {
       ( node: TwoAddr, indent: String )
       : String = node match {
         case op: Li =>
+          twoAddr(op,indent)(_.prefixStr,_.dest,_.source)
+        case op: La =>
           twoAddr(op,indent)(_.prefixStr,_.dest,_.source)
         case op: Lw =>
           twoAddr(op,indent)(_.prefixStr,_.dest,_.source)
@@ -129,7 +133,7 @@ object printMips {
       ( a: O, indent: String)
       ( n: O => String,
         d: O => Register,
-        r: O => Dest | Constant
+        r: O => Dest | IntLiteral
       ): String =
         s"${indent}${n(a)} ${registers(d(a))}, ${rsrc(r(a))}$endl"
 
@@ -143,9 +147,9 @@ object printMips {
       ): String =
         s"${indent}${n(a)} ${registers(d(a))}, ${registers(l(a))}, ${rsrc(r(a))}$endl"
 
-    def rsrc(v: Constant | Dest): String = v match {
-      case Constant(c) => c.toString
-      case Label(Scoped(Identifier(i),-1)) => s"$i"
+    def rsrc(v: IntLiteral | Dest): String = v match {
+      case c: IntLiteral => c.toString
+      case Label(Scoped(i,-1)) => s"$i"
       case Label(s: Scoped) => getScopedLabel(s)
       case ControlLabel(id) => evalLabels(id)
       case r: Register => registers(r)

@@ -1,6 +1,7 @@
 package mmc
 
 import Ast._
+import Constants._
 import StorageTypes._
 import Types._
 import RelationalOperators._
@@ -35,16 +36,16 @@ object printAst {
       node match {
         case Declaration(storage, types, declarator) =>
           declarator match {
-            case Scoped(Identifier(id),_) =>
+            case Scoped(id,_) =>
               s"$lvl${storageToString(storage)}${typesToString(types)} $id;$endl"
-            case FunctionDeclarator(Scoped(Identifier(id),_), args) =>
+            case FunctionDeclarator(Scoped(id,_), args) =>
               s"$lvl${storageToString(storage)}${typesToString(types)} $id${getArgList(args)};$endl"
           }
-        case Assignment(Scoped(Identifier(id),_), value) =>
+        case Assignment(Scoped(id,_), value) =>
           s"$lvl$id = ${exp(value)};$endl"
         case Assignment(t: Temporary, value) =>
           s"$lvl${showTemporary(t)} = ${exp(value)};$endl"
-        case Function(i @ Scoped(Identifier(id),_), _, b) =>
+        case Function(i @ Scoped(id,_), _, b) =>
           fn(id, b, level)
         case Block(b) => block(b, level)
         case Return(Nil) => s"${lvl}return;$endl"
@@ -76,11 +77,11 @@ object printAst {
           getBinary(op, getIt(l), getIt(r))
         case Unary(op, v) =>
           getUnary(op, getIt(v))
+        case Constant(str: StringLiteral) =>
+          s""""$str""""
         case Constant(v) =>
           s"$v"
-        case StringLiteral(str) =>
-          s""""$str""""
-        case Scoped(Identifier(i),_) =>
+        case Scoped(i,_) =>
           s"$i"
         case t: Temporary =>
           showTemporary(t)
@@ -101,7 +102,7 @@ object printAst {
     case LParam(params) =>
       params.view.map {
         case t: Types => typesToString(t)
-        case (t: Types, Scoped(Identifier(i),_)) => s"${typesToString(t)} $i"
+        case (t: Types, Scoped(i,_)) => s"${typesToString(t)} $i"
       }.mkString("(", ", ", ")")
   }
 

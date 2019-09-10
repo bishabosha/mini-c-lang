@@ -243,4 +243,3 @@ int yyerror(Ast** ast, char *s)
     printf("\n%*s\n%*s\n", column, "^", column, s);
     return 0;
 }
-

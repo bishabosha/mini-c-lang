@@ -1,12 +1,13 @@
 package mmc
 
 import Ast._
+import Constants._
 import exception._
 import tacToMips._
+import MIPS._
 import normalToTac._
 import PseudoZero._
 import PseudoUnary._
-import MIPS._
 import Temporaries._
 import Misc._
 import Arguments._
@@ -31,9 +32,9 @@ object tacToMips extends Stage {
   type Context  = MipsContext
   type Goal     = List[Assembler]
 
-  private val exitWithArg = Constant(17)
-  private val printInt = Constant(1)
-  private val readInt = Constant(5)
+  private val exitWithArg = IntLiteral(17)
+  private val printInt = IntLiteral(1)
+  private val readInt = IntLiteral(5)
 
   private val pseudoMain: Goal = List(
     Label(Scoped(Std.mainIdentifier.id, -1L)),
@@ -235,7 +236,7 @@ object tacToMips extends Stage {
       post: List[Assembler]
     ): MipsAcc =
       src match {
-        case c: Constant => (context, post :+ Li(destReg, c))
+        case c: IntLiteral => (context, post :+ Li(destReg, c))
         case v: Variable =>
           getDest(context, v) match {
             case Some(r: Register) => (context, post :+ Move(destReg, r))
@@ -247,7 +248,7 @@ object tacToMips extends Stage {
   private def evalASrcL
     (context: Context, dest: ASrc): (Context, Register, List[Assembler]) =
       dest match {
-        case c: Constant =>
+        case c: IntLiteral =>
           val t = assignTemporary(context, new Temporary)
           t ++ Tuple1(List(Li(t._2,c)))
         case v: Variable =>
@@ -257,7 +258,7 @@ object tacToMips extends Stage {
   private def evalASrcR
     (context: Context, dest: ASrc): (Context, Src, List[Assembler]) =
       dest match {
-        case c: Constant => (context, c, Nil)
+        case c: IntLiteral => (context, c, Nil)
         case v: Variable => evalVariableSrc(context, v)
       }
 

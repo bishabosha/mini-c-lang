@@ -1,6 +1,7 @@
 package mmc
 
 import mmc._
+import Constants._
 import Ast._
 import EqualityOperators._
 import RelationalOperators._
@@ -64,8 +65,8 @@ object Ast {
   type DeclarationSpecifiers  = Type | Storage
   type Declarations           = Declaration | Function | Assignment
   type Expressions            = List[Assignments]
-  type Constants              = Scoped | Constant | StringLiteral
-  type Primary                = Constants | LazyExpressions | Temporary
+  type Literals               = Scoped | Constant
+  type Primary                = Literals | LazyExpressions | Temporary
   type Postfix                = Primary | Application
   type Unaries                = Postfix | Unary
   type Multiplicatives        = Unaries | Multiplicative
@@ -74,34 +75,29 @@ object Ast {
   type Equalities             = Relationals | Equality
   type Assignments            = Equalities | Assignment
   type Node                   = Equality | Relational | Additive | Multiplicative | Unary
-  type Variable               = Scoped | Temporary
   type ExpressionRoot         = Equality | Relational | Additive | Multiplicative |
-                                  Unary | Constant | StringLiteral | Variable
+                                  Unary | Constant | Variable
   type BinaryOperators        = EqualityOperators | RelationalOperators |
                                   AdditiveOperators | MultiplicativeOperators
 
   def temporaryAssignment(value: Assignments): Assignment =
     Assignment(new Temporary, value)
-}
 
-class Temporary
-case class Scoped(id: Identifier, scope: Long)
-case class Identifier(id: String)
-case class FunctionDeclarator(id: Scoped, args: ArgList)
-case class Constant(value: Int)
-case class StringLiteral(value: String)
-case class Type(id: Types)
-case class Storage(id: StorageTypes)
-case class Return(value: Expressions)
-case class Application(operand: Postfix, args: Expressions)
-case class LazyExpressions(value: Expressions)
-case class Unary(op: UnaryOperators, value: Unaries)
-case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries)
-case class Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives)
-case class Relational(op: RelationalOperators, left: Relationals, right: Additives)
-case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
-case class Assignment(lvalue: Variable, rvalue: Assignments)
-case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
-case class Function(id: Scoped, frame: Frame, body: List[Statements])
-case class Block(inner: List[Statements])
-case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: Option[List[Statements]])
+  case class FunctionDeclarator(id: Scoped, args: ArgList)
+  case class Constant(value: StringLiteral | IntLiteral)
+  case class Type(id: Types)
+  case class Storage(id: StorageTypes)
+  case class Return(value: Expressions)
+  case class Application(operand: Postfix, args: Expressions)
+  case class LazyExpressions(value: Expressions)
+  case class Unary(op: UnaryOperators, value: Unaries)
+  case class Multiplicative(op: MultiplicativeOperators, left: Multiplicatives, right: Unaries)
+  case class Additive(op: AdditiveOperators, left: Additives, right: Multiplicatives)
+  case class Relational(op: RelationalOperators, left: Relationals, right: Additives)
+  case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
+  case class Assignment(lvalue: Variable, rvalue: Assignments)
+  case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
+  case class Function(id: Scoped, frame: Frame, body: List[Statements])
+  case class Block(inner: List[Statements])
+  case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: Option[List[Statements]])
+}
