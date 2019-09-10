@@ -32,7 +32,7 @@ void init_SymbTable(void) {
 }
 
 Ast *get_identifier(const char *s) {
-  if (polyglot_is_null(SymbTable_get(polyglot_from_string(s, "UTF-8")))) {
+  if (!polyglot_as_boolean(SymbTable_get(polyglot_from_string(s, "UTF-8")))) {
     SymbTable_put(polyglot_from_string(s, "UTF-8"));
     return get(s);
   } else {

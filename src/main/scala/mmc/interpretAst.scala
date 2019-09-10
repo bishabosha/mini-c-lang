@@ -1,6 +1,7 @@
 package mmc
 
 import Ast._
+import Constants._
 import StorageTypes._
 import Types._
 import RelationalOperators._
@@ -23,7 +24,7 @@ object interpretAst {
   }
 
   case class IdentKey(key: Variable) extends Bindings.Key {
-    type Value = Constant
+    type Value = IntLiteral
   }
 }
 
@@ -93,15 +94,15 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def addRandom(k: Variable): Unit = {
-     addConstant(k, Constant(random.nextInt))
+     addConstant(k, IntLiteral(random.nextInt))
   }
 
-  private def addConstant(k: Variable, c: Constant): Unit = {
+  private def addConstant(k: Variable, c: IntLiteral): Unit = {
      cursor = cursor.withBindings(cursor.current + (IdentKey(k), c))
   }
 
-  private def evalAsConstant(o: Option[Int]): Constant = {
-    o.map(Constant).getOrElse {
+  private def evalAsConstant(o: Option[Int]): IntLiteral = {
+    o.map(IntLiteral).getOrElse {
       throw UnimplementedError("expression does not yield constant")
     }
   }
@@ -120,9 +121,9 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
         binary(op, l, r)
       case Unary(op, v) =>
         unary(op, v)
-      case Constant(v) =>
-        Some(v)
-      case StringLiteral(str) =>
+      case Constant(v: IntLiteral) =>
+        Some(v.value)
+      case Constant(_) =>
         None
       case i: Scoped =>
         cursor.current.genSearch(IdentKey(i)).map(_.value).orElse {

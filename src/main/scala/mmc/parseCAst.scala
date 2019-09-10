@@ -2,6 +2,7 @@ package mmc
 
 import mmclib._
 import Ast._
+import Constants._
 import Types._
 import ArgList._
 import StorageTypes._
@@ -23,13 +24,13 @@ object parseCAst extends Stage {
 
   def apply
     ( source: Source,
-      identPool: Map[String, Identifier]
+      identPool: Set[Identifier]
     ): (Context, Goal) =
       new parseCAst(identPool, new mutable.AnyRefMap()).goal(source)
 }
 
 class parseCAst private
-  ( private val identPool: Map[String, Identifier],
+  ( private val identPool: Set[Identifier],
     private val scopedPool: mutable.AnyRefMap[(Identifier, Long),Scoped]
   ) {
 
@@ -116,9 +117,9 @@ class parseCAst private
 
   private lazy val primary: Parse[Primary] =
     identifierSearchScope
-    | (constant
+    | (intLiteral ->> (Constant(_))
       | (lazyExpressions
-        | stringLiteral))
+        | stringLiteral ->> (Constant(_))))
 
   private lazy val identifierSearchScope: Parse[Scoped] =
     identifier ->> searchInScope
@@ -275,7 +276,7 @@ class parseCAst private
           declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
           declareInScope(id, s, d, f, lens).toList
-        case a @ Assignment(Scoped(Identifier(i),s), StringLiteral(str)) =>
+        case a @ Assignment(Scoped(i,s), Constant(str: StringLiteral)) =>
           throw SemanticError(s""""$str" can not be assigned to `$i~s`""")
         case a @ Assignment(i: Scoped, _) =>
           declareInScope(i, s, d, i, lens).toList :+ a
@@ -356,11 +357,13 @@ class parseCAst private
   }
 
   private val identifier: Parse[Identifier] = {
-    case TokenString("id", id) => identPool(id)
+    case TokenString("id", id) =>
+      assert(identPool(id), s"unknown identifier $id")
+      id
   }
 
-  private val constant: Parse[Constant] = {
-    case TokenInt("constant", id) => Constant(id)
+  private val intLiteral: Parse[IntLiteral] = {
+    case TokenInt("constant", id) => IntLiteral(id)
   }
 
   private val lazyExpressions: Parse[LazyExpressions] = {
@@ -532,9 +535,9 @@ class parseCAst private
           case _: Scoped => declarator match {
             case _: FunctionDeclarator =>
               throw new SemanticError(
-                s"Redefinition of '${scoped.id.id}' as a function type.")
+                s"Redefinition of '${scoped.id}' as a function type.")
             case _ =>
-              throw new SemanticError(s"Redefinition of '${scoped.id.id}'.")
+              throw new SemanticError(s"Redefinition of '${scoped.id}'.")
           }
           case _: FunctionDeclarator => declarator match {
             case f: FunctionDeclarator =>
@@ -542,12 +545,12 @@ class parseCAst private
                 throwReturn(Option.empty)
               } else {
                 throw new SemanticError(
-                  s"Redefinition of function '${scoped.id.id}' with "+
+                  s"Redefinition of function '${scoped.id}' with "+
                    "incompatible types.")
               }
             case _ =>
               throw new SemanticError(
-                s"Redefinition of function '${scoped.id.id}' to variable.")
+                s"Redefinition of function '${scoped.id}' to variable.")
           }
         }
       }
@@ -568,7 +571,7 @@ class parseCAst private
 
   private def noAssign[A](a: A): Unit =
     a match {
-      case List(_: Declaration, Assignment(Scoped(Identifier(i),_), _: Application)) =>
+      case List(_: Declaration, Assignment(Scoped(i,_), _: Application)) =>
         throw SemanticError(
           s"Assignment of global variable $i to a function application")
       case _ =>
@@ -602,7 +605,7 @@ class parseCAst private
         if (inDecl) {
           scoped(identifier, currentScope)
         } else {
-          throw SemanticError(s"Identifier '${identifier.id}~$currentScope' is undefined")
+          throw SemanticError(s"Identifier '$identifier~$currentScope' is undefined")
         }
   }
 

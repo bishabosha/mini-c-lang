@@ -1,6 +1,7 @@
 package mmc
 
 import Ast._
+import Constants._
 import ArgList._
 import astToNormal._
 import normalToTac._
@@ -35,7 +36,7 @@ object normalToTac extends Stage {
     node match {
       case Declaration(_, _, i: Scoped) =>
         Some((i, zero))
-      case Assignment(i: Scoped, c: Constant) =>
+      case Assignment(i: Scoped, c: IntLiteral) =>
         Some((i, c))
       case _ => None
     }

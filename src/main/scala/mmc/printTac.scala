@@ -1,6 +1,7 @@
 package mmc
 
 import Ast._
+import Constants._
 import StorageTypes._
 import Types._
 import RelationalOperators._
@@ -40,7 +41,7 @@ object printTac {
     ( data: DataMap,
       indent: String
     ): String = data.view.map {
-        case (Scoped(Identifier(i),s),Constant(c)) =>
+        case (Scoped(i,s),c) =>
           s"$i~$s:$endl${indent}.const %I32 $c$endl"
     }.mkString
 
@@ -67,7 +68,7 @@ object printTac {
       codes: List[Code],
       indent: String
     ): String = {
-      s"${scoped.id.id}~${scoped.scope}:$endl" +
+      s"${scoped.id}~${scoped.scope}:$endl" +
       s"$indent.begin_function$endl" +
       evalFrame(frame, indent) +
       evalCodes(codes, indent) +
@@ -79,19 +80,19 @@ object printTac {
       indent: String
     ): String = {
       val globals = frame.globals.view.map {
-        case (Identifier(a), Declaration(_,t,_)) =>
+        case (a, Declaration(_,t,_)) =>
           s"${indent}.global ${evalType(t)} $a~0$endl"
       }.mkString
       val locals = frame.locals.view.map {
-        case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
+        case (Scoped(a, scope), Declaration(_,t,_)) =>
           s"${indent}.local ${evalType(t)} $a~$scope$endl"
       }.mkString
       val params = frame.params.view.map {
-        case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
+        case (Scoped(a, scope), Declaration(_,t,_)) =>
           s"${indent}.param ${evalType(t)} $a~$scope$endl"
       }.mkString
       val captured = frame.captures.view.map {
-        case (Scoped(Identifier(a), scope), Declaration(_,t,_)) =>
+        case (Scoped(a, scope), Declaration(_,t,_)) =>
           s"${indent}.captured ${evalType(t)} $a~$scope$endl"
       }.mkString
       globals + locals + params + captured
@@ -186,8 +187,8 @@ object printTac {
     }
 
   private def const(v: ASrc): String = v match {
-    case Constant(c) => c.toString
-    case Scoped(Identifier(i),s) => s"$i~$s"
+    case c: IntLiteral => c.toString
+    case Scoped(i,s) => s"$i~$s"
     case t: Temporary => showTemporary(t)
   }
 

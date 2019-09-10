@@ -1,6 +1,7 @@
 package mmc
 
 import Ast._
+import Constants._
 import StorageTypes._
 import Types._
 import parseCAst._
@@ -26,7 +27,7 @@ case class DefinitionKey(id: Scoped) extends Bindings.Key {
   type Value = Unit
 }
 
-val zero = Constant(0)
+val zero = IntLiteral(0)
 
 def replaceHead[A](list: List[A])(f: A => A): List[A] =
   f(list.head) :: list.tail
@@ -71,7 +72,7 @@ def unexpected(lvalue: Variable): Nothing = {
 
 def showVariable(lvalue: Variable): String =
   lvalue match {
-    case Scoped(Identifier(id),s) => s"$id~$s"
+    case Scoped(id,s) => s"$id~$s"
     case t: Temporary => showTemporary(t)
   }
 

@@ -3,10 +3,10 @@ package mmc
 import scala.collection.mutable
 
 class SymbTable {
-  private val map: mutable.AnyRefMap[String, Identifier] = mutable.AnyRefMap()
-  def put(id: String): Unit = map.put(key = id, value = Identifier(id))
-  def get(id: String): Identifier = map.get(key = id).orNull
-  def toMap: Map[String, Identifier] = Map() ++ map
-  def clear(): Unit = map.clear
-  override def toString: String = map.toString
+  private val set = mutable.HashSet.empty[Identifier]
+  def put(id: Identifier): Unit = set += id
+  def get(id: Identifier): Boolean = set(id)
+  def toSet: Set[Identifier] = set.toSet
+  def clear(): Unit = set.clear
+  override def toString: String = set.toString
 }
