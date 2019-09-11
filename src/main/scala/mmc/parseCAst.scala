@@ -14,6 +14,7 @@ import UnaryOperators._
 import exception._
 import PartialFunctionConversions._
 import parseCAst._
+
 import scala.collection.mutable
 import scala.util.control.NonLocalReturns._
 
@@ -43,7 +44,7 @@ class parseCAst private
   private var currentScope = scopeCount
   private var context: Context =
     Bindings.Empty
-      .copy(extractDeclarations(Std.declarations)) + (ScopeKey, scopeCount)
+      .copy(extractDeclarations(Std.declarations: _*)) + (ScopeKey, scopeCount)
   private var frames: List[Frame] = Nil
 
   private lazy val goal: Parse[(Context, Goal)] =
@@ -416,7 +417,7 @@ class parseCAst private
       FunctionDeclarator(identifierWithScope(name), LVoid)
     case BinaryNode("F", name, args) =>
       FunctionDeclarator(
-        identifierWithScope(name), LParam(parameters(args).toVector))
+        identifierWithScope(name), LParam(parameters(args)))
   }
 
   private val parameterList: Parse[List[Parameter]] = {
@@ -451,7 +452,7 @@ class parseCAst private
             for (b <- bodyOp) yield {
               framed {
                 args match {
-                  case LParam(l) => declareParamsInScope(l)
+                  case LParam(ls) => declareParamsInScope(ls:_*)
                   case _ =>
                 }
                 compoundStatements(b)
@@ -509,7 +510,7 @@ class parseCAst private
     result
   }
 
-  private def declareParamsInScope(args: Vector[Parameter]): Unit = {
+  private def declareParamsInScope(args: Parameter*): Unit = {
     for (p <- args) {
       p match {
         case (t: Types, s: Scoped) =>

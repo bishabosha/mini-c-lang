@@ -2,22 +2,14 @@ package mmc
 
 import Ast._
 import Constants._
-import StorageTypes._
-import Types._
-import RelationalOperators._
-import AdditiveOperators._
-import EqualityOperators._
-import MultiplicativeOperators._
-import UnaryOperators._
-import ArgList._
-import astToNormal._
 import exception._
 import interpretAst._
+
 import scala.util.Random
 
 object interpretAst {
 
-  def apply(context: Context, nodes: Goal): Unit = {
+  def apply(context: astToNormal.Context, nodes: astToNormal.Goal): Unit = {
     val cursor = Cursor(context)
     val exitCode = new interpretAst(cursor, nodes).evalProgram
     println(s"exit code: $exitCode")
@@ -28,7 +20,7 @@ object interpretAst {
   }
 }
 
-class interpretAst private (var cursor: Cursor, nodes: Goal) {
+class interpretAst private (var cursor: Cursor, nodes: astToNormal.Goal) {
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
 
@@ -94,11 +86,11 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   private def addRandom(k: Variable): Unit = {
-     addConstant(k, IntLiteral(random.nextInt))
+    addConstant(k, IntLiteral(random.nextInt))
   }
 
   private def addConstant(k: Variable, c: IntLiteral): Unit = {
-     cursor = cursor.withBindings(cursor.current + (IdentKey(k), c))
+    cursor = cursor.withBindings(cursor.current + (IdentKey(k), c))
   }
 
   private def evalAsConstant(o: Option[Int]): IntLiteral = {
@@ -126,9 +118,7 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
       case Constant(_) =>
         None
       case i: Scoped =>
-        cursor.current.genSearch(IdentKey(i)).map(_.value).orElse {
-          unexpected(i)
-        }
+        cursor.current.genSearch(IdentKey(i)).map(_.value).orElse(unexpected(i))
       case t: Temporary =>
         cursor.current.genSearch(IdentKey(t)).map(_.value)
       case x =>
@@ -137,13 +127,15 @@ class interpretAst private (var cursor: Cursor, nodes: Goal) {
   }
 
   def unary(op: UnaryOp, v: Assignments): Option[Int] =
-    for {
+    for
       uv <- expr(v)
-    } yield op.op(uv)
+    yield
+      op.op(uv)
 
   def binary(op: BinaryOp, l: Assignments, r: Assignments): Option[Int] =
-    for {
+    for
       lv <- expr(l)
       rv <- expr(r)
-    } yield op.op(lv, rv)
+    yield
+      op.op(lv, rv)
 }

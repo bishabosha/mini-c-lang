@@ -4,11 +4,6 @@ import Ast._
 import Constants._
 import StorageTypes._
 import Types._
-import RelationalOperators._
-import AdditiveOperators._
-import EqualityOperators._
-import MultiplicativeOperators._
-import UnaryOperators._
 import ArgList._
 import exception._
 
@@ -22,9 +17,8 @@ object printAst {
   private def astNode
     ( nodes: List[Statements],
       level: Int
-    ): String = {
-      (for (node <- nodes.view) yield astNode(node, level)).mkString
-    }
+    ): String =
+      (for node <- nodes yield astNode(node, level)).mkString
 
   private def astNode
     ( node: Statements,
@@ -98,12 +92,11 @@ object printAst {
 
   private def getArgList(a: ArgList): String = a match {
     case LVoid => "(void)"
-    case LAny => "()"
-    case LParam(params) =>
-      params.view.map {
-        case t: Types => typesToString(t)
-        case (t: Types, Scoped(i,_)) => s"${typesToString(t)} $i"
-      }.mkString("(", ", ", ")")
+    case LAny  => "()"
+    case LParam(params) => params.map({
+      case t: Types => typesToString(t)
+      case (t: Types, Scoped(i,_)) => s"${typesToString(t)} $i"
+    }).mkString("(", ", ", ")")
   }
 
   private def fn

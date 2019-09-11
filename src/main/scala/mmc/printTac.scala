@@ -1,32 +1,23 @@
 package mmc
 
-import Ast._
-import Constants._
-import StorageTypes._
-import Types._
-import RelationalOperators._
-import AdditiveOperators._
-import EqualityOperators._
-import MultiplicativeOperators._
-import UnaryOperators._
-import ArgList._
-import exception._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
 import TwoControlOperators._
 import OneControlOperators._
-import normalToTac._
+import exception._
+import Constants._
+import Types._
 
 object printTac {
 
   private val endl = System.lineSeparator
 
-  def apply(context: DataMap, src: List[Tac]): Unit =
+  def apply(context: normalToTac.DataMap, src: List[Tac]): Unit =
     print(tac(context, src, "  "))
 
   private def tac
-    ( data: DataMap,
+    ( data: normalToTac.DataMap,
       src: List[Tac],
       indent: String
     ): String = {
@@ -38,20 +29,18 @@ object printTac {
     }
 
   private def evalData
-    ( data: DataMap,
+    ( data: normalToTac.DataMap,
       indent: String
-    ): String = data.view.map {
-        case (Scoped(i,s),c) =>
-          s"$i~$s:$endl${indent}.const %I32 $c$endl"
+    ): String = data.map {
+      case Scoped(i,s) -> c =>
+        s"$i~$s:$endl${indent}.const %I32 $c$endl"
     }.mkString
 
   private def evalNodes
     ( nodes: List[Tac],
       indent: String
     ): String =
-      (for (node <- nodes.view)
-          yield evalNode(node, indent)
-      ).mkString
+      (for node <- nodes yield evalNode(node, indent)).mkString
 
   private def evalNode
     ( node: Tac,
@@ -79,19 +68,19 @@ object printTac {
     ( frame: Frame,
       indent: String
     ): String = {
-      val globals = frame.globals.view.map {
+      val globals = frame.globals.map {
         case (a, Declaration(_,t,_)) =>
           s"${indent}.global ${evalType(t)} $a~0$endl"
       }.mkString
-      val locals = frame.locals.view.map {
+      val locals = frame.locals.map {
         case (Scoped(a, scope), Declaration(_,t,_)) =>
           s"${indent}.local ${evalType(t)} $a~$scope$endl"
       }.mkString
-      val params = frame.params.view.map {
+      val params = frame.params.map {
         case (Scoped(a, scope), Declaration(_,t,_)) =>
           s"${indent}.param ${evalType(t)} $a~$scope$endl"
       }.mkString
-      val captured = frame.captures.view.map {
+      val captured = frame.captures.map {
         case (Scoped(a, scope), Declaration(_,t,_)) =>
           s"${indent}.captured ${evalType(t)} $a~$scope$endl"
       }.mkString
@@ -102,9 +91,7 @@ object printTac {
     ( nodes: List[Code],
       indent: String
     ): String =
-      (for (code <- nodes.view)
-          yield evalCode(code, indent)
-      ).mkString
+      (for code <- nodes yield evalCode(code, indent)).mkString
 
   private def evalCode
     ( node: Code,
@@ -140,11 +127,9 @@ object printTac {
     (indent: String )
     (op: TwoOperators, dest: Variable, value: ASrc): String = {
       val name = op match {
-        case ASSIGN => "="
-        case NOT => "= !"
-        case POSITIVE => "= +"
-        case NEGATIVE => "= -"
-        case CALL => "= call"
+        case ASSIGN             => "="
+        case CALL               => "= call"
+        case op: UnaryOperators => op.symbol
       }
       s"${indent}${const(dest)} $name ${const(value)}$endl"
     }
@@ -171,30 +156,23 @@ object printTac {
     (indent: String)
     (op: ThreeOperators, dest: Variable, left: ASrc, right: ASrc): String = {
       val name = op match {
-        case EQUAL => "=="
-        case NOT_EQUAL => "!="
-        case LT => "<"
-        case GT => ">"
-        case GT_EQ => ">="
-        case LT_EQ => ">="
-        case PLUS => "+"
-        case MINUS => "-"
-        case MULTIPLY => "*"
-        case DIVIDE => "/"
-        case MODULUS => "%"
+        case op: EqualityOperators       => op.symbol
+        case op: RelationalOperators     => op.symbol
+        case op: MultiplicativeOperators => op.symbol
+        case op: AdditiveOperators       => op.symbol
       }
       s"${indent}${const(dest)} = ${const(left)} $name ${const(right)}$endl"
     }
 
   private def const(v: ASrc): String = v match {
     case c: IntLiteral => c.toString
-    case Scoped(i,s) => s"$i~$s"
-    case t: Temporary => showTemporary(t)
+    case Scoped(i,s)   => s"$i~$s"
+    case t: Temporary  => showTemporary(t)
   }
 
   def evalLabels(v: LabelIds): String = v match {
     case ElseLabel(c) => s"else$c"
-    case Join(ic) => s"join$ic"
+    case Join(ic)     => s"join$ic"
   }
 
   private def labels(v: LabelIds): String =

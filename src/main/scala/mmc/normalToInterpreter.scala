@@ -1,11 +1,6 @@
 package mmc
 
 import Ast._
-import ArgList._
-import astToNormal._
-import exception._
-import StorageTypes._
-import Types._
 
 object normalToInterpreter extends Stage {
   type Source  = astToNormal.Goal
@@ -26,16 +21,10 @@ object normalToInterpreter extends Stage {
     case _ => Nil
   }
 
-  private def evalStatement(node: Statements): List[Statements] = {
-    node match {
-      case d @ Declaration(_, _, _: Scoped) =>
-        List(d)
-      case a @ Assignment(_, _: ExpressionRoot) =>
-        List(a)
-      case r @ Return((_: ExpressionRoot) :: Nil) =>
-        List(r)
-      case _ =>
-        List()
-    }
+  private def evalStatement(node: Statements): List[Statements] = node match {
+    case d @ Declaration(_, _, _: Scoped)       => List(d)
+    case a @ Assignment(_, _: ExpressionRoot)   => List(a)
+    case r @ Return((_: ExpressionRoot) :: Nil) => List(r)
+    case _                                      => List()
   }
 }

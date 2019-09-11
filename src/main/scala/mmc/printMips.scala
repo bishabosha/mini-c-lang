@@ -1,8 +1,6 @@
 package mmc
 
 import MIPS._
-import tacToMips._
-import Constants._
 import Misc._
 import PseudoZero._
 import PseudoUnary._
@@ -12,6 +10,7 @@ import TwoAddr._
 import ThreeAddr._
 import printTac._
 import exception._
+import Constants._
 
 object printMips {
 
@@ -27,7 +26,7 @@ object printMips {
       ( nodes: List[Assembler],
         indent: String
       ): String = {
-        (for (node <- nodes.view) yield astNode(node, indent)).mkString
+        (for node <- nodes yield astNode(node, indent)).mkString
       }
 
     def astNode

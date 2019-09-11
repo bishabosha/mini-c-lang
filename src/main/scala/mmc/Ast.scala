@@ -1,66 +1,11 @@
 package mmc
 
-import mmc._
 import Constants._
-import Ast._
-import EqualityOperators._
-import RelationalOperators._
-import AdditiveOperators._
-import MultiplicativeOperators._
-
-enum Types {
-  case Cint, Cvoid, Cfunction, Cstring
-}
-
-import scala.language.implicitConversions
-
-trait Operand(val symbol: String)
-trait BinaryOp(val op: (Int, Int) => Int)
-trait UnaryOp(val op: Int => Int)
-
-enum EqualityOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
-  case EQUAL      extends EqualityOperators(_==_, "==")
-  case NOT_EQUAL  extends EqualityOperators(_!=_, "!=")
-}
-
-enum RelationalOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
-  case LT     extends RelationalOperators(_<_, "<")
-  case GT     extends RelationalOperators(_>_, ">")
-  case LT_EQ  extends RelationalOperators(_<=_, "<=")
-  case GT_EQ  extends RelationalOperators(_>=_, ">=")
-}
-
-enum AdditiveOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
-  case PLUS  extends AdditiveOperators(_+_, "+")
-  case MINUS extends AdditiveOperators(_-_, "-")
-}
-
-enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) {
-  case MULTIPLY extends MultiplicativeOperators(_*_, "*")
-  case DIVIDE   extends MultiplicativeOperators(_/_, "/")
-  case MODULUS  extends MultiplicativeOperators(_%_, "%")
-}
-
-enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with UnaryOp(op) {
-  case NOT      extends UnaryOperators(_ == 0, "!")
-  case POSITIVE  extends UnaryOperators(identity, "+")
-  case NEGATIVE extends UnaryOperators(_ * -1, "-")
-}
-
-enum StorageTypes {
-  case Auto, Extern
-}
-
-enum ArgList {
-  case LVoid, LAny
-  case LParam(list: Vector[Parameter])
-}
 
 object Ast {
-  type Parameter              = (Types, Scoped) | Types
+
   type Selections             = IfElse
   type Statements             = Block | Declarations | Assignments | Return | Selections
-  type Declarator             = Scoped | FunctionDeclarator
   type InitDeclarator         = Declarator | Assignment
   type DeclarationSpecifiers  = Type | Storage
   type Declarations           = Declaration | Function | Assignment
@@ -75,15 +20,10 @@ object Ast {
   type Equalities             = Relationals | Equality
   type Assignments            = Equalities | Assignment
   type Node                   = Equality | Relational | Additive | Multiplicative | Unary
+
   type ExpressionRoot         = Equality | Relational | Additive | Multiplicative |
                                   Unary | Constant | Variable
-  type BinaryOperators        = EqualityOperators | RelationalOperators |
-                                  AdditiveOperators | MultiplicativeOperators
 
-  def temporaryAssignment(value: Assignments): Assignment =
-    Assignment(new Temporary, value)
-
-  case class FunctionDeclarator(id: Scoped, args: ArgList)
   case class Constant(value: StringLiteral | IntLiteral)
   case class Type(id: Types)
   case class Storage(id: StorageTypes)
@@ -96,8 +36,11 @@ object Ast {
   case class Relational(op: RelationalOperators, left: Relationals, right: Additives)
   case class Equality(op: EqualityOperators, left: Equalities, right: Relationals)
   case class Assignment(lvalue: Variable, rvalue: Assignments)
-  case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
   case class Function(id: Scoped, frame: Frame, body: List[Statements])
   case class Block(inner: List[Statements])
   case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: Option[List[Statements]])
+
+  def temporaryAssignment(value: Assignments): Assignment =
+    Assignment(new Temporary, value)
+
 }

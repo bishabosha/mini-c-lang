@@ -1,19 +1,10 @@
 package mmc
 
-import Ast._
 import Constants._
-import StorageTypes._
-import Types._
-import parseCAst._
-import exception.SemanticError
-import exception.UnexpectedAstNode
+import exception._
 import ArgList._
-import MIPS._
-import Tac._
 
-import scala.language.implicitConversions
-
-implicit def bool2Int(b: Boolean): Int = if b then 1 else 0
+given as Conversion[Boolean, Int] = if _ then 1 else 0
 
 case object ScopeKey extends Bindings.Key {
   type Value = Long
@@ -47,14 +38,14 @@ def mainDefined[A](topLevel: Bindings)(f: Bindings => A): A =
   }
 
 def extractDeclarations
-  (declarations: List[Declaration]): Map[Bindings.Key, Any] =
+  (declarations: Declaration*): Map[Bindings.Key, Any] =
     (for (d @ Declaration(_, _, decl) <- declarations)
       yield (DeclarationKey(extractIdentifier(decl)), d)
     ).toMap
 
 private def extractIdentifier(d: Declarator): Identifier = d match {
-  case Scoped(id, _) => id
-  case _ @ FunctionDeclarator(Scoped(id, _), _) => id
+  case Scoped(id, _)                        => id
+  case FunctionDeclarator(Scoped(id, _), _) => id
 }
 
 def printScopesOrdered(bindings: Bindings): Unit = {
@@ -70,52 +61,15 @@ def unexpected(lvalue: Variable): Nothing = {
   throw SemanticError(s"unknown variable ${showVariable(lvalue)}")
 }
 
-def showVariable(lvalue: Variable): String =
-  lvalue match {
-    case Scoped(id,s) => s"$id~$s"
-    case t: Temporary => showTemporary(t)
-  }
+def showVariable(lvalue: Variable): String = lvalue match {
+  case Scoped(id,s) => s"$id~$s"
+  case t: Temporary => showTemporary(t)
+}
 
 def showTemporary(temporary: Temporary): String =
   ("@" + temporary.hashCode).take(6)
 
 def getCurrentScope(bindings: Bindings): Long =
   bindings.genGet(ScopeKey).getOrElse {
-    throw new IllegalStateException("Context has no scope!")
+    throw IllegalStateException("Context has no scope!")
   }
-
-object Std {
-  val mainIdentifier = Scoped(Identifier("main"),0)
-  val mainIdentifierKey = DeclarationKey(Std.mainIdentifier.id)
-  val mainDefinitionKey = DefinitionKey(Std.mainIdentifier)
-  val mainFunc =
-    Declaration(
-      Auto,
-      Cint,
-      FunctionDeclarator(mainIdentifier, LVoid)
-    )
-  val printIntIdentifier = Scoped(Identifier("print_int"),0)
-  val readIntIdentifier = Scoped(Identifier("read_int"),0)
-  val print_int =
-    Declaration(
-      Extern,
-      Cvoid,
-      FunctionDeclarator(
-        printIntIdentifier,
-        LParam(Vector(Cint -> Scoped(Identifier("value"),0)))
-      )
-    )
-  val read_int =
-    Declaration(
-      Extern,
-      Cint,
-      FunctionDeclarator(
-        readIntIdentifier,
-        LVoid
-      )
-    )
-  val declarations = List[Declaration](
-    print_int,
-    read_int
-  )
-}

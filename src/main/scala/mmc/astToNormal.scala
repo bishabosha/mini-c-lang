@@ -4,8 +4,6 @@ import Ast._
 import Constants._
 import exception._
 import PartialFunctionConversions._
-import EqualityOperators._
-import astToNormal._
 
 object astToNormal extends Stage {
   type Source  = parseCAst.Goal

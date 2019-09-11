@@ -5,6 +5,7 @@ import Constants._
 import Tac._
 
 object MIPS {
+
   type Labels     = Label | ControlLabel
   type Src        = Register | IntLiteral
   type Register   = Results | Arguments | Temporaries | SavedValues | Trap | Misc
@@ -12,6 +13,7 @@ object MIPS {
   type Dest       = Addresses | Register
   type Assembler  = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero |
                       PseudoUnary | Labels | Comment
+
 }
 
 enum Results {

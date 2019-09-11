@@ -1,7 +1,7 @@
 package mmc
 
 import Cursor._
-import exception.SemanticError
+import exception._
 
 object Cursor {
   def apply(bindings: Bindings): Cursor =

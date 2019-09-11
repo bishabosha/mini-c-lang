@@ -1,10 +1,9 @@
 package mmc
 
-import Tac._
 import Constants._
-import Ast._
 
 object Tac {
+
   type ThreeOperators = BinaryOperators
   type TwoOperators   = UnaryOperators | MiscTwoOperators
   type OneOperators   = MiscOneOperators
@@ -26,4 +25,5 @@ object Tac {
   case class Func(id: Scoped, frame: Frame, body: List[Code])
   case class ElseLabel(id: Long)
   case class Join(id: Long)
+
 }

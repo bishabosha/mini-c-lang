@@ -1,11 +1,8 @@
 package mmc
 
-import Ast._
 import Constants._
 import exception._
-import tacToMips._
 import MIPS._
-import normalToTac._
 import PseudoZero._
 import PseudoUnary._
 import Temporaries._
@@ -33,8 +30,8 @@ object tacToMips extends Stage {
   type Goal     = List[Assembler]
 
   private val exitWithArg = IntLiteral(17)
-  private val printInt = IntLiteral(1)
-  private val readInt = IntLiteral(5)
+  private val printInt    = IntLiteral(1)
+  private val readInt     = IntLiteral(5)
 
   private val pseudoMain: Goal = List(
     Label(Scoped(Std.mainIdentifier.id, -1L)),
@@ -124,12 +121,12 @@ object tacToMips extends Stage {
   private def add(context: Context, key: Variable, value: Register): Context =
     context.copy(context.current + (key -> value))
 
-  def apply( context: DataMap, tac: List[Tac]): Goal =
+  def apply( context: normalToTac.DataMap, tac: List[Tac]): Goal =
     goal(nextFrame(Frame.Empty), context, tac)
 
   private def goal
     ( context: Context,
-      data: DataMap,
+      data: normalToTac.DataMap,
       nodes: List[Tac]
     ): Goal = {
       val dataAssembler =
@@ -374,10 +371,10 @@ object tacToMips extends Stage {
   private def unexpectedInContext
     (context: Context, lvalue: Variable): Nothing = unexpected(lvalue)
 
-  private def getData(dataMap: DataMap): Goal = {
+  private def getData(dataMap: normalToTac.DataMap): Goal = {
     val data =
-      dataMap.view.map {
-        case (i, c) => List(Label(i), Word(c)): Goal
+      dataMap.map {
+        case i -> c => List(Label(i), Word(c)): Goal
       }
       .flatMap[Assembler](identity)
       .toList

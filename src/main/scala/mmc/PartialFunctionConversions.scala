@@ -1,6 +1,7 @@
 package mmc
 
 object PartialFunctionConversions {
+
   implicit final class OrOps[A, B](`this`: PartialFunction[A, B]) extends AnyVal {
     def | [A1 <: A, B1 >: B](that: PartialFunction[A1, B1]) = `this` orElse that
   }
@@ -28,4 +29,5 @@ object PartialFunctionConversions {
   implicit final class Effectual[A, B](`this`: PartialFunction[A, B]) extends AnyVal {
     def !!(effect: B => Unit): PartialFunction[A, B] = `this` ->> { x => effect(x) ; x }
   }
+
 }

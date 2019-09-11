@@ -2,12 +2,7 @@ package mmc
 
 import Ast._
 import Constants._
-import ArgList._
-import astToNormal._
-import normalToTac._
 import exception._
-import StorageTypes._
-import Types._
 import Tac._
 import MiscTwoOperators._
 import MiscOneOperators._
@@ -22,24 +17,21 @@ object normalToTac extends Stage {
   type DataMap = Map[Scoped, Global]
 
   def apply(nodes: List[Declarations]): (Context, Goal) = {
-      val data = nodes.foldLeft(Map(): DataMap) {
-        (acc, declaration) =>
-          getData(declaration).fold(acc)(acc + _)
-        }
-      val code = nodes.foldRight(Nil: List[Tac]) {
-        topLevelDeclaration(_) ++ _
+    val data = nodes.foldLeft(Map(): DataMap) {
+      (acc, declaration) =>
+        getData(declaration).fold(acc)(acc + _)
       }
-      (data, code)
+    val code = nodes.foldRight(Nil: List[Tac]) {
+      topLevelDeclaration(_) ++ _
     }
+    (data, code)
+  }
 
-  private def getData(node: Declarations): Option[(Scoped, Global)] =
-    node match {
-      case Declaration(_, _, i: Scoped) =>
-        Some((i, zero))
-      case Assignment(i: Scoped, c: IntLiteral) =>
-        Some((i, c))
-      case _ => None
-    }
+  private def getData(node: Declarations): Option[(Scoped, Global)] = node match {
+    case Declaration(_, _, i: Scoped)         => Some((i, zero))
+    case Assignment(i: Scoped, c: IntLiteral) => Some((i, c))
+    case _                                    => None
+  }
 
   private def topLevelDeclaration
     (node: Declarations): List[Tac] =
@@ -134,22 +126,13 @@ object normalToTac extends Stage {
       }.reverse
     }
 
-  private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = {
-    expr match {
-      case Multiplicative(op, l: ASrc, r: ASrc) =>
-        ThreeTac(op, dest, l, r) :: Nil
-      case Additive(op, l: ASrc, r: ASrc) =>
-        ThreeTac(op, dest, l, r) :: Nil
-      case Relational(op, l: ASrc, r: ASrc) =>
-        ThreeTac(op, dest, l, r) :: Nil
-      case Equality(op, l: ASrc, r: ASrc) =>
-        ThreeTac(op, dest, l, r) :: Nil
-      case Unary(op, v: ASrc) =>
-        TwoTac(op, dest, v) :: Nil
-      case b: ASrc =>
-        TwoTac(ASSIGN, dest, b) :: Nil
-      case _ =>
-        Nil
-    }
+  private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = expr match {
+    case Multiplicative(op, l: ASrc, r: ASrc) => ThreeTac(op, dest, l, r) :: Nil
+    case Additive(op, l: ASrc, r: ASrc)       => ThreeTac(op, dest, l, r) :: Nil
+    case Relational(op, l: ASrc, r: ASrc)     => ThreeTac(op, dest, l, r) :: Nil
+    case Equality(op, l: ASrc, r: ASrc)       => ThreeTac(op, dest, l, r) :: Nil
+    case Unary(op, v: ASrc)                   => TwoTac(op, dest, v)      :: Nil
+    case b: ASrc                              => TwoTac(ASSIGN, dest, b)  :: Nil
+    case _                                    => Nil
   }
 }
