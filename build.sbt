@@ -5,7 +5,7 @@ val graalvmVersion = "19.2.0"
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "minus2c",
+    name := "mmc",
     version := "0.1.0",
 
     scalacOptions ++= Seq("-noindent"),

@@ -11,8 +11,7 @@ object MIPS {
   type Register   = Results | Arguments | Temporaries | SavedValues | Trap | Misc
   type Addresses  = OffsetAddress | Labels
   type Dest       = Addresses | Register
-  type Assembler  = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | PseudoZero |
-                      PseudoUnary | Labels | Comment
+  type Assembler  = ZeroAddr | OneAddr | TwoAddr | ThreeAddr | Labels | Comment
 
 }
 
@@ -41,13 +40,16 @@ enum Misc {
 }
 
 enum ZeroAddr {
-  case Syscall
+  case Syscall, Text, Data
 }
 
 enum OneAddr {
   case Jal(dest: Labels)
   case Jr(dest: Register)
   case J(dest: Labels)
+  case Word(size: IntLiteral)
+  case Globl(name: Scoped)
+  case Asciiz(value: String)
 }
 
 enum TwoAddr {
@@ -78,15 +80,5 @@ enum ThreeAddr {
 case class ControlLabel(id: LabelIds)
 case class Label(id: Scoped)
 case class OffsetAddress(address: Register, offset: IntLiteral)
-
-enum PseudoZero {
-  case Text, Data
-}
-
-enum PseudoUnary {
-  case Word(size: IntLiteral)
-  case Globl(name: Scoped)
-  case Asciiz(value: String)
-}
 
 case class Comment(msg: String)
