@@ -2,8 +2,6 @@ package mmc
 
 import MIPS._
 import Misc._
-import PseudoZero._
-import PseudoUnary._
 import ZeroAddr._
 import OneAddr._
 import TwoAddr._
@@ -34,31 +32,26 @@ object printMips {
         indent: String
       ): String = {
         node match {
-          case Text =>
-            s"$indent.text$endl"
-          case Comment(msg) =>
-            s"$indent#$msg$endl"
-          case Data =>
-            s"$indent.data$endl"
-          case Globl(Scoped(id,_)) =>
-            s"$indent.globl $id$endl"
           case Label(Scoped(i,-1)) =>
             s"$i:$endl"
           case Label(s @ Scoped(i, id)) =>
             s"${getScopedLabel(s)}: #debug: $i~$id$endl"
           case ControlLabel(id) =>
             s"${evalLabels(id)}:$endl"
-          case Word(w) =>
-            s"$indent.word $w$endl"
-          case Syscall =>
-            s"${indent}syscall$endl"
           case oa: OneAddr =>
             oneAddrNodes(oa, indent)
           case ta: TwoAddr =>
             twoAddrNodes(ta, indent)
           case ta: ThreeAddr =>
             threeAddrNodes(ta, indent)
-          case _ => s"${indent}???$endl"
+          case Syscall =>
+            s"${indent}syscall$endl"
+          case Comment(msg) =>
+            s"$indent#$msg$endl"
+          case Text =>
+            s"$indent.text$endl"
+          case Data =>
+            s"$indent.data$endl"
         }
       }
 
@@ -71,6 +64,12 @@ object printMips {
           oneAddr(op,indent)(_.prefixStr,_.dest)
         case op: J =>
           oneAddr(op,indent)(_.prefixStr,_.dest)
+        case Globl(Scoped(id,_)) =>
+          s"$indent.globl $id$endl"
+        case Word(w) =>
+          s"$indent.word $w$endl"
+        case Asciiz(s) =>
+          s"""$indent.asciiz "$s"$endl"""
       }
 
     def twoAddrNodes
@@ -151,9 +150,8 @@ object printMips {
       case Label(Scoped(i,-1)) => s"$i"
       case Label(s: Scoped) => getScopedLabel(s)
       case ControlLabel(id) => evalLabels(id)
+      case OffsetAddress(r,i) => s"$i(${registers(r)})"
       case r: Register => registers(r)
-      case u =>
-        throw UnexpectedAstNode(u.toString)
     }
 
     def registers(reg: Register): String = reg match {
