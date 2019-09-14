@@ -13,5 +13,8 @@ int main(void) {
     } else {
         print_int(a % b);
     }
+    while (a < 200) {
+        a = read_int();
+    }
     return 0;
 }

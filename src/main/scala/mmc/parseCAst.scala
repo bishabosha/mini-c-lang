@@ -162,7 +162,7 @@ class parseCAst private
     | expressionsStatement
     | jumpStatement
     | selections .L
-    | { case value => throw UnimplementedError(s"statement: $value") }
+    | { case value => throw UnimplementedError(s"statement (${value.ast.tpe}):\n${value.printAst}") }
 
   private def makeIf
     (test: Source, ifThen: Source): IfElse = {
