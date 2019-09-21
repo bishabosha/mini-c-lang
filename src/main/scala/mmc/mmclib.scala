@@ -23,7 +23,7 @@ object mmclib { self =>
     opaque type CAst    = Value
     opaque type AstInfo = Value
 
-    def getAst: Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
+    def parse(): Option[CAst] = Option(get_ast()).filter(!_.isNull)
 
     object CAst {
       given (node: CAst) {
@@ -40,35 +40,24 @@ object mmclib { self =>
 
     object AstInfo {
       given (node: AstInfo) {
-        def tpe: String = get_type.execute(node).asString
-        def tag: AstTag = AstTags(get_tag.execute(node).asInt)
+        def tpe: String = get_tpe(node).asString
+        def tag: AstTag = AstTags(get_tag(node).asInt)
       }
     }
 
-    def (node: CAst) a1     : CAst   = ast_to_poly.execute(node.getMember("a1"))
-    def (node: CAst) a2     : CAst   = ast_to_poly.execute(node.getMember("a2"))
-    def (node: CAst) a3     : CAst   = ast_to_poly.execute(ast_to_ternary.execute(node).getMember("a3"))
-    def (node: CAst) lexeme : String = get_lexeme.execute(node).asString
-    def (node: CAst) value  : Int    = get_value.execute(node).asInt
+    def (node: CAst) a1     : CAst   = ast_to_poly(node.getMember("a1"))
+    def (node: CAst) a2     : CAst   = ast_to_poly(node.getMember("a2"))
+    def (node: CAst) lexeme : String = get_lexeme(node).asString
+    def (node: CAst) value  : Int    = get_value(node).asInt
 
     def free(node: CAst): Unit = free_pointer.executeVoid(node)
   }
 
-  export opaques.{CAst, AstInfo, getAst, free}
+  export opaques.{CAst, AstInfo, parse, free}
 
-  enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TERNARY_NODE, TOKEN_INT, TOKEN_STRING }
+  enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING }
 
   private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
-
-  object TernaryNode {
-    def unapply(node: CAst): Option[(String, CAst, CAst, CAst)] = {
-      val ast = node.ast
-      ast.tag match {
-        case TERNARY_NODE => Some((ast.tpe, node.a1, node.a2, node.a3))
-        case _            => None
-      }
-    }
-  }
 
   object BinaryNode {
     def unapply(node: CAst): Option[(String, CAst, CAst)] = {
@@ -181,7 +170,7 @@ object mmclib { self =>
     set_debug.executeVoid(Boolean.box(value))
 
   def identPool: Set[Identifier] = {
-    val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
+    val symbTable = get_SymbTable_inst().asHostObject[SymbTable]
     val symbols   = symbTable.toSet
     symbTable.clear()
     symbols
@@ -200,8 +189,6 @@ object mmclib { self =>
           printUnaryNode(node, level, builder)
         case BINARY_NODE =>
           printBinaryNode(node, level, builder)
-        case TERNARY_NODE =>
-          printTernaryNode(node, level, builder)
         case TOKEN_STRING =>
           printTokenString(node, builder)
         case TOKEN_INT =>
@@ -224,13 +211,6 @@ object mmclib { self =>
     printAst0(node.a2, level + 2, builder)
   }
 
-  private def printTernaryNode(node: CAst, level: Int, builder: StringBuilder): StringBuilder = {
-    builder.addAll(s"${node.ast.tpe}\n")
-    printAst0(node.a1, level + 2, builder)
-    printAst0(node.a2, level + 2, builder)
-    printAst0(node.a3, level + 2, builder)
-  }
-
   private def printTokenString(node: CAst, builder: StringBuilder): StringBuilder = {
     val info = node.ast
     info.tpe match {
@@ -247,9 +227,10 @@ object mmclib { self =>
 
   private def printLevel(level: Int, builder: StringBuilder): StringBuilder = builder.addAll(" " * level)
 
-  private val ast_to_ternary = mmclib.getMember("ast_to_ternary")
+  private inline def (f: Value) apply(args: AnyRef*): Value = f.execute(args: _*)
+
   private val get_tag = mmclib.getMember("get_tag")
-  private val get_type = mmclib.getMember("get_type")
+  private val get_tpe = mmclib.getMember("get_tpe")
   private val get_value = mmclib.getMember("get_value")
   private val get_lexeme = mmclib.getMember("get_lexeme")
   private val ast_to_poly = mmclib.getMember("ast_to_poly")

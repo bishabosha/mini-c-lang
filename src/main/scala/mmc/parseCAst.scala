@@ -168,7 +168,7 @@ class parseCAst private
   private lazy val selections: Parse[IfElse] = ifElse
 
   private val ifElse: Parse[Selections] = {
-    case TernaryNode("if", test, ifThen, orElse) =>
+    case BinaryNode("if", test, BinaryNode("else", ifThen, orElse)) =>
       makeIfElse(test, inlineBlock(ifThen), inlineBlock(orElse))
     case BinaryNode("if", test, ifThen) =>
       makeIfElse(test, inlineBlock(ifThen), None)

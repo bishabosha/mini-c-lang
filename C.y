@@ -206,7 +206,7 @@ expression_statement
 
 selection_statement
     : IF '(' expression ')' statement                { $$ = BinaryNode_new(IF, $3, $5); }
-    | IF '(' expression ')' statement ELSE statement { $$ = TernaryNode_new(IF, $3, $5, $7); }
+    | IF '(' expression ')' statement ELSE statement { $$ = BinaryNode_new(IF, $3, BinaryNode_new(ELSE, $5, $7)); }
     ;
 
 iteration_statement

@@ -106,14 +106,14 @@ void count() {
 Ast *Singleton_new(int type) {
     Ast *ans = (Ast *)malloc(sizeof(Ast));
     ans->tag = SINGLETON;
-    ans->type = type;
+    ans->tpe = type;
     return ans;
 }
 
 Ast *TokenString_new(int type, char * lexeme) {
     TokenString *ans = (TokenString *)malloc(sizeof(TokenString));
     ans->ast.tag = TOKEN_STRING;
-    ans->ast.type = type;
+    ans->ast.tpe = type;
     ans->lexeme = lexeme;
     return (Ast *)ans;
 }
@@ -121,7 +121,7 @@ Ast *TokenString_new(int type, char * lexeme) {
 Ast *TokenInt_new(int type, int value) {
     TokenInt *ans = (TokenInt*)malloc(sizeof(TokenInt));
     ans->ast.tag = TOKEN_INT;
-    ans->ast.type = type;
+    ans->ast.tpe = type;
     ans->value = value;
     return (Ast *)ans;
 }

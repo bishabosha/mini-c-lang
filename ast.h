@@ -1,11 +1,11 @@
 #ifndef _Ast_H_
 #define _Ast_H_
 
-typedef enum { SINGLETON, UNARY_NODE, BINARY_NODE, TERNARY_NODE, TOKEN_INT, TOKEN_STRING } AstTag;
+typedef enum { SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING } AstTag;
 
 typedef struct ast {
   AstTag tag;
-  int type;
+  int tpe;
 } Ast;
 
 typedef struct unary_node {
@@ -19,13 +19,6 @@ typedef struct binary_node {
   Ast *a2;
 } BinaryNode;
 
-typedef struct ternary_node {
-  Ast ast;
-  Ast *a1;
-  Ast *a2;
-  Ast *a3;
-} TernaryNode;
-
 typedef struct token_int {
   Ast ast;
   int value;
@@ -38,8 +31,7 @@ typedef struct token_string {
 
 extern Ast *TokenString_new(int, char*);
 extern Ast *Singleton_new(int);
-Ast *TernaryNode_new(int, Ast *, Ast *, Ast *);
-Ast *BinaryNode_new(int, Ast *, Ast *);
 Ast *UnaryNode_new(int, Ast *);
+Ast *BinaryNode_new(int, Ast *, Ast *);
 
 #endif
