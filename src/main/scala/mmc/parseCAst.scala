@@ -15,6 +15,7 @@ import exception._
 import PartialFunctionConversions._
 import parseCAst._
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.control.NonLocalReturns._
 
@@ -156,7 +157,7 @@ class parseCAst private
       | identifierWithScopeOf(currentScope + 1) ->> { Cint -> })
 
   private lazy val compoundStatements: Parse[List[Statements]]
-    = block .L
+    = block ->> (_.toList)
     | multiList
     | declarationsAndAssignments
     | expressionsStatement
@@ -173,9 +174,10 @@ class parseCAst private
       makeIfElse(test, inlineBlock(ifThen), None)
   }
 
-  def inlineBlock(node: Source) = node match {
+  @tailrec
+  private def inlineBlock(node: Source): Option[Source] = node match {
     case Singleton("B")        => None
-    case UnaryNode("B", stats) => Some(stats)
+    case UnaryNode("B", stats) => inlineBlock(stats)
     case other                 => Some(other)
   }
 
@@ -209,13 +211,11 @@ class parseCAst private
       }
   }
 
-  private val block: Parse[Block] = {
+  private val block: Parse[Option[Block]] = {
     case UnaryNode("B", body) =>
-      stacked {
-        Block(compoundStatements(body))
-      }
+      inlineBlock(body).map(stats => Block(stacked(compoundStatements(stats))))
     case Singleton("B") =>
-      Block(Nil)
+      None
   }
 
   private val multiList: Parse[List[Statements]] = {
