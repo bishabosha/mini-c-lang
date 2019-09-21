@@ -4,7 +4,7 @@ import Constants._
 import exception._
 import ArgList._
 
-given as Conversion[Boolean, Int] = if _ then 1 else 0
+given Conversion[Boolean, Int] = if _ then 1 else 0
 
 type =?>[I,O] = PartialFunction[I,O]
 
