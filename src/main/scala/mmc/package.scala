@@ -6,6 +6,8 @@ import ArgList._
 
 given as Conversion[Boolean, Int] = if _ then 1 else 0
 
+type =?>[I,O] = PartialFunction[I,O]
+
 case object ScopeKey extends Bindings.Key {
   type Value = Long
 }

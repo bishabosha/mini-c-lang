@@ -8,12 +8,12 @@ object normalToInterpreter extends Stage {
   type Goal    = astToNormal.Goal
 
   def apply(context: Context, nodes: Source): (Context, Goal) =
-    context -> nodes.foldRight(Nil: Goal) { topLevelStatement(_) ++ _ }
+    context -> nodes.foldRight(Nil: Goal) { topLevelStatement(_) ::: _ }
 
   private def topLevelStatement(node: Declarations): Goal = node match {
     case Function(Std.`mainIdentifier`, f, body) =>
       val validated = body.foldRight(Nil: List[Statements]) {
-        evalStatement(_) ++ _
+        evalStatement(_) ::: _
       }
       List(Function(Std.mainIdentifier, f, validated))
     case a: Assignment => List(a)

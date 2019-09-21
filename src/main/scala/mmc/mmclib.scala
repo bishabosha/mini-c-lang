@@ -47,6 +47,7 @@ object mmclib { self =>
 
     def (node: CAst) a1     : CAst   = ast_to_poly.execute(node.getMember("a1"))
     def (node: CAst) a2     : CAst   = ast_to_poly.execute(node.getMember("a2"))
+    def (node: CAst) a3     : CAst   = ast_to_poly.execute(ast_to_ternary.execute(node).getMember("a3"))
     def (node: CAst) lexeme : String = get_lexeme.execute(node).asString
     def (node: CAst) value  : Int    = get_value.execute(node).asInt
 
@@ -55,9 +56,19 @@ object mmclib { self =>
 
   export opaques.{CAst, AstInfo, getAst, free}
 
-  enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING }
+  enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TERNARY_NODE, TOKEN_INT, TOKEN_STRING }
 
   private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
+
+  object TernaryNode {
+    def unapply(node: CAst): Option[(String, CAst, CAst, CAst)] = {
+      val ast = node.ast
+      ast.tag match {
+        case TERNARY_NODE => Some((ast.tpe, node.a1, node.a2, node.a3))
+        case _            => None
+      }
+    }
+  }
 
   object BinaryNode {
     def unapply(node: CAst): Option[(String, CAst, CAst)] = {
@@ -189,6 +200,8 @@ object mmclib { self =>
           printUnaryNode(node, level, builder)
         case BINARY_NODE =>
           printBinaryNode(node, level, builder)
+        case TERNARY_NODE =>
+          printTernaryNode(node, level, builder)
         case TOKEN_STRING =>
           printTokenString(node, builder)
         case TOKEN_INT =>
@@ -211,6 +224,13 @@ object mmclib { self =>
     printAst0(node.a2, level + 2, builder)
   }
 
+  private def printTernaryNode(node: CAst, level: Int, builder: StringBuilder): StringBuilder = {
+    builder.addAll(s"${node.ast.tpe}\n")
+    printAst0(node.a1, level + 2, builder)
+    printAst0(node.a2, level + 2, builder)
+    printAst0(node.a3, level + 2, builder)
+  }
+
   private def printTokenString(node: CAst, builder: StringBuilder): StringBuilder = {
     val info = node.ast
     info.tpe match {
@@ -227,6 +247,7 @@ object mmclib { self =>
 
   private def printLevel(level: Int, builder: StringBuilder): StringBuilder = builder.addAll(" " * level)
 
+  private val ast_to_ternary = mmclib.getMember("ast_to_ternary")
   private val get_tag = mmclib.getMember("get_tag")
   private val get_type = mmclib.getMember("get_type")
   private val get_value = mmclib.getMember("get_value")

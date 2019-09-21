@@ -122,112 +122,86 @@ object tacToMips extends Stage {
   def apply( context: normalToTac.DataMap, tac: List[Tac]): Goal =
     goal(nextFrame(Frame.Empty), context, tac)
 
-  private def goal
-    ( context: Context,
-      data: normalToTac.DataMap,
-      nodes: List[Tac]
-    ): Goal = {
-      val dataAssembler =
-        getData(data)
-      val (contextFinal, goal) =
-        foldCode(topLevelDeclarations)(context, nodes) {
-          identity(_,_)
-        }
-      val top: Goal = predef ++ pseudoMain
-      val end: Goal = goal.reverse ++ dataAssembler
-      top ++ end
+  private def goal(context: Context, data: normalToTac.DataMap, nodes: List[Tac]): Goal = {
+    val dataAssembler        = getData(data)
+    val (contextFinal, goal) = foldCode(topLevelDeclarations)(context, nodes)(identity)
+    val top: Goal = predef ::: pseudoMain
+    val end: Goal = goal.reverse ::: dataAssembler
+    top ::: end
+  }
+
+  private def topLevelDeclarations(context: Context, statement: Tac): MipsAcc = statement match {
+    case Func(id, frame, body) => evalFunction(nextFrame(frame))(id, body)
+  }
+
+  private def evalFunction(context: Context)(id: Scoped,body: List[Code]): MipsAcc =
+    foldCode(evalStatements)(defineLocals(context),body) { (context,code) =>
+      (context, code :+ Label(id))
     }
 
-  private def topLevelDeclarations
-    ( context: Context,
-      statement: Tac
-    ): MipsAcc =
-      statement match {
-        case Func(id, frame, body) =>
-          evalFunction(nextFrame(frame))(id, body)
+  private def evalStatements(startContext: Context, code: Code): MipsAcc = code match {
+    case ThreeTac(op, d, l, r) =>
+      val (context, dreg: Register, post)   = evalVariableDest(startContext, d)
+      val (lContext, a1reg: Register, prel) = evalASrcL(context, l)
+      val (rContext, a2reg: Src, prer)      = evalASrcR(lContext, r)
+      val result                            = binaryOperators(op)(dreg, a1reg, a2reg)
+      rContext -> (post ::: result :: prer ::: prel)
+
+    case TwoTac(ASSIGN, d, value) =>
+      val (context, dest: Register, post) = evalVariableDest(startContext, d)
+      evalAssigment(context, dest, value, post)
+
+    case TwoTac(CALL, d, Std.`printIntIdentifier`) =>
+      val (context, _, post)    = evalVariableDest(startContext, d)
+      val (nContext, arg: ASrc) = context.pop
+      val (iContext, inlined)   = doInlinePrintInt(nContext, arg)
+      iContext -> (post ::: inlined)
+
+    case TwoTac(CALL, d, Std.`readIntIdentifier`) =>
+      val (context, dest: Register, post) = evalVariableDest(startContext, d)
+      val move                            = Move(dest, V0)
+      context -> (post ::: move :: inlineReadInt.reverse)
+
+    case TwoTac(op, d, v) =>
+      val (context, dest: Register, post)   = evalVariableDest(startContext, d)
+      val (vContext, a1reg: Register, prev) = evalASrcL(context, v)
+      val resultAndStack                    = unary(op)(dest,a1reg) :: prev
+      context -> (post ::: resultAndStack)
+
+    case OneTac(RETURN, value) =>
+      evalAssigment(startContext, V0, value, Jr(Ra) :: Nil)
+
+    case OneTac(PUSH, a) =>
+      startContext.push(a) -> Nil
+
+    case OneControl(JUMP, dest) =>
+      startContext -> (J(ControlLabel(dest)) :: Nil)
+
+    case TwoControl(JUMP_IF_ZERO, src, dest) =>
+      val (dContext, a1reg: Register, prev) = evalASrcL(startContext, src)
+      dContext -> (Beqz(a1reg, ControlLabel(dest)) :: prev)
+
+    case l: LabelIds =>
+      startContext -> (ControlLabel(l) :: Nil)
+  }
+
+  private def evalAssigment(context: Context, dest: Register, src: ASrc, post: List[Assembler]): MipsAcc = src match {
+    case v: Variable =>
+      getDest(context, v) match {
+        case Some(r: Register) => (context, post :+ Move(dest, r))
+        case Some(a: Addresses) => (context, post :+ Lw(dest, a))
+        case None => unexpected(v)
       }
 
-  private def evalFunction
-    ( context: Context )
-    ( id: Scoped,
-      body: List[Code],
-    ): MipsAcc =
-      foldCode(evalStatements)(defineLocals(context),body) {
-        (context,code) => (context, code :+ Label(id))
-      }
-
-  private def evalStatements
-    ( startContext: Context,
-      code: Code
-    ): MipsAcc =
-      code match {
-        case ThreeTac(op, d, l, r) =>
-          val (context, dreg: Register, post)   = evalVariableDest(startContext, d)
-          val (lContext, a1reg: Register, prel) = evalASrcL(context, l)
-          val (rContext, a2reg: Src, prer)      = evalASrcR(lContext, r)
-          val result                            = binaryOperators(op)(dreg, a1reg, a2reg)
-          rContext -> (post ::: result :: prer ::: prel)
-
-        case TwoTac(ASSIGN, d, value) =>
-          val (context, dest: Register, post) = evalVariableDest(startContext, d)
-          evalAssigment(context, dest, value, post)
-
-        case TwoTac(CALL, d, Std.`printIntIdentifier`) =>
-          val (context, _, post)    = evalVariableDest(startContext, d)
-          val (nContext, arg: ASrc) = context.pop
-          val (iContext, inlined)   = doInlinePrintInt(nContext, arg)
-          iContext -> (post ::: inlined)
-
-        case TwoTac(CALL, d, Std.`readIntIdentifier`) =>
-          val (context, dest: Register, post) = evalVariableDest(startContext, d)
-          val move                            = Move(dest, V0)
-          context -> (post ::: move :: inlineReadInt.reverse)
-
-        case TwoTac(op, d, v) =>
-          val (context, dest: Register, post)   = evalVariableDest(startContext, d)
-          val (vContext, a1reg: Register, prev) = evalASrcL(context, v)
-          val resultAndStack                    = unary(op)(dest,a1reg) :: prev
-          context -> (post ::: resultAndStack)
-
-        case OneTac(RETURN, value) =>
-          evalAssigment(startContext, V0, value, Jr(Ra) :: Nil)
-
-        case OneTac(PUSH, a) =>
-          startContext.push(a) -> Nil
-
-        case OneControl(JUMP, dest) =>
-          startContext -> (J(ControlLabel(dest)) :: Nil)
-
-        case TwoControl(JUMP_IF_ZERO, src, dest) =>
-          val (dContext, a1reg: Register, prev) = evalASrcL(startContext, src)
-          dContext -> (Beqz(a1reg, ControlLabel(dest)) :: prev)
-
-        case l: LabelIds =>
-          startContext -> (ControlLabel(l) :: Nil)
-      }
-
-  private def evalAssigment
-    ( context: Context,
-      destReg: Register,
-      src: ASrc,
-      post: List[Assembler]
-    ): MipsAcc =
-      src match {
-        case c: IntLiteral => (context, post :+ Li(destReg, c))
-        case v: Variable =>
-          getDest(context, v) match {
-            case Some(r: Register) => (context, post :+ Move(destReg, r))
-            case Some(a: Addresses) => (context, post :+ Lw(destReg, a))
-            case None => unexpected(v)
-          }
-      }
+    case c: IntLiteral => (context, post :+ Li(dest, c))
+  }
 
   private def evalASrcL(context: Context, dest: ASrc): (Context, Register, List[Assembler]) = dest match {
     case c: IntLiteral =>
       val t = assignTemporary(context, new Temporary)
-      t ++ Tuple1(List(Li(t._2,c)))
-    case v: Variable =>
-      evalVariableSrc(context, v)
+      t ++ List(Li(t._2,c)) *: ()
+
+    case v: Variable => evalVariableSrc(context, v)
   }
 
   private def evalASrcR(context: Context, dest: ASrc): (Context, Src, List[Assembler]) = dest match {
@@ -235,37 +209,31 @@ object tacToMips extends Stage {
     case v: Variable   => evalVariableSrc(context, v)
   }
 
-  private def evalVariableSrc:
-    (Context, Variable) => (Context, Register, List[Assembler]) =
-      evalVariable(evalAddressSrc)(unexpectedInContext)
+  private def evalVariableSrc: (Context, Variable) => (Context, Register, List[Assembler]) =
+    evalVariable(evalAddressSrc)(unexpectedInContext)
 
-  private def evalVariableDest:
-    (Context, Variable) => (Context, Register, List[Assembler]) =
-      evalVariable(evalAddressDest)(assignTemporary)
+  private def evalVariableDest: (Context, Variable) => (Context, Register, List[Assembler]) =
+    evalVariable(evalAddressDest)(assignTemporary)
 
-  private def evalVariable
-    (ifAddress: (Context, Addresses) => (Context, Register, List[Assembler]))
-    (ifNone: (Context, Variable) => (Context, Register))
-    (context: Context, variable: Variable)
-    : (Context, Register, List[Assembler]) = {
-      getDest(context, variable) match {
-        case Some(r: Register)  => (context, r, Nil)
-        case Some(a: Addresses) => ifAddress(context, a)
-        case None               => ifNone(context, variable) ++ Tuple1(Nil)
-      }
+  private def evalVariable(ifAddress: (Context, Addresses) => (Context, Register, List[Assembler]))(
+    ifNone: (Context, Variable) => (Context, Register))(context: Context, variable: Variable)
+  : (Context, Register, List[Assembler]) = {
+    getDest(context, variable) match {
+      case Some(r: Register)  => (context, r, Nil)
+      case Some(a: Addresses) => ifAddress(context, a)
+      case None               => ifNone(context, variable) ++ Nil *: ()
     }
+  }
 
-  private def evalAddressSrc
-    (context: Context, a: Addresses): (Context, Register, List[Assembler]) = {
-      val (c, reg: Register) = assignTemporary(context, new Temporary)
-      (c, reg, Lw(reg, a) :: Nil)
-    }
+  private def evalAddressSrc(context: Context, a: Addresses): (Context, Register, List[Assembler]) = {
+    val (c, reg: Register) = assignTemporary(context, new Temporary)
+    (c, reg, Lw(reg, a) :: Nil)
+  }
 
-  private def evalAddressDest
-    (context: Context, a: Addresses): (Context, Register, List[Assembler]) = {
-      val (c, reg: Register) = assignTemporary(context, new Temporary)
-      (c, reg, Sw(reg, a) :: Nil)
-    }
+  private def evalAddressDest(context: Context, a: Addresses): (Context, Register, List[Assembler]) = {
+    val (c, reg: Register) = assignTemporary(context, new Temporary)
+    (c, reg, Sw(reg, a) :: Nil)
+  }
 
   private def binaryOperators(op: BinaryOp): BinaryArgs = op match {
     case ad: AdditiveOperators       => additive(ad)
@@ -302,21 +270,18 @@ object tacToMips extends Stage {
     case NEGATIVE => Neg(_,_)
   }
 
-  private def foldCode[O,A]
-    (f: (Context, A) => MipsAcc)
-    (context: Context, src: List[A])
-    (finisher: MipsAcc => O): O = {
-      var contextAcc = context
-      var rest = src
-      var codeAcc: Goal = Nil
-      while (rest.nonEmpty) {
-        val (context, code) = f(contextAcc, rest.head)
-        codeAcc = code ++ codeAcc
-        rest = rest.tail
-        contextAcc = context
-      }
-      finisher(contextAcc, codeAcc)
+  private def foldCode[O,A](f: (Context, A) => MipsAcc)(context: Context, src: List[A])(finisher: MipsAcc => O): O = {
+    var contextAcc = context
+    var rest       = src
+    var codeAcc    = List.empty[Assembler]
+    while rest.nonEmpty do {
+      val (context, code) = f(contextAcc, rest.head)
+      codeAcc = code ::: codeAcc
+      rest = rest.tail
+      contextAcc = context
     }
+    finisher(contextAcc, codeAcc)
+  }
 
   private def compose(l: Goal, r: MipsAcc): MipsAcc = {
     val (context, codeR) = r

@@ -47,116 +47,116 @@ class parseCAst private
       .copy(extractDeclarations(Std.declarations: _*)) + (ScopeKey, scopeCount)
   private var frames: List[Frame] = Nil
 
-  private lazy val goal: Parse[(Context, Goal)] =
-    translationUnit ->> { context -> _ }
+  private lazy val goal: Parse[(Context, Goal)]
+    = translationUnit ->> { context -> _ }
 
-  private lazy val translationUnit: Parse[Goal] =
-    externalDeclarationList
+  private lazy val translationUnit: Parse[Goal]
+    = externalDeclarationList
     | externalDeclaration
 
-  private lazy val externalDeclaration: Parse[List[Declarations]] =
-    functionDefinition
+  private lazy val externalDeclaration: Parse[List[Declarations]]
+    = functionDefinition
     | declarationsAndAssignments !! noAssign
 
-  private lazy val declarationsAndAssignments: Parse[List[Declarations]] =
-    variableDeclaration
+  private lazy val declarationsAndAssignments: Parse[List[Declarations]]
+    = variableDeclaration
     | functionDefinition
     | declarationSpecifier .E
 
-  private lazy val declarationSpecifiers: Parse[List[DeclarationSpecifiers]] =
-    declarationSpecifierList
+  private lazy val declarationSpecifiers: Parse[List[DeclarationSpecifiers]]
+    = declarationSpecifierList
     | declarationSpecifier .L
 
-  private lazy val declarationSpecifier: Parse[DeclarationSpecifiers] =
-    `type`
+  private lazy val declarationSpecifier: Parse[DeclarationSpecifiers]
+    = `type`
     | storage
 
-  private lazy val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)] =
-    declarationSpecifiers ->> reduceDeclarationSpecifiers
+  private lazy val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)]
+    = declarationSpecifiers ->> reduceDeclarationSpecifiers
 
-  private lazy val jumpStatement: Parse[List[Statements]] =
-    `return` .L
+  private lazy val jumpStatement: Parse[List[Statements]]
+    = `return` .L
 
-  private lazy val expressionsStatement: Parse[Expressions] =
-    empty
+  private lazy val expressionsStatement: Parse[Expressions]
+    = empty
     | expressions
 
-  private lazy val expressions: Parse[Expressions] =
-    expressionList
+  private lazy val expressions: Parse[Expressions]
+    = expressionList
     | assignmentsAsExpressions
 
-  private lazy val assignmentsAsExpressions: Parse[Expressions] =
-    assignments .L
+  private lazy val assignmentsAsExpressions: Parse[Expressions]
+    = assignments .L
 
-  private lazy val assignments: Parse[Assignments] =
-    assignment
+  private lazy val assignments: Parse[Assignments]
+    = assignment
     | equalities
 
-  private lazy val equalities: Parse[Equalities] =
-    equality
+  private lazy val equalities: Parse[Equalities]
+    = equality
     | relationals
 
-  private lazy val relationals: Parse[Relationals] =
-    relational
+  private lazy val relationals: Parse[Relationals]
+    = relational
     | additives
 
-  private lazy val additives: Parse[Additives] =
-    additive
+  private lazy val additives: Parse[Additives]
+    = additive
     | multiplicatives
 
-  private lazy val multiplicatives: Parse[Multiplicatives] =
-    multiplicative
+  private lazy val multiplicatives: Parse[Multiplicatives]
+    = multiplicative
     | unaries
 
-  private lazy val unaries: Parse[Unaries] =
-    unary
+  private lazy val unaries: Parse[Unaries]
+    = unary
     | postfix
 
-  private lazy val postfix: Parse[Postfix] =
-    application
+  private lazy val postfix: Parse[Postfix]
+    = application
     | primary
 
-  private lazy val primary: Parse[Primary] =
-    identifierSearchScope
+  private lazy val primary: Parse[Primary]
+    = identifierSearchScope
     | (intLiteral ->> (Constant(_))
       | (lazyExpressions
         | stringLiteral ->> (Constant(_))))
 
-  private lazy val identifierSearchScope: Parse[Scoped] =
-    identifier ->> searchInScope
+  private lazy val identifierSearchScope: Parse[Scoped]
+    = identifier ->> searchInScope
 
-  private def identifierWithScope: Parse[Scoped] =
-    identifierWithScopeOf(currentScope)
+  private def identifierWithScope: Parse[Scoped]
+    = identifierWithScopeOf(currentScope)
 
-  private def identifierWithScopeOf(scope: Long): Parse[Scoped] =
-    identifier ->> { decld { scoped(_, scope) } }
+  private def identifierWithScopeOf(scope: Long): Parse[Scoped]
+    = identifier ->> { decld { scoped(_, scope) } }
 
-  private lazy val initDeclarators: Parse[List[InitDeclarator]] =
-    initDeclaratorList
+  private lazy val initDeclarators: Parse[List[InitDeclarator]]
+    = initDeclaratorList
     | initDeclarator .L
 
-  private lazy val initDeclarator: Parse[InitDeclarator] =
-    declarator
+  private lazy val initDeclarator: Parse[InitDeclarator]
+    = declarator
     | declassignment
 
-  private lazy val declarator: Parse[InitDeclarator] =
-    identifierWithScope
+  private lazy val declarator: Parse[InitDeclarator]
+    = identifierWithScope
     | functionDeclarator
 
-  private lazy val types: Parse[Types] =
-    `type` ->> { _.id }
+  private lazy val types: Parse[Types]
+    = `type` ->> (_.id)
 
-  private lazy val parameters: Parse[List[Parameter]] =
-    parameterList
+  private lazy val parameters: Parse[List[Parameter]]
+    = parameterList
     | parameter .L
 
-  private lazy val parameter: Parse[Parameter] =
-    typesAndIdentifier
+  private lazy val parameter: Parse[Parameter]
+    = typesAndIdentifier
     | (types
       | identifierWithScopeOf(currentScope + 1) ->> { Cint -> })
 
-  private lazy val compoundStatements: Parse[List[Statements]] =
-    block .L
+  private lazy val compoundStatements: Parse[List[Statements]]
+    = block .L
     | multiList
     | declarationsAndAssignments
     | expressionsStatement
@@ -164,96 +164,19 @@ class parseCAst private
     | selections .L
     | { case value => throw UnimplementedError(s"statement (${value.ast.tpe}):\n${value.printAst}") }
 
-  private def makeIf
-    (test: Source, ifThen: Source): IfElse = {
-      val id = ifCount
-      ifCount += 1
-      IfElse(
-        id,
-        expressions(test),
-        stacked { compoundStatements(ifThen) },
-        None
-      )
-    }
-
-  private def makeIfElse
-    (test: Source, ifThen: Source, orElse: Source): IfElse = {
-      val id = ifCount
-      ifCount += 1
-      IfElse(
-        id,
-        expressions(test),
-        stacked { compoundStatements(ifThen) },
-        Some(stacked { compoundStatements(orElse) })
-      )
-    }
-
-  private def makeIfElseEmpty
-    (test: Source, ifThen: Source): IfElse = {
-      val id = ifCount
-      ifCount += 1
-      IfElse (
-        id,
-        expressions(test),
-        stacked { compoundStatements(ifThen) },
-        Some(Nil)
-      )
-    }
-
-  private def makeIfElseEmptyIf
-    (test: Source, orElse: Source): IfElse = {
-      val id = ifCount
-      ifCount += 1
-      IfElse(
-        id,
-        expressions(test),
-        Nil,
-        Some({ stacked { compoundStatements(orElse) } })
-      )
-    }
-
-  private def makeIfElseEmptyAll(test: Source): IfElse = {
-    val id = ifCount
-    ifCount += 1
-    IfElse(
-      id,
-      expressions(test),
-      Nil,
-      None
-    )
-  }
-
   private lazy val selections: Parse[IfElse] = ifElse
 
   private val ifElse: Parse[Selections] = {
-    case BinaryNode("if", test,
-      BinaryNode("else", UnaryNode("B", ifThen), UnaryNode("B", orElse))) =>
-        makeIfElse(test, ifThen, orElse)
-    case BinaryNode("if", test,
-      BinaryNode("else", Singleton("B"), Singleton("B"))) =>
-        makeIfElseEmptyAll(test)
-    case BinaryNode("if", test,
-      BinaryNode("else", UnaryNode("B", ifThen), Singleton("B"))) =>
-        makeIfElseEmpty(test, ifThen)
-    case BinaryNode("if", test,
-      BinaryNode("else", Singleton("B"), UnaryNode("B", orElse))) =>
-        makeIfElseEmptyIf(test, orElse)
-    case BinaryNode("if", test,
-      BinaryNode("else", UnaryNode("B", ifThen), orElse)) =>
-        makeIfElse(test, ifThen, orElse)
-    case BinaryNode("if", test,
-      BinaryNode("else", ifThen, UnaryNode("B", orElse))) =>
-        makeIfElse(test, ifThen, orElse)
-    case BinaryNode("if", test, BinaryNode("else", Singleton("B"), orElse)) =>
-      makeIfElseEmptyIf(test, orElse)
-    case BinaryNode("if", test, BinaryNode("else", ifThen, Singleton("B"))) =>
-      makeIfElseEmpty(test, ifThen)
-    case BinaryNode("if", test, BinaryNode("else", ifThen, orElse)) =>
-      makeIfElse(test, ifThen, orElse)
-    case BinaryNode("if", test, UnaryNode("B", ifThen)) =>
-      makeIf(test, ifThen)
+    case TernaryNode("if", test, ifThen, orElse) =>
+      makeIfElse(test, inlineBlock(ifThen), inlineBlock(orElse))
     case BinaryNode("if", test, ifThen) =>
-      makeIf(test, ifThen)
+      makeIfElse(test, inlineBlock(ifThen), None)
+  }
+
+  def inlineBlock(node: Source) = node match {
+    case Singleton("B")        => None
+    case UnaryNode("B", stats) => Some(stats)
+    case other                 => Some(other)
   }
 
   private val externalDeclarationList: Parse[List[Declarations]] = {
@@ -430,52 +353,58 @@ class parseCAst private
       (types(typeSpecifier), identifierWithScopeOf(currentScope + 1)(ident))
   }
 
-  private def functionDef
-    (declarators: Source, bodyOp: Option[Source]): List[Declarations] =
-      declarators match {
-        case BinaryNode("d", types, declarator) =>
-          val (storage, typeFinal) = declarationSpecifiersSpecific(types)
-          yieldDefinition(storage,typeFinal)(bodyOp) {
-            functionDeclarator(declarator)
-          }
-        case declarator =>
-          yieldDefinition(Auto, Cint)(bodyOp)(functionDeclarator(declarator))
-      }
+  private def makeIfElse(test: Source, ifThen: Option[Source], orElse: Option[Source]): IfElse = {
+    val id = ifCount
+    ifCount += 1
+    IfElse(
+      id,
+      expressions(test),
+      ifThen.fold(Nil)(s => stacked(compoundStatements(s))),
+      orElse.fold(Nil)(s => stacked(compoundStatements(s)))
+    )
+  }
 
-  private def yieldDefinition
-    (storage: StorageTypes, types: Types)
-    (bodyOp: Option[Source])
-    : PartialFunction[FunctionDeclarator, List[Declarations]] = {
-      case f @ FunctionDeclarator(i, args) =>
-        declareInScope(i, storage, types, f, None).toList :+ {
-          val bodyParsed =
-            for (b <- bodyOp) yield {
-              framed {
-                args match {
-                  case LParam(ls) => declareParamsInScope(ls:_*)
-                  case _ =>
-                }
-                compoundStatements(b)
+  private def functionDef(declarators: Source, bodyOp: Option[Source]): List[Declarations] = declarators match {
+    case BinaryNode("d", types, declarator) =>
+      val (storage, typeFinal) = declarationSpecifiersSpecific(types)
+      yieldDefinition(storage,typeFinal)(bodyOp) {
+        functionDeclarator(declarator)
+      }
+    case declarator =>
+      yieldDefinition(Auto, Cint)(bodyOp)(functionDeclarator(declarator))
+  }
+
+  private def yieldDefinition(storage: StorageTypes, types: Types)(bodyOp: Option[Source])
+    : FunctionDeclarator => List[Declarations] = {
+    case f @ FunctionDeclarator(i, args) =>
+      declareInScope(i, storage, types, f, None).toList :+ {
+        val bodyParsed =
+          for (b <- bodyOp) yield {
+            framed {
+              args match {
+                case LParam(ls) => declareParamsInScope(ls:_*)
+                case _ =>
               }
+              compoundStatements(b)
             }
-          if types != Cvoid then {
-            tailYieldsValue(bodyParsed.map(_._2))
           }
-          define {
-            bodyParsed.map {
-              Function(i,_,_)
-            } getOrElse {
-              Function(i, Frame.Empty, Nil)
-            }
+        if types != Cvoid then {
+          tailYieldsValue(bodyParsed.map(_._2))
+        }
+        define {
+          bodyParsed.map {
+            Function(i,_,_)
+          } getOrElse {
+            Function(i, Frame.Empty, Nil)
           }
         }
-    }
+      }
+  }
 
   private def scoped(id: Identifier, scope: Long): Scoped =
-    scopedPool.getOrElseUpdate(
-      (id, scope),
-      { Scoped(id, scope) }
-    )
+    scopedPool.getOrElseUpdate(id -> scope, {
+      Scoped(id, scope)
+    })
 
   private def framed[A](parser: => A): (Frame, A) =
     stacked {
@@ -492,7 +421,7 @@ class parseCAst private
     currentScope = scopeCount
     context += (ScopeKey, currentScope)
     val result = parser
-    context = context.popOrElse { Bindings.Empty }
+    context = context.popOrElse(Bindings.Empty)
     currentScope = getCurrentScope(context)
     result
   }
