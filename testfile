@@ -1,7 +1,12 @@
 int main(void) {
     int a, b;
-    a = read_int();
-    b = read_int();
+    {{}}
+    {
+        {
+            a = read_int();
+            b = read_int();
+        }
+    }
     if (a < b) {
         if (a > 0) {
             print_int(a * b);

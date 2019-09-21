@@ -38,7 +38,7 @@ object Ast {
   case class Assignment(lvalue: Variable, rvalue: Assignments)
   case class Function(id: Scoped, frame: Frame, body: List[Statements])
   case class Block(inner: List[Statements])
-  case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: Option[List[Statements]])
+  case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: List[Statements])
 
   def temporaryAssignment(value: Assignments): Assignment =
     Assignment(new Temporary, value)

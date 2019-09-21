@@ -22,7 +22,7 @@ object normalToTac extends Stage {
         getData(declaration).fold(acc)(acc + _)
       }
     val code = nodes.foldRight(Nil: List[Tac]) {
-      topLevelDeclaration(_) ++ _
+      topLevelDeclaration(_) ::: _
     }
     (data, code)
   }
@@ -38,7 +38,7 @@ object normalToTac extends Stage {
       node match {
         case Function(s, f, body) =>
           val validated = body.foldLeft(Nil: List[Code]) {
-            (code, statement) => evalStatement(statement) ++ code
+            (code, statement) => evalStatement(statement) ::: code
           }
           List(Func(s, f, eliminateJumps(validated)))
         case _ => Nil
@@ -57,29 +57,24 @@ object normalToTac extends Stage {
       case Return((a: ASrc) :: Nil) =>
         List(OneTac(RETURN, a))
       case Block(nodes) => nodes.foldLeft[List[Code]](Nil) {
-        (code, statement) => evalStatement(statement) ++ code
+        (code, statement) => evalStatement(statement) ::: code
       }
       case IfElse(ifCount,(isOne: ASrc) :: Nil, ifTrue, elsePart) =>
         val joinLabel = Join(ifCount)
-        val elseLabel: Option[LabelIds] = elsePart.map(_ => ElseLabel(ifCount))
+        val elseLabel: Option[LabelIds] = elsePart.headOption.map(_ => ElseLabel(ifCount))
         val ifZero: LabelIds = elseLabel.getOrElse(joinLabel)
         val jumpIfZero = TwoControl(JUMP_IF_ZERO, isOne, ifZero)
         val joinCommand = OneControl(JUMP, joinLabel)
         val ifOne = ifTrue.foldLeft[List[Code]](Nil) {
-          (code, statement) => evalStatement(statement) ++ code
+          (code, statement) => evalStatement(statement) ::: code
         }
-        val orElse = elsePart.map {
-          _.foldLeft[List[Code]](Nil) {
-            (code, statement) => evalStatement(statement) ++ code
-          }
+        val orElse = elsePart.foldLeft[List[Code]](Nil) {
+          (code, statement) => evalStatement(statement) ::: code
         }
-        val code: Option[List[Code]] = for {
-          elseL <- elseLabel
-          elseCode <- orElse
-        } yield {
+        val code: Option[List[Code]] = for elseL <- elseLabel yield {
           val endIf: List[Code]   = (joinCommand :: ifOne).reverse
-          val endElse: List[Code] = elseL :: (joinCommand :: elseCode).reverse
-          val both: List[Code]    = endIf ++ endElse
+          val endElse: List[Code] = elseL :: (joinCommand :: orElse).reverse
+          val both: List[Code]    = endIf ::: endElse
           (jumpIfZero :: both) :+ joinLabel
         }
         val finalCode: List[Code] = code getOrElse {

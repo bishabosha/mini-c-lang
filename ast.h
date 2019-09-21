@@ -5,7 +5,7 @@ typedef enum { SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING } Ast
 
 typedef struct ast {
   AstTag tag;
-  int type;
+  int tpe;
 } Ast;
 
 typedef struct unary_node {
@@ -31,7 +31,7 @@ typedef struct token_string {
 
 extern Ast *TokenString_new(int, char*);
 extern Ast *Singleton_new(int);
-Ast *BinaryNode_new(int, Ast *, Ast *);
 Ast *UnaryNode_new(int, Ast *);
+Ast *BinaryNode_new(int, Ast *, Ast *);
 
 #endif

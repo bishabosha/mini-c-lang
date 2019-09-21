@@ -9,7 +9,7 @@ import org.graalvm.polyglot._
  * Exports opaque type [[CAst]] which is simply a polyglot value with a type safe api, representing the AST built by
  * the Yacc parser.
  */
-object mmclib {
+object mmclib { self =>
   import opaques._
   import AstTag._
   import given CAst._
@@ -23,7 +23,7 @@ object mmclib {
     opaque type CAst    = Value
     opaque type AstInfo = Value
 
-    def getAst: Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
+    def parse(): Option[CAst] = Option(get_ast()).filter(!_.isNull)
 
     object CAst {
       given (node: CAst) {
@@ -34,25 +34,26 @@ object mmclib {
             node
 
         def nonEmpty: Boolean = (node ne null) && !node.isNull
+        def printAst: String  = self.printAst(node)
       }
     }
 
     object AstInfo {
       given (node: AstInfo) {
-        def tpe: String = get_type.execute(node).asString
-        def tag: AstTag = AstTags(get_tag.execute(node).asInt)
+        def tpe: String = get_tpe(node).asString
+        def tag: AstTag = AstTags(get_tag(node).asInt)
       }
     }
 
-    def (node: CAst) a1: CAst = ast_to_poly.execute(node.getMember("a1"))
-    def (node: CAst) a2: CAst = ast_to_poly.execute(node.getMember("a2"))
-    def (node: CAst) lexeme: String = get_lexeme.execute(node).asString
-    def (node: CAst) value: Int = get_value.execute(node).asInt
+    def (node: CAst) a1     : CAst   = ast_to_poly(node.getMember("a1"))
+    def (node: CAst) a2     : CAst   = ast_to_poly(node.getMember("a2"))
+    def (node: CAst) lexeme : String = get_lexeme(node).asString
+    def (node: CAst) value  : Int    = get_value(node).asInt
 
     def free(node: CAst): Unit = free_pointer.executeVoid(node)
   }
 
-  export opaques.{CAst, AstInfo, getAst, free}
+  export opaques.{CAst, AstInfo, parse, free}
 
   enum AstTag { case SINGLETON, UNARY_NODE, BINARY_NODE, TOKEN_INT, TOKEN_STRING }
 
@@ -63,9 +64,8 @@ object mmclib {
       val ast = node.ast
       val tpe = ast.tpe
       ast.tag match {
-        case BINARY_NODE if !sequenceTpes.contains(tpe) =>
-          Some((tpe, node.a1, node.a2))
-        case _ => None
+        case BINARY_NODE if !sequenceTpes.contains(tpe) => Some((tpe, node.a1, node.a2))
+        case _                                          => None
       }
     }
   }
@@ -170,7 +170,7 @@ object mmclib {
     set_debug.executeVoid(Boolean.box(value))
 
   def identPool: Set[Identifier] = {
-    val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
+    val symbTable = get_SymbTable_inst().asHostObject[SymbTable]
     val symbols   = symbTable.toSet
     symbTable.clear()
     symbols
@@ -178,55 +178,59 @@ object mmclib {
 
   def close(): Unit = polyglot.close()
 
-  def printAst(node: CAst): Unit = printAst0(node, 0)
+  def printAst(node: CAst): String = printAst0(node, 0, StringBuilder()).toString
 
-  private def printAst0(node: CAst, level: Int): Unit =
+  private def printAst0(node: CAst, level: Int, builder: StringBuilder): StringBuilder =
     if node.nonEmpty then {
-      printLevel(level)
+      printLevel(level, builder)
       val ast = node.ast
       ast.tag match {
         case UNARY_NODE =>
-          printUnaryNode(node, level)
+          printUnaryNode(node, level, builder)
         case BINARY_NODE =>
-          printBinaryNode(node, level)
+          printBinaryNode(node, level, builder)
         case TOKEN_STRING =>
-          printTokenString(node)
+          printTokenString(node, builder)
         case TOKEN_INT =>
-          printTokenInt(node)
+          printTokenInt(node, builder)
         case SINGLETON =>
-          printSingleton(ast)
+          printSingleton(ast, builder)
       }
+    } else {
+      builder
     }
 
-  private def printUnaryNode(node: CAst, level: Int): Unit = {
-    print(s"${node.ast.tpe}\n")
-    printAst0(node.a1, level + 2)
+  private def printUnaryNode(node: CAst, level: Int, builder: StringBuilder): StringBuilder = {
+    builder.addAll(s"${node.ast.tpe}\n")
+    printAst0(node.a1, level + 2, builder)
   }
 
-  private def printBinaryNode(node: CAst, level: Int): Unit = {
-    print(s"${node.ast.tpe}\n")
-    printAst0(node.a1, level + 2)
-    printAst0(node.a2, level + 2)
+  private def printBinaryNode(node: CAst, level: Int, builder: StringBuilder): StringBuilder = {
+    builder.addAll(s"${node.ast.tpe}\n")
+    printAst0(node.a1, level + 2, builder)
+    printAst0(node.a2, level + 2, builder)
   }
 
-  private def printTokenString(node: CAst) = {
+  private def printTokenString(node: CAst, builder: StringBuilder): StringBuilder = {
     val info = node.ast
     info.tpe match {
       case "string" =>
-        print("" + '"' + node.lexeme + '"' + '\n')
+        builder.addAll("" + '"' + node.lexeme + '"' + '\n')
       case _ =>
-        print(s"${node.lexeme}\n")
+        builder.addAll(s"${node.lexeme}\n")
     }
   }
 
-  private def printTokenInt(node: CAst) = print(s"${node.value}\n")
+  private def printTokenInt(node: CAst, builder: StringBuilder): StringBuilder = builder.addAll(s"${node.value}\n")
 
-  private def printSingleton(ast: AstInfo) = print(s"${ast.tpe}\n")
+  private def printSingleton(ast: AstInfo, builder: StringBuilder): StringBuilder = builder.addAll(s"${ast.tpe}\n")
 
-  private def printLevel(level: Int): Unit = print(" " * level)
+  private def printLevel(level: Int, builder: StringBuilder): StringBuilder = builder.addAll(" " * level)
+
+  private inline def (f: Value) apply(args: AnyRef*): Value = f.execute(args: _*)
 
   private val get_tag = mmclib.getMember("get_tag")
-  private val get_type = mmclib.getMember("get_type")
+  private val get_tpe = mmclib.getMember("get_tpe")
   private val get_value = mmclib.getMember("get_value")
   private val get_lexeme = mmclib.getMember("get_lexeme")
   private val ast_to_poly = mmclib.getMember("ast_to_poly")

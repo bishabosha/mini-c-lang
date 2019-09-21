@@ -23,7 +23,7 @@ import exception._
   mmclib.setDebug(debug)
   mmclib.initSymbTable()
 
-  for t <- mmclib.getAst do try {
+  for t <- mmclib.parse() do try {
     timeIt("LEXING_TIME")
     val identPool = mmclib.identPool
     timeIt("EXPORT_IDENTIFIERS")

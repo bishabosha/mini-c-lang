@@ -8,7 +8,7 @@
 #include <string.h>
 
 char *named(Ast *ast) {
-  int token = ast->type;
+  int token = ast->tpe;
   static char b[100];
   switch (token) {
   case IDENTIFIER:
@@ -101,7 +101,7 @@ void *ast_to_poly(Ast *ast) {
 
 AstTag get_tag(Ast *ast) { return ast->tag; }
 
-void *get_type(Ast *ast) { return JAVA_STRING(named(ast)); }
+void *get_tpe(Ast *ast) { return JAVA_STRING(named(ast)); }
 
 void *get_lexeme(TokenString *ast) { return JAVA_STRING(ast->lexeme); }
 
