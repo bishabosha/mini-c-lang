@@ -69,6 +69,8 @@ POLYGLOT_DECLARE_STRUCT(token_string);
 
 #define JAVA_STRING(expr) polyglot_from_string(expr, "UTF-8")
 
+static Ast *null_Ast = NULL;
+
 extern void *get_SymbTable_inst();
 extern void init_SymbTable(void);
 void *ast_to_poly(Ast *ast);
@@ -99,12 +101,16 @@ void *ast_to_poly(Ast *ast) {
   }
 }
 
-AstTag get_tag(Ast *ast) { return ast->tag; }
+AstTag Ast_tag(Ast *ast) { return ast->tag; }
 
-void *get_tpe(Ast *ast) { return JAVA_STRING(named(ast)); }
+void *Ast_tpe(Ast *ast) { return JAVA_STRING(named(ast)); }
 
-void *get_lexeme(TokenString *ast) { return JAVA_STRING(ast->lexeme); }
+Ast *UnaryNode_a1(UnaryNode *ast) { return ast->a1; }
 
-int get_value(TokenInt *ast) { return ast->value; }
+Ast *BinaryNode_a2(BinaryNode *ast) { return ast->a2; }
+
+void *TokenString_lexeme(TokenString *ast) { return JAVA_STRING(ast->lexeme); }
+
+int TokenInt_value(TokenInt *ast) { return ast->value; }
 
 void free_pointer(void *any) { free(any); }
