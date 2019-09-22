@@ -2,7 +2,7 @@ OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc mmc.bc
 SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mmc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
-CLANG = clang
+CLANG = ${GRAALVM_HOME}/jre/languages/llvm/native/bin/clang
 BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
 LLVM_HOME = /usr/local/opt/llvm/bin
@@ -76,7 +76,7 @@ rm_logs:
 	rm *.log
 
 %.bc:
-	${CC} -g -c $*.c
+	${CC} -g -c $*.c -o $*.bc
 
 ${TARGET}: C.tab.c lex.yy.c ${OBJS}
 	${LINK} -o ${TARGET} ${OBJS}
