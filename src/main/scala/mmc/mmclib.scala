@@ -26,7 +26,7 @@ object mmclib { self =>
     opaque type CAst    = Value
     opaque type AstInfo = Value
 
-    def parse(): Option[CAst] = Option(get_ast()).filter(!_.isNull)
+    def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
     object CAst {
       given (node: CAst) {
@@ -37,7 +37,7 @@ object mmclib { self =>
           else
             node
 
-        def nonEmpty: Boolean = (node ne null) && !node.isNull
+        def nonEmpty: Boolean = (node `ne` null) && !node.isNull
         def printAst: String  = self.printAst(node)
       }
     }
@@ -59,16 +59,16 @@ object mmclib { self =>
       AstTags.trimToSize()
 
       given (node: AstInfo) {
-        def tpe: String = Ast_tpe(node).asString
-        def tag: AstTag = AstTags(Ast_tag(node).asInt)
+        def tpe: String = Ast_tpe.execute(node).asString
+        def tag: AstTag = AstTags(Ast_tag.execute(node).asInt)
       }
 
     }
 
-    def (node: CAst) a1 (given UnaryNode | BinaryNode): CAst = UnaryNode_a1(node)
-    def (node: CAst) a2 (given BinaryNode): CAst = BinaryNode_a2(node)
-    def (node: CAst) lexeme (given TokenString): String = TokenString_lexeme(node).asString
-    def (node: CAst) value (given TokenInt): Int = TokenInt_value(node).asInt
+    def (node: CAst) a1     : CAst   = UnaryNode_a1.execute(node)
+    def (node: CAst) a2     : CAst   = BinaryNode_a2.execute(node)
+    def (node: CAst) lexeme : String = TokenString_lexeme.execute(node).asString
+    def (node: CAst) value  : Int    = TokenInt_value.execute(node).asInt
 
     val EmptyAst: CAst = null_Ast
 
@@ -82,8 +82,8 @@ object mmclib { self =>
       val ast = node.ast
       val tpe = ast.tpe
       ast.tag match {
-        case given _: BinaryNode if !sequenceTpes.contains(tpe) => Some((tpe, node.a1, node.a2))
-        case _                                                  => None
+        case _: BinaryNode if !sequenceTpes.contains(tpe) => Some((tpe, node.a1, node.a2))
+        case _                                            => None
       }
     }
   }
@@ -92,8 +92,8 @@ object mmclib { self =>
     def unapply(node: CAst): Option[(String, CAst)] = {
       val ast = node.ast
       ast.tag match {
-        case given _: UnaryNode => Some((ast.tpe, node.a1))
-        case _                  => None
+        case _: UnaryNode => Some((ast.tpe, node.a1))
+        case _            => None
       }
     }
   }
@@ -112,8 +112,8 @@ object mmclib { self =>
     def unapply(node: CAst): Option[(String, Int)] = {
       val ast = node.ast
       ast.tag match {
-        case given _: TokenInt => Some((ast.tpe, node.value))
-        case _                 => None
+        case _: TokenInt => Some((ast.tpe, node.value))
+        case _           => None
       }
     }
   }
@@ -122,8 +122,8 @@ object mmclib { self =>
     def unapply(node: CAst): Option[(String, String)] = {
       val ast = node.ast
       ast.tag match {
-        case given _: TokenString => Some((ast.tpe, node.lexeme))
-        case _                    => None
+        case _: TokenString => Some((ast.tpe, node.lexeme))
+        case _              => None
       }
     }
   }
@@ -133,8 +133,8 @@ object mmclib { self =>
       val ast = node.ast
       val tpe = ast.tpe
       ast.tag match {
-        case given _: BinaryNode if sequenceTpes.contains(tpe) => Some((tpe, sequence(tpe, node.a1, node.a2)))
-        case _                                                 => None
+        case _: BinaryNode if sequenceTpes.contains(tpe) => Some((tpe, sequence(tpe, node.a1, node.a2)))
+        case _                                           => None
       }
     }
   }
@@ -156,22 +156,16 @@ object mmclib { self =>
           decided = true;
         }
         list = right :: list
-        (left.ast.tag: @unchecked) match {
-          case given _: BinaryNode =>
-            right = left.a2
-            left  = left.a1
-        }
+        right = left.a2
+        left  = left.a1
       } else if (rightinfo.tag.isInstanceOf[BinaryNode] && rightinfo.tpe == tpe) {
         if (!decided) {
           decided = true
           reverse = true
         }
         list  = left :: list
-        (right.ast.tag: @unchecked) match {
-          case given _: BinaryNode =>
-            left  = right.a1
-            right = right.a2
-        }
+        left  = right.a1
+        right = right.a2
       } else {
         if (reverse) {
           list = right :: left :: list
@@ -191,7 +185,7 @@ object mmclib { self =>
     set_debug.executeVoid(Boolean.box(value))
 
   def identPool: Set[Identifier] = {
-    val symbTable = get_SymbTable_inst().asHostObject[SymbTable]
+    val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
     val symbols   = symbTable.toSet
     symbTable.clear()
     symbols
@@ -206,28 +200,28 @@ object mmclib { self =>
       printLevel(level, builder)
       val ast = node.ast
       ast.tag match {
-        case given _: UnaryNode   => node.printUnaryNode(level, builder)
-        case given _: BinaryNode  => node.printBinaryNode(level, builder)
-        case given _: TokenString => node.printTokenString(builder)
-        case given _: TokenInt    => node.printTokenInt(builder)
-        case given _: Singleton   => ast.printSingleton(builder)
+        case _: UnaryNode   => node.printUnaryNode(level, builder)
+        case _: BinaryNode  => node.printBinaryNode(level, builder)
+        case _: TokenString => node.printTokenString(builder)
+        case _: TokenInt    => node.printTokenInt(builder)
+        case _: Singleton   => ast.printSingleton(builder)
       }
     } else {
       builder
     }
 
-  private def (node: CAst) printUnaryNode(level: Int, builder: StringBuilder)(given UnaryNode): StringBuilder = {
+  private def (node: CAst) printUnaryNode(level: Int, builder: StringBuilder): StringBuilder = {
     builder.addAll(s"${node.ast.tpe}\n")
     printAst0(node.a1, level + 2, builder)
   }
 
-  private def (node: CAst) printBinaryNode(level: Int, builder: StringBuilder)(given BinaryNode): StringBuilder = {
+  private def (node: CAst) printBinaryNode(level: Int, builder: StringBuilder): StringBuilder = {
     builder.addAll(s"${node.ast.tpe}\n")
     printAst0(node.a1, level + 2, builder)
     printAst0(node.a2, level + 2, builder)
   }
 
-  private def (node: CAst) printTokenString(builder: StringBuilder)(given TokenString): StringBuilder = {
+  private def (node: CAst) printTokenString(builder: StringBuilder): StringBuilder = {
     val info = node.ast
     info.tpe match {
       case "string" =>
@@ -237,13 +231,11 @@ object mmclib { self =>
     }
   }
 
-  private def (node: CAst) printTokenInt(builder: StringBuilder)(given TokenInt): StringBuilder = builder.addAll(s"${node.value}\n")
+  private def (node: CAst) printTokenInt(builder: StringBuilder): StringBuilder = builder.addAll(s"${node.value}\n")
 
-  private def (ast: AstInfo) printSingleton(builder: StringBuilder)(given Singleton): StringBuilder = builder.addAll(s"${ast.tpe}\n")
+  private def (ast: AstInfo) printSingleton(builder: StringBuilder): StringBuilder = builder.addAll(s"${ast.tpe}\n")
 
   private def printLevel(level: Int, builder: StringBuilder): StringBuilder = builder.addAll(" " * level)
-
-  private inline def (f: Value) apply(args: AnyRef*): Value = f.execute(args: _*)
 
   private val null_Ast = mmclib.getMember("null_Ast")
   private val Ast_tag = mmclib.getMember("Ast_tag")
