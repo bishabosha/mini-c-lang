@@ -2,12 +2,14 @@ OBJS = lex.yy.bc C.tab.bc SymbTable.bc ast.bc mmc.bc
 SRCS = lex.yy.c C.tab.c SymbTable.c ast.c mmc.c
 GUFF = C.tab.c C.tab.h lex.yy.c C.output
 CC = ${GRAAL_CC}
+CLANG = clang
 BISON = /usr/local/opt/bison/bin/bison
 LINK = ${LLVM_LINK}
 LLVM_HOME = /usr/local/opt/llvm/bin
 OPT = ${LLVM_HOME}/opt
 GRAALVM_HOME = /Library/Java/JavaVirtualMachines/graalvm-ce-19.2.0/Contents/Home
-GRAAL_CC = clang -I${GRAALVM_HOME}/jre/languages/llvm/include -emit-llvm -O1
+POLYGLOT_H=${GRAALVM_HOME}/jre/languages/llvm/include
+GRAAL_CC = ${CLANG} -I${POLYGLOT_H} -emit-llvm -O1
 GRAAL_CC_SANDBOXED = ${GRAALVM_HOME}/bin/clang-sandboxed
 LLVM_LINK = ${LLVM_HOME}/llvm-link
 
