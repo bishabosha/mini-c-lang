@@ -30,7 +30,7 @@ import exception._
     val cast = t
     if doPrint then {
       println("AST:")
-      mmclib.printAst(t)
+      DSL.show(t)
       timeIt("PRINT_AST")
     }
     val (context, ast) = parseCAst(cast, identPool) // TODO: Re-entrant - free memory

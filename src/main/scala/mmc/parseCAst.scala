@@ -1,6 +1,7 @@
 package mmc
 
 import mmclib._
+import DSL._
 import Ast._
 import Constants._
 import Types._
@@ -163,7 +164,7 @@ class parseCAst private
     | expressionsStatement
     | jumpStatement
     | selections .L
-    | { case value => throw UnimplementedError(s"statement (${value.ast.tpe}):\n${value.printAst}") }
+    | { case value => throw UnimplementedError(s"statement (${value.ast.tpe}):\n${value.show}") }
 
   private lazy val selections: Parse[IfElse] = ifElse
 
