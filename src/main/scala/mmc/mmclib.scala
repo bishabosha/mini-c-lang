@@ -14,6 +14,7 @@ import org.graalvm.polyglot._
  */
 object mmclib { self =>
   import opaques._
+  import AstTag._
   import CAst.given
   import AstInfo.{given, _}
 
@@ -23,14 +24,14 @@ object mmclib { self =>
 
   private object opaques {
 
+    opaque type AstInfo = Value
+
     opaque type CAst                   = Value
     opaque type BinaryNodeOps  <: CAst = Value
     opaque type UnaryNodeOps   <: CAst = Value
     opaque type TokenStringOps <: CAst = Value
     opaque type TokenIntOps    <: CAst = Value
     opaque type SingletonOps   <: CAst = Value
-
-    opaque type AstInfo = Value
 
     object BinaryNodeOps {
       given (node: BinaryNodeOps) {
@@ -60,8 +61,6 @@ object mmclib { self =>
     def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
     object CAst {
-      import AstInfo.given
-
       given (node: CAst) {
 
         def ast: AstInfo =
@@ -76,19 +75,7 @@ object mmclib { self =>
 
     object AstInfo {
 
-      type AstTag = Singleton | UnaryNode | BinaryNode | TokenInt | TokenString
-
-      private val AstTags = mutable.ArrayBuffer.empty[AstTag]
-      private def enter[T <: AstTag](tag: T): Unit = { AstTags += tag }
-
-      // Keep in sync with ast.h `AstTag`
-      final class Singleton   private[AstInfo](); enter(Singleton())
-      final class UnaryNode   private[AstInfo](); enter(UnaryNode())
-      final class BinaryNode  private[AstInfo](); enter(BinaryNode())
-      final class TokenInt    private[AstInfo](); enter(TokenInt())
-      final class TokenString private[AstInfo](); enter(TokenString())
-
-      AstTags.trimToSize()
+      private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
 
       given (node: AstInfo) {
         def tpe: String = Ast_tpe.execute(node).asString
@@ -104,6 +91,9 @@ object mmclib { self =>
 
   export opaques._
 
+  // Keep in sync with ast.h `AstTag`
+  enum AstTag { case Singleton, UnaryNode, BinaryNode, TokenInt, TokenString }
+
   inline given singleton(given node: SingletonOps): SingletonOps = node
   inline given binary(given node: BinaryNodeOps): BinaryNodeOps = node
   inline given unary(given node: UnaryNodeOps): UnaryNodeOps = node
@@ -111,38 +101,38 @@ object mmclib { self =>
   inline given tokenInt(given node: TokenIntOps): TokenIntOps = node
 
   inline def (node: CAst) asBinaryNode[T](f: => (given BinaryNodeOps) => T): Option[T] = node.ast.tag match {
-    case _: BinaryNode if !sequenceTpes.contains(node.ast.tpe) => Some(f(given node.asInstanceOf))
-    case _                                                     => None
+    case BinaryNode if !sequenceTpes.contains(node.ast.tpe) => Some(f(given node.asInstanceOf))
+    case _                                                  => None
   }
 
   inline def (node: CAst) asSequence[T](f: => (given BinaryNodeOps) => T): Option[T] = node.ast.tag match {
-    case _: BinaryNode if sequenceTpes.contains(node.ast.tpe) => Some(f(given node.asInstanceOf))
-    case _                                                    => None
+    case BinaryNode if sequenceTpes.contains(node.ast.tpe) => Some(f(given node.asInstanceOf))
+    case _                                                 => None
   }
 
   inline def (node: CAst) asUnaryNode[T](f: => (given UnaryNodeOps) => T): Option[T] = node.ast.tag match {
-    case _: UnaryNode => Some(f(given node.asInstanceOf))
-    case _            => None
+    case UnaryNode => Some(f(given node.asInstanceOf))
+    case _         => None
   }
 
   inline def (node: CAst) asTokenInt[T](f: => (given TokenIntOps) => T): Option[T] = node.ast.tag match {
-    case _: TokenInt => Some(f(given node.asInstanceOf))
-    case _           => None
+    case TokenInt => Some(f(given node.asInstanceOf))
+    case _        => None
   }
 
   inline def (node: CAst) asTokenString[T](f: => (given TokenStringOps) => T): Option[T] = node.ast.tag match {
-    case _: TokenString => Some(f(given node.asInstanceOf))
-    case _              => None
+    case TokenString => Some(f(given node.asInstanceOf))
+    case _           => None
   }
 
   inline def (node: CAst) asSingleton[T](f: => (given SingletonOps) => T): Option[T] = node.ast.tag match {
-    case _: Singleton => Some(f(given node.asInstanceOf))
-    case _            => None
+    case Singleton => Some(f(given node.asInstanceOf))
+    case _         => None
   }
 
-  inline def (node: CAst) binaryOp[T](op: => (given BinaryNodeOps) => Unit): Unit = node.ast.tag match {
-    case _: BinaryNode => op(given node.asInstanceOf)
-    case _             =>
+  inline def (node: CAst) binaryOp(op: => (given BinaryNodeOps) => Unit): Unit = node.ast.tag match {
+    case BinaryNode => op(given node.asInstanceOf)
+    case _          =>
   }
 
   inline def (node: CAst) cata[T](
@@ -152,11 +142,11 @@ object mmclib { self =>
     tokin: => (given TokenIntOps) => T,
     singl: => (given SingletonOps) => T
   ): T = node.ast.tag match {
-    case _: UnaryNode   => unaop(given node.asInstanceOf)
-    case _: BinaryNode  => binop(given node.asInstanceOf)
-    case _: TokenString => tokst(given node.asInstanceOf)
-    case _: TokenInt    => tokin(given node.asInstanceOf)
-    case _: Singleton   => singl(given node.asInstanceOf)
+    case UnaryNode   => unaop(given node.asInstanceOf)
+    case BinaryNode  => binop(given node.asInstanceOf)
+    case TokenString => tokst(given node.asInstanceOf)
+    case TokenInt    => tokin(given node.asInstanceOf)
+    case Singleton   => singl(given node.asInstanceOf)
   }
 
   private val sequenceTpes = Set("E", ";", ",", "~")

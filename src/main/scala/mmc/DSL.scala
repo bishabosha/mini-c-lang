@@ -1,7 +1,7 @@
 package mmc
 
 import mmclib.{_, given}
-import AstInfo._
+import AstTag._
 
 object DSL {
 
@@ -42,7 +42,7 @@ object DSL {
     while (!break) {
       val leftinfo = left.ast
       val rightinfo = right.ast
-      if (leftinfo.tag.isInstanceOf[BinaryNode] && leftinfo.tpe == tpe) {
+      if (leftinfo.tag == BinaryNode && leftinfo.tpe == tpe) {
         if (!decided) {
           decided = true;
         }
@@ -51,7 +51,7 @@ object DSL {
           left  = binary.a1
           right = binary.a2
         }
-      } else if (rightinfo.tag.isInstanceOf[BinaryNode] && rightinfo.tpe == tpe) {
+      } else if (rightinfo.tag == BinaryNode && rightinfo.tpe == tpe) {
         if (!decided) {
           decided = true
           reverse = true
