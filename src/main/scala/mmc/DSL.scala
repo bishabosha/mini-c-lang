@@ -80,28 +80,28 @@ object DSL {
       printLevel(level, builder)
       val ast = node.ast
       node.cata(
-        printUnaryNode(level, builder),
-        printBinaryNode(level, builder),
-        printTokenString(builder),
-        printTokenInt(builder),
-        printSingleton(builder)
+        printUnaryNode(unary, level, builder),
+        printBinaryNode(binary, level, builder),
+        printTokenString(tokenString, builder),
+        printTokenInt(tokenInt, builder),
+        printSingleton(singleton, builder)
       )
     } else {
       builder
     }
 
-  private def printUnaryNode(level: Int, builder: StringBuilder)(given UnaryNodeOps): StringBuilder = {
+  private def printUnaryNode(unary: UnaryNodeOps, level: Int, builder: StringBuilder): StringBuilder = {
     builder.addAll(s"${unary.ast.tpe}\n")
     printAst0(unary.a1, level + 2, builder)
   }
 
-  private def printBinaryNode(level: Int, builder: StringBuilder)(given BinaryNodeOps): StringBuilder = {
+  private def printBinaryNode(binary: BinaryNodeOps, level: Int, builder: StringBuilder): StringBuilder = {
     builder.addAll(s"${binary.ast.tpe}\n")
     printAst0(binary.a1, level + 2, builder)
     printAst0(binary.a2, level + 2, builder)
   }
 
-  private def printTokenString(builder: StringBuilder)(given TokenStringOps): StringBuilder = {
+  private def printTokenString(tokenString: TokenStringOps, builder: StringBuilder): StringBuilder = {
     tokenString.ast.tpe match {
       case "string" =>
         builder.addAll("" + '"' + tokenString.lexeme + '"' + '\n')
@@ -110,10 +110,10 @@ object DSL {
     }
   }
 
-  private def printTokenInt(builder: StringBuilder)(given TokenIntOps): StringBuilder =
+  private def printTokenInt(tokenInt: TokenIntOps, builder: StringBuilder): StringBuilder =
     builder.addAll(s"${tokenInt.value}\n")
 
-  private def printSingleton(builder: StringBuilder)(given SingletonOps): StringBuilder =
+  private def printSingleton(singleton: SingletonOps, builder: StringBuilder): StringBuilder =
     builder.addAll(s"${singleton.ast.tpe}\n")
 
   private def printLevel(level: Int, builder: StringBuilder): StringBuilder = builder.addAll(" " * level)
