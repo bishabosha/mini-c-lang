@@ -3,8 +3,8 @@ package mmc
 import Ast._
 import Frame._
 
-object Frame {
-  val Empty = Frame(Map(),Map(),Map(),Map())
+object Frame
+  val Empty = Frame(Map.empty, Map.empty, Map.empty, Map.empty)
   type CapturedDefs = Map[Scoped, Declaration]
   type Defs = Map[Identifier, Declaration]
   type FrameLens = (CapturedDefs => CapturedDefs) => Frame => Frame
@@ -16,7 +16,6 @@ object Frame {
     frame.copy(globals = f(frame.globals))
   def capturesLens(f: CapturedDefs => CapturedDefs)(frame: Frame): Frame =
     frame.copy(captures = f(frame.captures))
-}
 
 case class Frame(
   globals: Defs,
