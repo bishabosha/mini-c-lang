@@ -12,7 +12,7 @@ import org.graalvm.polyglot._
  * Exports opaque type [[CAst]] which is simply a polyglot value with a type safe api, representing the AST built by
  * the Yacc parser.
  */
-object mmclib { self =>
+object mmclib
   import opaques._
   import AstTag._
   import CAst.given
@@ -150,5 +150,3 @@ object mmclib { self =>
   private val get_ast             = mmclib.getMember("get_ast")
   private val get_SymbTable_inst  = mmclib.getMember("get_SymbTable_inst")
   private val init_SymbTable      = mmclib.getMember("init_SymbTable")
-
-}
