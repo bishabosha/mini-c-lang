@@ -1,7 +1,6 @@
 package mmc
 
-trait Stage {
+trait Stage
   type Source
   type Context
   type Goal
-}

@@ -22,7 +22,7 @@ object mmclib { self =>
   private val source   = Source.newBuilder("llvm", getClass.getResource("/mmclib")).build
   private val mmclib   = polyglot.eval(source)
 
-  private object opaques {
+  private object opaques
 
     opaque type AstInfo = Value
 
@@ -33,35 +33,27 @@ object mmclib { self =>
     opaque type TokenIntOps    <: CAst = Value
     opaque type SingletonOps   <: CAst = Value
 
-    object BinaryNodeOps {
-      given (node: BinaryNodeOps) {
+    object BinaryNodeOps
+      given :(node: BinaryNodeOps)
         def a1: CAst = UnaryNode_a1.execute(node)
         def a2: CAst = BinaryNode_a2.execute(node)
-      }
-    }
 
-    object UnaryNodeOps {
-      given (node: UnaryNodeOps) {
+    object UnaryNodeOps
+      given :(node: UnaryNodeOps)
         def a1: CAst = UnaryNode_a1.execute(node)
-      }
-    }
 
-    object TokenIntOps {
-      given (node: TokenIntOps) {
+    object TokenIntOps
+      given :(node: TokenIntOps)
         def value: Int = TokenInt_value.execute(node).asInt
-      }
-    }
 
-    object TokenStringOps {
-      given (node: TokenStringOps) {
+    object TokenStringOps
+      given :(node: TokenStringOps)
         def lexeme: String = TokenString_lexeme.execute(node).asString
-      }
-    }
 
     def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
-    object CAst {
-      given (node: CAst) {
+    object CAst
+      given :(node: CAst)
 
         def ast: AstInfo =
           if node.hasMember("ast") then
@@ -70,24 +62,19 @@ object mmclib { self =>
             node
 
         def nonEmpty: Boolean = (node `ne` null) && !node.isNull
-      }
-    }
 
-    object AstInfo {
+    object AstInfo
 
       private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
 
-      given (node: AstInfo) {
+      given :(node: AstInfo)
         def tpe: String = Ast_tpe.execute(node).asString
         def tag: AstTag = AstTags(Ast_tag.execute(node).asInt)
-      }
 
-    }
 
     val EmptyAst: CAst = null_Ast
 
     def free(node: CAst): Unit = free_pointer.executeVoid(node)
-  }
 
   export opaques._
 
@@ -100,40 +87,27 @@ object mmclib { self =>
   inline given tokenString(given node: TokenStringOps): TokenStringOps = node
   inline given tokenInt(given node: TokenIntOps): TokenIntOps = node
 
-  inline def (node: CAst) asBinaryNode[T](f: => (given BinaryNodeOps) => T): Option[T] = node.ast.tag match {
-    case BinaryNode if !sequenceTpes.contains(node.ast.tpe) => Some(f(given node.asInstanceOf))
-    case _                                                  => None
-  }
+  inline def (node: CAst) castTo[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
+    node.ast.tag match
+      case `tag` if cond(node) => Some(f(given node.asInstanceOf))
+      case _                   => None
 
-  inline def (node: CAst) asSequence[T](f: => (given BinaryNodeOps) => T): Option[T] = node.ast.tag match {
-    case BinaryNode if sequenceTpes.contains(node.ast.tpe) => Some(f(given node.asInstanceOf))
-    case _                                                 => None
-  }
+  inline def (node: CAst) castOp[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
+    node.ast.tag match
+      case `tag` if cond(node) => op(given node.asInstanceOf)
+      case _                   =>
 
-  inline def (node: CAst) asUnaryNode[T](f: => (given UnaryNodeOps) => T): Option[T] = node.ast.tag match {
-    case UnaryNode => Some(f(given node.asInstanceOf))
-    case _         => None
-  }
+  inline def (node: CAst) asBinaryNode[T](f: => (given BinaryNodeOps) => T) =
+    node.castTo(BinaryNode)(n => !sequenceTpes.contains(n.ast.tpe))(f)
 
-  inline def (node: CAst) asTokenInt[T](f: => (given TokenIntOps) => T): Option[T] = node.ast.tag match {
-    case TokenInt => Some(f(given node.asInstanceOf))
-    case _        => None
-  }
+  inline def (node: CAst) asSequence[T](f: => (given BinaryNodeOps) => T) =
+    node.castTo(BinaryNode)(n => sequenceTpes.contains(n.ast.tpe))(f)
 
-  inline def (node: CAst) asTokenString[T](f: => (given TokenStringOps) => T): Option[T] = node.ast.tag match {
-    case TokenString => Some(f(given node.asInstanceOf))
-    case _           => None
-  }
-
-  inline def (node: CAst) asSingleton[T](f: => (given SingletonOps) => T): Option[T] = node.ast.tag match {
-    case Singleton => Some(f(given node.asInstanceOf))
-    case _         => None
-  }
-
-  inline def (node: CAst) binaryOp(op: => (given BinaryNodeOps) => Unit): Unit = node.ast.tag match {
-    case BinaryNode => op(given node.asInstanceOf)
-    case _          =>
-  }
+  inline def (node: CAst) asUnaryNode[T](f: => (given UnaryNodeOps) => T)     = node.castTo(UnaryNode)(True)(f)
+  inline def (node: CAst) asTokenInt[T](f: => (given TokenIntOps) => T)       = node.castTo(TokenInt)(True)(f)
+  inline def (node: CAst) asTokenString[T](f: => (given TokenStringOps) => T) = node.castTo(TokenString)(True)(f)
+  inline def (node: CAst) asSingleton[T](f: => (given SingletonOps) => T)     = node.castTo(Singleton)(True)(f)
+  inline def (node: CAst) binaryOp(op: => (given BinaryNodeOps) => Unit)      = node.castOp(BinaryNode)(True)(op)
 
   inline def (node: CAst) cata[T](
     unaop: => (given UnaryNodeOps) => T,
@@ -141,13 +115,12 @@ object mmclib { self =>
     tokst: => (given TokenStringOps) => T,
     tokin: => (given TokenIntOps) => T,
     singl: => (given SingletonOps) => T
-  ): T = node.ast.tag match {
+  ): T = node.ast.tag match
     case UnaryNode   => unaop(given node.asInstanceOf)
     case BinaryNode  => binop(given node.asInstanceOf)
     case TokenString => tokst(given node.asInstanceOf)
     case TokenInt    => tokin(given node.asInstanceOf)
     case Singleton   => singl(given node.asInstanceOf)
-  }
 
   private val sequenceTpes = Set("E", ";", ",", "~")
 
@@ -157,12 +130,11 @@ object mmclib { self =>
   def setDebug(value: Boolean): Unit =
     set_debug.executeVoid(Boolean.box(value))
 
-  def identPool: Set[Identifier] = {
+  def identPool: Set[Identifier] =
     val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
     val symbols   = symbTable.toSet
     symbTable.clear()
     symbols
-  }
 
   def close(): Unit = polyglot.close()
 
