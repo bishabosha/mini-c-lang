@@ -89,7 +89,7 @@ object normalToTac extends Stage {
   private def eliminateJumps(code: List[Code]): List[Code] = {
     var acc = Nil: List[Code]
     var left = code
-    while (!left.isEmpty) {
+    while !left.isEmpty do {
       left match {
         case (l: LabelIds) :: left1 =>
           left1 match {

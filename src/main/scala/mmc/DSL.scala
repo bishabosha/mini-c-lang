@@ -39,11 +39,11 @@ object DSL {
     var reverse = false
     var decided = false
     var break   = false
-    while (!break) {
+    while !break do {
       val leftinfo = left.ast
       val rightinfo = right.ast
-      if (leftinfo.tag == BinaryNode && leftinfo.tpe == tpe) {
-        if (!decided) {
+      if leftinfo.tag == BinaryNode && leftinfo.tpe == tpe then {
+        if !decided then {
           decided = true;
         }
         list = right :: list
@@ -51,8 +51,8 @@ object DSL {
           left  = binary.a1
           right = binary.a2
         }
-      } else if (rightinfo.tag == BinaryNode && rightinfo.tpe == tpe) {
-        if (!decided) {
+      } else if rightinfo.tag == BinaryNode && rightinfo.tpe == tpe then {
+        if !decided then {
           decided = true
           reverse = true
         }
@@ -62,7 +62,7 @@ object DSL {
           right = binary.a2
         }
       } else {
-        if (reverse) {
+        if reverse then {
           list = right :: left :: list
         } else {
           list = left :: right :: list

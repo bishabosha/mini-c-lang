@@ -45,7 +45,7 @@ def mainDefined[A](topLevel: Bindings)(f: Bindings => A): A =
 
 def extractDeclarations
   (declarations: Declaration*): Map[Bindings.Key, Any] =
-    (for (d @ Declaration(_, _, decl) <- declarations)
+    (for d @ Declaration(_, _, decl) <- declarations
       yield (DeclarationKey(extractIdentifier(decl)), d)
     ).toMap
 
@@ -56,7 +56,7 @@ private def extractIdentifier(d: Declarator): Identifier = d match {
 
 def printScopesOrdered(bindings: Bindings): Unit = {
   var cursor = Cursor(bindings)
-  while (!cursor.isEmpty) {
+  while !cursor.isEmpty do {
     val scope = getCurrentScope(cursor.current)
     println(scope)
     cursor = cursor.next

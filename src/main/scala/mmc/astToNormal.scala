@@ -77,7 +77,7 @@ object astToNormal extends Stage {
   private def eliminateTemporaries(statements: List[Statements]): List[Statements] = {
     var acc = Nil: List[Statements]
     var left = statements.reverse
-    while (!left.isEmpty) {
+    while !left.isEmpty do {
       left match {
         case (a @ Assignment(id: Scoped, t: Temporary)) :: left1 =>
           left1 match {

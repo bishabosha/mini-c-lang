@@ -380,7 +380,7 @@ class parseCAst private
     case f @ FunctionDeclarator(i, args) =>
       declareInScope(i, storage, types, f, None).toList :+ {
         val bodyParsed =
-          for (b <- bodyOp) yield {
+          for b <- bodyOp yield {
             framed {
               args match {
                 case LParam(ls) => declareParamsInScope(ls:_*)
@@ -441,7 +441,7 @@ class parseCAst private
   }
 
   private def declareParamsInScope(args: Parameter*): Unit = {
-    for (p <- args) {
+    for p <- args do {
       p match {
         case (t: Types, s: Scoped) =>
           declareInScope(s, Auto, t, s, Some(Frame.paramsLens))
@@ -487,7 +487,7 @@ class parseCAst private
       }
       val declaration = Declaration(storage, types, declarator)
       context += (DeclarationKey(scoped.id), declaration)
-      for (updater <- frameLens) {
+      for updater <- frameLens do {
         var declInFrame = scoped -> declaration
         frames = replaceHead(frames) { updater(_ + declInFrame) }
       }
@@ -533,7 +533,7 @@ class parseCAst private
             scoped(identifier, scope)
         }
       case _ =>
-        if (inDecl) {
+        if inDecl then {
           scoped(identifier, currentScope)
         } else {
           throw SemanticError(s"Identifier '$identifier~$currentScope' is undefined")
