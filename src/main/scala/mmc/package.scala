@@ -6,6 +6,10 @@ import ArgList._
 
 given Conversion[Boolean, Int] = if _ then 1 else 0
 
+inline def const[A,B](a: A) = (b: B) => a
+
+inline def True[A]: A => Boolean = const(true)
+
 type =?>[I,O] = PartialFunction[I,O]
 
 case object ScopeKey extends Bindings.Key {
