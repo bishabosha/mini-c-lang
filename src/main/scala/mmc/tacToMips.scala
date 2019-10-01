@@ -75,19 +75,22 @@ object tacToMips extends Stage
       private val saved: Set[SavedValues],
     )
       def advanceTemporary: MipsContext =
-        val temp = _temporary.map { t =>
+        val temp = _temporary.map:
+          t =>
           if t.ordinal == Temporaries.values.length -1 then
             throw SemanticError("Too many temporaries!")
           Temporaries.values.find(_.ordinal == t.ordinal + 1).get
-        } orElse {
+        .orElse:
           Some(T0)
-        }
         copy(_temporary = temp)
 
       def freeTemporary: MipsContext =
         val temp =
-          _temporary.map(t => Temporaries.values.find(_.ordinal == t.ordinal - 1).get)
-                    .orElse(throw SemanticError("No temporary to free!"))
+          _temporary.map:
+            t =>
+            Temporaries.values.find(_.ordinal == t.ordinal - 1).get
+          .orElse:
+            throw SemanticError("No temporary to free!")
         copy(_temporary = temp)
 
       def advanceSaved: (SavedValues, MipsContext) =
@@ -98,20 +101,20 @@ object tacToMips extends Stage
         val consumed = newSet.head
         (consumed, copy(saved = saved + consumed))
 
-      def temporary: Temporaries = _temporary.getOrElse { T0 }
+      def temporary: Temporaries = _temporary.getOrElse(T0)
 
       def push(asrc: ASrc): MipsContext = copy(stack = asrc :: stack)
 
       def pop: (MipsContext, ASrc) = (copy(stack = stack.tail), stack.head)
 
   private def nextFrame(frame: Frame): Context =
-    MipsContext(Map(), frame, Nil, None, Set())
+    MipsContext(Map.empty, frame, Nil, None, Set.empty)
 
   private def add(context: Context, key: Variable, value: Register): Context =
     context.copy(context.current + (key -> value))
 
   def apply( context: normalToTac.DataMap, tac: List[Tac]): Goal =
-    goal(nextFrame(Frame.Empty), context, tac)
+    goal(nextFrame(Frame.empty), context, tac)
 
   private def goal(context: Context, data: normalToTac.DataMap, nodes: List[Tac]): Goal =
     val dataAssembler        = getData(data)
@@ -260,14 +263,14 @@ object tacToMips extends Stage
     (context, codeR ::: l)
 
   private def defineLocals(context: Context): Context =
-    context.frame.locals.keys.foldLeft(context) { (c, s) =>
+    context.frame.locals.keys.foldLeft(context):
+      (c, s) =>
       val (register, advanced) = c.advanceSaved
       add(advanced, s, register)
-    }
 
   private def getDest(context: Context, lvalue: Variable): Option[Dest] = lvalue match
     case s @ Scoped(i, 0) =>
-      context.frame.globals.get(i).map { _ => Label(s) }
+      context.frame.globals.get(i).map(_ => Label(s))
     case _ =>
       context.current.get(lvalue)
 
@@ -283,4 +286,4 @@ object tacToMips extends Stage
     if dataMap.isEmpty then
       Nil
     else
-      Data :: dataMap.flatMap[Assembler]((i, c) => Label(i) :: Word(c) :: Nil).toList
+      Data :: dataMap.flatMap[Assembler](Label(_) :: Word(_) :: Nil).toList

@@ -7,23 +7,23 @@ object DSL
 
   object BinaryNode
     def unapply(node: CAst) =
-      node.asBinaryNode(node.ast.tpe, binary.a1, binary.a2)
+      node.asBinaryNode(binary.ast.tpe, binary.a1, binary.a2)
 
   object UnaryNode
     def unapply(node: CAst) =
-      node.asUnaryNode(node.ast.tpe, unary.a1)
+      node.asUnaryNode(unary.ast.tpe, unary.a1)
 
   object Singleton
     def unapply(node: CAst) =
-      node.asSingleton(node.ast.tpe)
+      node.asSingleton(singleton.ast.tpe)
 
   object TokenInt
     def unapply(node: CAst) =
-      node.asTokenInt(node.ast.tpe, tokenInt.value)
+      node.asTokenInt(tokenInt.ast.tpe, tokenInt.value)
 
   object TokenString
     def unapply(node: CAst) =
-      node.asTokenString(node.ast.tpe, tokenString.lexeme)
+      node.asTokenString(tokenString.ast.tpe, tokenString.lexeme)
 
   object Sequence
     def unapply(node: CAst) =
@@ -44,19 +44,17 @@ object DSL
         if !decided then
           decided = true;
         list = right :: list
-        left.binaryOp {
+        left.binaryOp:
           left  = binary.a1
           right = binary.a2
-        }
       else if rightinfo.tag == BinaryNode && rightinfo.tpe == tpe then
         if !decided then
           decided = true
           reverse = true
         list  = left :: list
-        right.binaryOp {
+        right.binaryOp:
           left  = binary.a1
           right = binary.a2
-        }
       else
         if reverse then
           list = right :: left :: list

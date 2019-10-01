@@ -4,7 +4,7 @@ import Bindings._
 
 object Bindings
 
-  val Empty = Bindings(Map(), Nil, Nil)
+  val empty = Bindings(Map.empty, Nil, Nil)
 
   trait Key
     type Value
@@ -20,11 +20,11 @@ case class Bindings(
   def genSearch(id: Key): Option[id.Value] =
     (LazyList(this) ++: stack.view)
       .map(_.data.get(id))
-      .collectFirst { case Some(o) => o.asInstanceOf[id.Value] }
+      .collectFirst({ case Some(o) => o.asInstanceOf[id.Value] })
 
   def topView: Iterable[(Key, Any)] = data.view
 
-  def push: Bindings = Empty.copy(stack = this :: stack)
+  def push: Bindings = empty.copy(stack = this :: stack)
 
   def popOrElse(default: => Bindings): Bindings =
     stack.headOption

@@ -8,6 +8,8 @@ lazy val root = project
     name := "mmc",
     version := "0.1.0",
 
+    scalacOptions ++= Seq("-Yindent-colons"),
+
     scalaVersion := dottyVersion,
 
     libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test",

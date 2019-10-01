@@ -180,16 +180,14 @@ class parseCAst private (
       list.flatMap(externalDeclaration)
 
   private val functionDefinition: Parse[List[Declarations]] =
-    case BinaryNode("D", declarators, UnaryNode("B", body)) =>
-      functionDef(declarators, Some(body))
-    case BinaryNode("D", declarators, Singleton("B")) =>
-      functionDef(declarators, None)
+    case BinaryNode("D", declarators, UnaryNode("B", body)) => functionDef(declarators, Some(body))
+    case BinaryNode("D", declarators, Singleton("B"))       => functionDef(declarators, None)
 
   private val variableDeclaration: Parse[List[Declarations]] =
     case BinaryNode("q", specifiers, expr) =>
-      val (s, d) = declarationSpecifiersSpecific(specifiers)
+      val s -> d = declarationSpecifiersSpecific(specifiers)
       val lens   = if frames.isEmpty then None else Some(Frame.localsLens)
-      initDeclarators(expr).flatMap {
+      initDeclarators(expr).flatMap:
         case i: Scoped =>
           declareInScope(i, s, d, i, lens).toList
         case f @ FunctionDeclarator(id, _) =>
@@ -200,7 +198,6 @@ class parseCAst private (
           declareInScope(i, s, d, i, lens).toList :+ a
         case _ =>
           Nil
-      }
 
   private val block: Parse[Option[Block]] =
     case UnaryNode("B", body) => inlineBlock(body).map(stats => Block(stacked(compoundStatements(stats))))
@@ -244,9 +241,7 @@ class parseCAst private (
     case UnaryNode("apply", name)        => Application(postfix(name), Nil)
 
   private val identifier: Parse[Identifier] =
-    case TokenString("id", id) =>
-      assert(identPool(id), s"unknown identifier $id")
-      id
+    case TokenString("id", id) => id.ensuring(identPool(id), s"unknown identifier $id")
 
   private val intLiteral: Parse[IntLiteral] =
     case TokenInt("constant", id) => IntLiteral(id)
@@ -275,12 +270,12 @@ class parseCAst private (
 
   private val storage: Parse[Storage] =
     case Singleton("extern") => Storage(Extern)
-    case Singleton("auto") => Storage(Auto)
+    case Singleton("auto")   => Storage(Auto)
 
   private val `type`: Parse[Type] =
-    case Singleton("int") => Type(Cint)
+    case Singleton("int")      => Type(Cint)
     case Singleton("function") => Type(Cfunction)
-    case Singleton("void") => Type(Cvoid)
+    case Singleton("void")     => Type(Cvoid)
 
   private val functionDeclarator: Parse[FunctionDeclarator] =
     case UnaryNode("F", name)        => FunctionDeclarator(identifierWithScope(name), LAny)
@@ -310,34 +305,32 @@ class parseCAst private (
 
     case declarator => yieldDefinition(Auto, Cint)(bodyOp)(functionDeclarator(declarator))
 
-  private def yieldDefinition(storage: StorageTypes, types: Types)(bodyOp: Option[Source])
-    : FunctionDeclarator => List[Declarations] =
+  private def yieldDefinition(storage: StorageTypes, types: Types)(body: Option[Source]): FunctionDeclarator => List[Declarations] =
     case f @ FunctionDeclarator(i, args) =>
-      declareInScope(i, storage, types, f, None).toList :+ {
-        val bodyParsed =
-          for b <- bodyOp yield
-            framed {
-              args match
-                case LParam(ls) => declareParamsInScope(ls:_*)
-                case _ =>
-              compoundStatements(b)
-            }
-        if types != Cvoid then
-          tailYieldsValue(bodyParsed.map(_._2))
-        define(bodyParsed.map(Function(i,_,_)).getOrElse(Function(i, Frame.Empty, Nil)))
-      }
+      declareInScope(i, storage, types, f, None).toList :+ makeDef(i, args, body)
+
+  private def makeDef(i: Scoped, args: ArgList, body: Option[Source]): Declarations =
+    val bodyParsed =
+    for b <- body
+    yield framed:
+      args match
+        case LParam(ls) => declareParamsInScope(ls:_*)
+        case _          =>
+      compoundStatements(b)
+    if types != Cvoid then
+      tailYieldsValue(bodyParsed.map(_._2))
+    define(bodyParsed.map(Function(i,_,_)).getOrElse(Function(i, Frame.empty, Nil)))
 
   private def scoped(id: Identifier, scope: Long): Scoped =
     scopedPool.getOrElseUpdate(id -> scope, Scoped(id, scope))
 
   private def framed[A](parser: => A): (Frame, A) =
-    stacked {
-      frames = Frame.Empty :: frames
+    stacked:
+      frames = Frame.empty :: frames
       val result = parser
       val popped = frames.head
       frames = frames.tail
-      (popped, result)
-    }
+      popped -> result
 
   private def stacked[A](parser: => A): A =
     context = context.push
@@ -361,13 +354,10 @@ class parseCAst private (
     for (t -> s) <- args do
       declareInScope(s, Auto, t, s, Some(Frame.paramsLens))
 
-  private def declareInScope
-    ( scoped: Scoped,
-      storage: StorageTypes,
-      types: Types,
-      declarator: Declarator,
-      frameLens: Option[FrameLens]
-    ): Option[Declaration] = returning {
+  private def declareInScope(scoped: Scoped, storage: StorageTypes, types: Types, declarator: Declarator,
+    frameLens: Option[FrameLens])
+  : Option[Declaration] =
+    returning:
       for
         Declaration(s, t, existing) <- context.genGet(DeclarationKey(scoped.id))
       do
@@ -385,7 +375,7 @@ class parseCAst private (
               else
                 throw new SemanticError(
                   s"Redefinition of function '${scoped.id}' with "+
-                   "incompatible types.")
+                  "incompatible types.")
             case _ =>
               throw new SemanticError(
                 s"Redefinition of function '${scoped.id}' to variable.")
@@ -393,9 +383,8 @@ class parseCAst private (
       context = context.add(DeclarationKey(scoped.id), declaration)
       for updater <- frameLens do
         var declInFrame = scoped -> declaration
-        frames = replaceHead(frames) { updater(_ + declInFrame) }
+        frames = replaceHead(frames)(updater(_ + declInFrame))
       Some(declaration)
-    }
 
   private def define(f: Function): Function =
     context = context.add(DefinitionKey(f.id), ())
@@ -414,20 +403,16 @@ class parseCAst private (
         decl match
           case Scoped(_, scope) =>
             val scopedId = scoped(identifier, scope)
-              if currentScope != scope then
-                if scope == 0 then
-                  frames = replaceHead(frames) {
-                    Frame.globalsLens(_ + (identifier -> d))
-                  }
-                else
-                  if frames.head.locals.get(scopedId).isEmpty then
-                    var declInFrame = scopedId -> d
-                    frames = replaceHead(frames) {
-                      Frame.capturesLens(_ + declInFrame)
-                    }
+            if currentScope != scope then
+              if scope == 0 then
+                frames = replaceHead(frames)(Frame.globalsLens(_ + (identifier -> d)))
+              else if frames.head.locals.get(scopedId).isEmpty then
+                var declInFrame = scopedId -> d
+                frames = replaceHead(frames)(Frame.capturesLens(_ + declInFrame))
             scopedId
-          case FunctionDeclarator(Scoped(_, scope), _) =>
-            scoped(identifier, scope)
+
+          case FunctionDeclarator(Scoped(_, scope), _) => scoped(identifier, scope)
+
       case _ =>
         if inDecl then
           scoped(identifier, currentScope)
@@ -441,18 +426,16 @@ class parseCAst private (
         throw SemanticError("Tail of function does not return a value.")
 
   private def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) =
-    val (storages, types) =
-        declarationSpecifiers.partition(_.isInstanceOf[Storage])
+    val storages -> types = declarationSpecifiers.partition(_.isInstanceOf[Storage])
 
-    val storage: StorageTypes = storages match
-      case Nil => Auto
+    val storage = storages match
+      case Nil                 => Auto
       case (s: Storage) :: Nil => s.id
-      case _ => throw SemanticError(
-        "More than one storage class may not be specified.")
+      case _                   => throw SemanticError("More than one storage class may not be specified.")
 
-    val returnType: Types = types match
-      case Nil => Cint // warning implicit return type 'int'
+    val returnType = types match
+      case Nil              => Cint // warning implicit return type 'int'
       case (t: Type) :: Nil => t.id
-      case _ => throw SemanticError("Invalid combination of type specifiers.")
+      case _                => throw SemanticError("Invalid combination of type specifiers.")
 
-    (storage, returnType)
+    storage -> returnType

@@ -79,7 +79,8 @@ object mmclib
   export opaques._
 
   // Keep in sync with ast.h `AstTag`
-  enum AstTag { case Singleton, UnaryNode, BinaryNode, TokenInt, TokenString }
+  enum AstTag
+    case Singleton, UnaryNode, BinaryNode, TokenInt, TokenString
 
   inline given singleton(given node: SingletonOps): SingletonOps = node
   inline given binary(given node: BinaryNodeOps): BinaryNodeOps = node
@@ -87,12 +88,12 @@ object mmclib
   inline given tokenString(given node: TokenStringOps): TokenStringOps = node
   inline given tokenInt(given node: TokenIntOps): TokenIntOps = node
 
-  inline def (node: CAst) castTo[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
+  private inline def (node: CAst) castTo[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
     node.ast.tag match
       case `tag` if cond(node) => Some(f(given node.asInstanceOf))
       case _                   => None
 
-  inline def (node: CAst) castOp[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
+  private inline def (node: CAst) castOp[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
     node.ast.tag match
       case `tag` if cond(node) => op(given node.asInstanceOf)
       case _                   =>
