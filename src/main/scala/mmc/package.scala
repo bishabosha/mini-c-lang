@@ -64,6 +64,5 @@ def showTemporary(temporary: Temporary): String =
   ("@" + temporary.hashCode).take(6)
 
 def getCurrentScope(bindings: Bindings): Long =
-  bindings.genGet(ScopeKey).getOrElse {
+  bindings.genGet(ScopeKey).getOrElse:
     throw IllegalStateException("Context has no scope!")
-  }

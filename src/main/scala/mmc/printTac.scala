@@ -23,9 +23,10 @@ object printTac
     val codeAll = evalNodes(src, indent)
     dataString + dataAll + codeString + codeAll
 
-  private def evalData(data: normalToTac.DataMap, indent: String): String = data.map {
-    case Scoped(i,s) -> c => s"$i~$s:$endl${indent}.const %I32 $c$endl"
-  } mkString
+  private def evalData(data: normalToTac.DataMap, indent: String): String =
+    val entries = data.map:
+      case Scoped(i,s) -> c => s"$i~$s:$endl${indent}.const %I32 $c$endl"
+    entries.mkString
 
   private def evalNodes(nodes: List[Tac], indent: String): String =
     nodes.map(evalNode(_, indent)).mkString
@@ -42,19 +43,15 @@ object printTac
     s"$indent.end_function$endl"
 
   private def evalFrame(frame: Frame, indent: String): String =
-    val globals = frame.globals.map {
-      case (a, Declaration(_,t,_)) => s"${indent}.global ${evalType(t)} $a~0$endl"
-    } mkString
-    val locals = frame.locals.map {
-      case (Scoped(a, scope), Declaration(_,t,_)) => s"${indent}.local ${evalType(t)} $a~$scope$endl"
-    } mkString
-    val params = frame.params.map {
-      case (Scoped(a, scope), Declaration(_,t,_)) => s"${indent}.param ${evalType(t)} $a~$scope$endl"
-    } mkString
-    val captured = frame.captures.map {
-      case (Scoped(a, scope), Declaration(_,t,_)) => s"${indent}.captured ${evalType(t)} $a~$scope$endl"
-    }.mkString
-    s"${globals}${locals}${params}${captured}"
+    val globals = frame.globals.map:
+      case a -> Declaration(_,t,_) => s"${indent}.global ${evalType(t)} $a~0$endl"
+    val locals = frame.locals.map:
+      case Scoped(a, scope) -> Declaration(_,t,_) => s"${indent}.local ${evalType(t)} $a~$scope$endl"
+    val params = frame.params.map:
+      case Scoped(a, scope) -> Declaration(_,t,_) => s"${indent}.param ${evalType(t)} $a~$scope$endl"
+    val captured = frame.captures.map:
+      case Scoped(a, scope) -> Declaration(_,t,_) => s"${indent}.captured ${evalType(t)} $a~$scope$endl"
+    s"${globals.mkString}${locals.mkString}${params.mkString}${captured.mkString}"
 
   private def evalCodes(nodes: List[Code], indent: String): String =
     nodes.map(evalCode(_, indent)).mkString

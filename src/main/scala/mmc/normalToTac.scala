@@ -38,9 +38,9 @@ object normalToTac extends Stage
     (node: Declarations): List[Tac] =
       node match
         case Function(s, f, body) =>
-          val validated = body.foldLeft(List.empty[Code]) {
-            (code, statement) => evalStatement(statement) ::: code
-          }
+          val validated = body.foldLeft(List.empty[Code])((code, statement) =>
+            evalStatement(statement) ::: code
+          )
           List(Func(s, f, eliminateJumps(validated)))
         case _ => Nil
 
@@ -75,10 +75,9 @@ object normalToTac extends Stage
           val endElse: List[Code] = elseL :: (joinCommand :: orElse).reverse
           val both: List[Code]    = endIf ::: endElse
           (jumpIfZero :: both) :+ joinLabel
-        val finalCode: List[Code] = code getOrElse {
+        val finalCode: List[Code] = code getOrElse:
           val endIf: List[Code]   = (joinCommand :: ifOne).reverse
           (jumpIfZero :: endIf) :+ joinLabel
-        }
         finalCode.reverse
       case _ =>
         List()
@@ -104,13 +103,14 @@ object normalToTac extends Stage
 
   private def evalApplication
     (dest: Variable, id: Scoped, args: Expressions): List[Code] =
-      args.foldRight(List[Code](TwoTac(CALL, dest, id))) { (exp, acc) =>
-        exp match
+      args.foldRight(List[Code](TwoTac(CALL, dest, id))) :
+        (exp, acc) =>
+          exp match
           case a: ASrc =>
             OneTac(PUSH, a) :: acc
           case _ =>
             acc
-      }.reverse
+      .reverse
 
   private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = expr match
     case Multiplicative(op, l: ASrc, r: ASrc) => ThreeTac(op, dest, l, r) :: Nil

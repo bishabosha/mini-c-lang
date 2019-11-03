@@ -82,9 +82,8 @@ class interpretAst private (var cursor: Cursor, nodes: astToNormal.Goal)
     cursor = cursor.withBindings(cursor.current.add(IdentKey(k), c))
 
   private def evalAsConstant(o: Option[Int]): IntLiteral =
-    o.map(IntLiteral).getOrElse {
+    o.map(IntLiteral).getOrElse:
       throw UnimplementedError("expression does not yield constant")
-    }
 
   private def expr(node: Assignments): Option[Int] = node match
     case _: Application           => None

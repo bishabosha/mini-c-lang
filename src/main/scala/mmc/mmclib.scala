@@ -79,7 +79,8 @@ object mmclib
   export opaques._
 
   // Keep in sync with ast.h `AstTag`
-  enum AstTag { case Singleton, UnaryNode, BinaryNode, TokenInt, TokenString }
+  enum AstTag
+    case Singleton, UnaryNode, BinaryNode, TokenInt, TokenString
 
   inline given singleton(given node: SingletonOps): SingletonOps = node
   inline given binary(given node: BinaryNodeOps): BinaryNodeOps = node
@@ -87,29 +88,29 @@ object mmclib
   inline given tokenString(given node: TokenStringOps): TokenStringOps = node
   inline given tokenInt(given node: TokenIntOps): TokenIntOps = node
 
-  inline def (node: CAst) castTo[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
+  private inline def [Ops, T](node: CAst) castTo(tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
     node.ast.tag match
       case `tag` if cond(node) => Some(f(given node.asInstanceOf))
       case _                   => None
 
-  inline def (node: CAst) castOp[Ops, T](tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
+  private inline def [Ops, T](node: CAst) castOp(tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
     node.ast.tag match
       case `tag` if cond(node) => op(given node.asInstanceOf)
       case _                   =>
 
-  inline def (node: CAst) asBinaryNode[T](f: => (given BinaryNodeOps) => T) =
+  inline def [T](node: CAst) asBinaryNode(f: => (given BinaryNodeOps) => T) =
     node.castTo(BinaryNode)(n => !sequenceTpes.contains(n.ast.tpe))(f)
 
-  inline def (node: CAst) asSequence[T](f: => (given BinaryNodeOps) => T) =
+  inline def [T](node: CAst) asSequence(f: => (given BinaryNodeOps) => T) =
     node.castTo(BinaryNode)(n => sequenceTpes.contains(n.ast.tpe))(f)
 
-  inline def (node: CAst) asUnaryNode[T](f: => (given UnaryNodeOps) => T)     = node.castTo(UnaryNode)(True)(f)
-  inline def (node: CAst) asTokenInt[T](f: => (given TokenIntOps) => T)       = node.castTo(TokenInt)(True)(f)
-  inline def (node: CAst) asTokenString[T](f: => (given TokenStringOps) => T) = node.castTo(TokenString)(True)(f)
-  inline def (node: CAst) asSingleton[T](f: => (given SingletonOps) => T)     = node.castTo(Singleton)(True)(f)
+  inline def [T](node: CAst) asUnaryNode(f: => (given UnaryNodeOps) => T)     = node.castTo(UnaryNode)(True)(f)
+  inline def [T](node: CAst) asTokenInt(f: => (given TokenIntOps) => T)       = node.castTo(TokenInt)(True)(f)
+  inline def [T](node: CAst) asTokenString(f: => (given TokenStringOps) => T) = node.castTo(TokenString)(True)(f)
+  inline def [T](node: CAst) asSingleton(f: => (given SingletonOps) => T)     = node.castTo(Singleton)(True)(f)
   inline def (node: CAst) binaryOp(op: => (given BinaryNodeOps) => Unit)      = node.castOp(BinaryNode)(True)(op)
 
-  inline def (node: CAst) cata[T](
+  inline def [T](node: CAst) cata(
     unaop: => (given UnaryNodeOps) => T,
     binop: => (given BinaryNodeOps) => T,
     tokst: => (given TokenStringOps) => T,

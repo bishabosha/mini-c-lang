@@ -4,10 +4,10 @@ import Ast._
 import Frame._
 
 object Frame
-  val Empty = Frame(Map.empty, Map.empty, Map.empty, Map.empty)
   type CapturedDefs = Map[Scoped, Declaration]
-  type Defs = Map[Identifier, Declaration]
-  type FrameLens = (CapturedDefs => CapturedDefs) => Frame => Frame
+  type Defs         = Map[Identifier, Declaration]
+  type FrameLens    = (CapturedDefs => CapturedDefs) => Frame => Frame
+  val empty = Frame(Map.empty, Map.empty, Map.empty, Map.empty)
   def paramsLens(f: CapturedDefs => CapturedDefs)(frame: Frame): Frame =
     frame.copy(params = f(frame.params))
   def localsLens(f: CapturedDefs => CapturedDefs)(frame: Frame): Frame =
