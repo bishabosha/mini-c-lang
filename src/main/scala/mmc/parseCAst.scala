@@ -40,7 +40,7 @@ class parseCAst private (
   private var ifCount = 0L
   private var scopeCount = 0L
   private var currentScope = scopeCount
-  private var context = Bindings.Empty.copy(extractDeclarations(Std.declarations: _*).toMap).add(ScopeKey, scopeCount)
+  private var context = Bindings.empty.copy(extractDeclarations(Std.declarations: _*).toMap).add(ScopeKey, scopeCount)
 
   private var frames: List[Frame] = Nil
 
@@ -338,7 +338,7 @@ class parseCAst private (
     currentScope = scopeCount
     context = context.add(ScopeKey, currentScope)
     val result = parser
-    context = context.popOrElse(Bindings.Empty)
+    context = context.popOrElse(Bindings.empty)
     currentScope = getCurrentScope(context)
     result
 
