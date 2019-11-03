@@ -159,9 +159,15 @@ class parseCAst private (
     | expressionsStatement
     | jumpStatement
     | selections .L
-    | { case value => throw UnimplementedError(s"statement (${value.ast.tpe}):\n${value.show}") }
+    | iterations .L
 
   private lazy val selections: Parse[IfElse] = ifElse
+
+  private lazy val iterations: Parse[While] = `while`
+
+  private val `while`: Parse[While] =
+    case BinaryNode("while", test, body) =>
+      While(expressions(test), inlineBlock(body).fold(Nil)(s => stacked(compoundStatements(s))))
 
   private val ifElse: Parse[Selections] =
     case BinaryNode("if", test, BinaryNode("else", ifThen, orElse)) =>

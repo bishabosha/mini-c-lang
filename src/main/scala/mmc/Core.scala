@@ -30,7 +30,7 @@ object Constants
       def  value: Int = c
 
   object StringLiteral
-    given : (s: StringLiteral)
+    given :(s: StringLiteral)
       def value: String = s
 
 enum Types

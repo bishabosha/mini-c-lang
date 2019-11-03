@@ -13,5 +13,8 @@ int main(void) {
     } else {
         print_int(a % b);
     }
+    while (1) {
+        print_int(0);
+    }
     return 0;
 }

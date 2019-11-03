@@ -32,7 +32,7 @@ MYCC = dotr -cp ${CP}:${JAR} mmc.Parser
 
 PARSER = cat testfile | ${MYCC}
 
-all:  ${TARGET}
+all: ${TARGET}
 
 cp:
 	echo "${CP}" | pbcopy

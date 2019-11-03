@@ -4,8 +4,9 @@ import Constants._
 
 object Ast
 
+  type Iterations             = While
   type Selections             = IfElse
-  type Statements             = Block | Declarations | Assignments | Return | Selections
+  type Statements             = Block | Declarations | Assignments | Return | Selections | Iterations
   type InitDeclarator         = Declarator | Assignment
   type DeclarationSpecifiers  = Type | Storage
   type Declarations           = Declaration | Function | Assignment
@@ -39,7 +40,7 @@ object Ast
   case class Function(id: Scoped, frame: Frame, body: List[Statements])
   case class Block(inner: List[Statements])
   case class IfElse(id: Long, test: Expressions, ifThen: List[Statements], orElse: List[Statements])
+  case class While(test: Expressions, body: List[Statements])
 
   def temporaryAssignment(value: Assignments): Assignment =
     Assignment(new Temporary, value)
-

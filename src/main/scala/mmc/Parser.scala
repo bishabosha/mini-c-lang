@@ -34,6 +34,7 @@ import exception._
       timeIt("PRINT_AST")
     val (context, ast) = parseCAst(cast, identPool) // TODO: Re-entrant - free memory
     timeIt("PARSE_CAST")
+    printAst(ast)
     val (nContext, astFlattened) = astToNormal(context, ast)
     timeIt("AST_TO_NORMAL")
     if doPrintNormal then

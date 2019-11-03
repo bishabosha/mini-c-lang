@@ -68,6 +68,7 @@ object astToNormal extends Stage
     | assignments
     | jumpStatements
     | selectionStatements
+    | { case other => throw UnexpectedAstNode(s"Found $other") }
 
   private val function: Statements =?> Function =
     case Function(i, f, body) => Function(i, f, eliminateTemporaries(statementList(body)))
