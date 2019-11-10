@@ -7,8 +7,8 @@ object normalToInterpreter extends Stage
   type Context = astToNormal.Context
   type Goal    = astToNormal.Goal
 
-  def apply(context: Context, nodes: Source): (Context, Goal) =
-    context -> nodes.foldRight(List.empty[Declarations])(topLevelStatement(_) ::: _)
+  def apply(nodes: Source): Goal =
+    nodes.foldRight(List.empty[Declarations])(topLevelStatement(_) ::: _)
 
   private def topLevelStatement(node: Declarations): Goal = node match
     case Function(Std.`mainIdentifier`, f, body) =>
