@@ -7,7 +7,7 @@ object Ast
   type Selections             = IfElse
   type Statements             = Block | Declarations | Assignments | Return | Selections
   type InitDeclarator         = Declarator | Assignment
-  type DeclarationSpecifiers  = Type | Storage
+  type DeclarationSpecifiers  = TypeRef | Storage
   type Declarations           = Declaration | Function | Assignment
   type Expressions            = List[Assignments]
   type Literals               = Scoped | Constant
@@ -25,8 +25,8 @@ object Ast
                                   Unary | Constant | Variable
 
   case class Constant(value: StringLiteral | IntLiteral)
-  case class Type(id: Types)
-  case class Storage(id: StorageTypes)
+  case class TypeRef(id: Type)
+  case class Storage(id: StorageKind)
   case class Return(value: Expressions)
   case class Application(operand: Postfix, args: Expressions)
   case class LazyExpressions(value: Expressions)
@@ -42,4 +42,3 @@ object Ast
 
   def temporaryAssignment(value: Assignments): Assignment =
     Assignment(new Temporary, value)
-

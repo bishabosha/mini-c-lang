@@ -2,8 +2,8 @@ package mmc
 
 import Ast._
 import Constants._
-import StorageTypes._
-import Types._
+import StorageKind._
+import Type._
 import ArgList._
 import exception._
 
@@ -61,8 +61,8 @@ object printAst
   private def getArgList(a: ArgList): String = a match
     case LParam(params) =>
       params.map {
-        case t: Types => typesToString(t)
-        case (t: Types, Scoped(i,_)) => s"${typesToString(t)} $i"
+        case t: Type => typesToString(t)
+        case (t: Type, Scoped(i,_)) => s"${typesToString(t)} $i"
       } mkString("(", ", ", ")")
 
     case LVoid => "(void)"
@@ -95,11 +95,11 @@ object printAst
 
   private def inc(level: Int) = level + 2
 
-  private def storageToString(s: StorageTypes) = s match
+  private def storageToString(s: StorageKind) = s match
     case Auto => ""
     case _    => s"$s "
 
-  private def typesToString(s: Types) = s match
+  private def typesToString(s: Type) = s match
     case Cint       => "int"
     case Cvoid      => "void"
     case Cfunction  => "function"

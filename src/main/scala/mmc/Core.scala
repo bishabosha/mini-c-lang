@@ -2,7 +2,7 @@ package mmc
 
 import language.implicitConversions
 
-type Parameter  = (Types, Scoped) | Types
+type Parameter  = (Type, Scoped) | Type
 type Variable   = Scoped | Temporary
 type Declarator = Scoped | FunctionDeclarator
 type Identifier = String
@@ -11,9 +11,9 @@ class Temporary
 case class Scoped(id: Identifier, scope: Long)
 case class FunctionDeclarator(id: Scoped, args: ArgList)
 
-case class Declaration(storage: StorageTypes, declType: Types, declarator: Declarator)
+case class Declaration(storage: StorageKind, declType: Type, declarator: Declarator)
 
-enum ArgList
+enum ArgList derives Eql
   case LVoid
   case LAny
   case LParam(list: List[Parameter])
@@ -25,18 +25,16 @@ object Constants
   def IntLiteral(i: Int): IntLiteral = i
   def StringLiteral(s: String): StringLiteral = s
 
-  object IntLiteral
-    given :(c: IntLiteral)
-      def  value: Int = c
+  given (c: IntLiteral)
+    def value: Int = c
 
-  object StringLiteral
-    given : (s: StringLiteral)
-      def value: String = s
+  given (s: StringLiteral)
+    def value: String = s
 
-enum Types
+enum Type derives Eql
   case Cint, Cvoid, Cfunction, Cstring
 
-enum StorageTypes
+enum StorageKind derives Eql
   case Auto, Extern
 
 trait Operand(val symbol: String)
@@ -71,8 +69,8 @@ enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with
 
 object Std
   import ArgList._
-  import StorageTypes._
-  import Types._
+  import StorageKind._
+  import Type._
 
   val mainIdentifier    = Scoped("main",0)
   val mainIdentifierKey = DeclarationKey(Std.mainIdentifier.id)

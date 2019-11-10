@@ -4,10 +4,10 @@ import mmclib._
 import DSL._
 import Ast._
 import Constants._
-import Types._
+import Type._
 import Frame._
 import ArgList._
-import StorageTypes._
+import StorageKind._
 import EqualityOperators._
 import RelationalOperators._
 import AdditiveOperators._
@@ -68,7 +68,7 @@ class parseCAst private (
     = `type`
     | storage
 
-  private lazy val declarationSpecifiersSpecific: Parse[(StorageTypes, Types)]
+  private lazy val declarationSpecifiersSpecific: Parse[(StorageKind, Type)]
     = declarationSpecifiers ->> reduceDeclarationSpecifiers
 
   private lazy val jumpStatement: Parse[List[Statements]]
@@ -140,7 +140,7 @@ class parseCAst private (
     = identifierWithScope
     | functionDeclarator
 
-  private lazy val types: Parse[Types]
+  private lazy val types: Parse[Type]
     = `type` ->> (_.id)
 
   private lazy val parameters: Parse[List[Parameter]]
@@ -272,10 +272,10 @@ class parseCAst private (
     case Singleton("extern") => Storage(Extern)
     case Singleton("auto")   => Storage(Auto)
 
-  private val `type`: Parse[Type] =
-    case Singleton("int")      => Type(Cint)
-    case Singleton("function") => Type(Cfunction)
-    case Singleton("void")     => Type(Cvoid)
+  private val `type`: Parse[TypeRef] =
+    case Singleton("int")      => TypeRef(Cint)
+    case Singleton("function") => TypeRef(Cfunction)
+    case Singleton("void")     => TypeRef(Cvoid)
 
   private val functionDeclarator: Parse[FunctionDeclarator] =
     case UnaryNode("F", name)        => FunctionDeclarator(identifierWithScope(name), LAny)
@@ -305,11 +305,11 @@ class parseCAst private (
 
     case declarator => yieldDefinition(Auto, Cint)(bodyOp)(functionDeclarator(declarator))
 
-  private def yieldDefinition(storage: StorageTypes, types: Types)(body: Option[Source]): FunctionDeclarator => List[Declarations] =
+  private def yieldDefinition(storage: StorageKind, types: Type)(body: Option[Source]): FunctionDeclarator => List[Declarations] =
     case f @ FunctionDeclarator(i, args) =>
-      declareInScope(i, storage, types, f, None).toList :+ makeDef(i, args, body)
+      declareInScope(i, storage, types, f, None).toList :+ makeDef(i, types, args, body)
 
-  private def makeDef(i: Scoped, args: ArgList, body: Option[Source]): Declarations =
+  private def makeDef(i: Scoped, types: Type, args: ArgList, body: Option[Source]): Declarations =
     val bodyParsed =
     for b <- body
     yield framed:
@@ -354,7 +354,7 @@ class parseCAst private (
     for (t -> s) <- args do
       declareInScope(s, Auto, t, s, Some(Frame.paramsLens))
 
-  private def declareInScope(scoped: Scoped, storage: StorageTypes, types: Types, declarator: Declarator,
+  private def declareInScope(scoped: Scoped, storage: StorageKind, types: Type, declarator: Declarator,
     frameLens: Option[FrameLens])
   : Option[Declaration] =
     returning:
@@ -425,7 +425,7 @@ class parseCAst private (
       case _ =>
         throw SemanticError("Tail of function does not return a value.")
 
-  private def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageTypes, Types) =
+  private def reduceDeclarationSpecifiers(declarationSpecifiers: List[DeclarationSpecifiers]): (StorageKind, Type) =
     val storages -> types = declarationSpecifiers.partition(_.isInstanceOf[Storage])
 
     val storage = storages match
@@ -434,8 +434,8 @@ class parseCAst private (
       case _                   => throw SemanticError("More than one storage class may not be specified.")
 
     val returnType = types match
-      case Nil              => Cint // warning implicit return type 'int'
-      case (t: Type) :: Nil => t.id
-      case _                => throw SemanticError("Invalid combination of type specifiers.")
+      case Nil                 => Cint // warning implicit return type 'int'
+      case (t: TypeRef) :: Nil => t.id
+      case _                   => throw SemanticError("Invalid combination of type specifiers.")
 
     storage -> returnType

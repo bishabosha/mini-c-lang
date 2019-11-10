@@ -41,7 +41,7 @@ mips:
 	${PARSER} -m > out.asm
 
 run:
-	${PARSER} -i
+	${PARSER} -i -int
 
 pkg: ${TARGET}
 	sbt package
