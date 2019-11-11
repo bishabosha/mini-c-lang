@@ -7,7 +7,7 @@ import TwoControlOperators._
 import OneControlOperators._
 import exception._
 import Constants._
-import Types._
+import Type._
 
 object printTac
 
@@ -107,7 +107,7 @@ object printTac
   private def labels(v: LabelIds): String =
     s"${evalLabels(v)}:$endl"
 
-  private def evalType(types: Types): String = types match
+  private def evalType(types: Type): String = types match
     case Cint => "%I32"
     case Cfunction => "%Function"
     case Cvoid => "%Void"

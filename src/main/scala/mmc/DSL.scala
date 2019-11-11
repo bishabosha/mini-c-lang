@@ -1,7 +1,6 @@
 package mmc
 
 import mmclib.{_, given}
-import AstTag._
 
 object DSL
 
@@ -40,14 +39,14 @@ object DSL
     while !break do
       val leftinfo = left.ast
       val rightinfo = right.ast
-      if leftinfo.tag == BinaryNode && leftinfo.tpe == tpe then
+      if leftinfo.tag.isBinary && leftinfo.tpe == tpe then
         if !decided then
           decided = true;
         list = right :: list
         left.binaryOp:
           left  = binary.a1
           right = binary.a2
-      else if rightinfo.tag == BinaryNode && rightinfo.tpe == tpe then
+      else if rightinfo.tag.isBinary && rightinfo.tpe == tpe then
         if !decided then
           decided = true
           reverse = true

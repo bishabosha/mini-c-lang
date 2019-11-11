@@ -61,7 +61,7 @@ def showVariable(lvalue: Variable): String = lvalue match
   case t: Temporary => showTemporary(t)
 
 def showTemporary(temporary: Temporary): String =
-  ("@" + temporary.hashCode).take(6)
+  ("@" + Integer.toHexString(temporary.hashCode)).take(6)
 
 def getCurrentScope(bindings: Bindings): Long =
   bindings.genGet(ScopeKey).getOrElse:

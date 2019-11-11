@@ -16,6 +16,12 @@ object normalToTac extends Stage
 
   type DataMap = Map[Scoped, Global]
 
+  object ASrc
+    def unapply(ast: Variable | Constant): Option[ASrc] = ast match
+      case Constant(i: IntLiteral) => Some(i)
+      case v: Variable             => Some(v)
+      case _                       => None
+
   object DataMap
     val empty: DataMap = Map.empty
 
@@ -53,12 +59,12 @@ object normalToTac extends Stage
           evalApplication(dest, id, args)
         else
           throw SemanticError("Can only call global functions")
-      case Return((a: ASrc) :: Nil) =>
+      case Return(ASrc(a) :: Nil) =>
         List(OneTac(RETURN, a))
       case Block(nodes) => nodes.foldLeft(List.empty)((code, statement) =>
         evalStatement(statement) ::: code
       )
-      case IfElse(ifCount,(isOne: ASrc) :: Nil, ifTrue, elsePart) =>
+      case IfElse(ifCount, ASrc(isOne) :: Nil, ifTrue, elsePart) =>
         val joinLabel = Join(ifCount)
         val elseLabel: Option[LabelIds] = elsePart.headOption.map(_ => ElseLabel(ifCount))
         val ifZero: LabelIds = elseLabel.getOrElse(joinLabel)
@@ -106,17 +112,17 @@ object normalToTac extends Stage
       args.foldRight(List[Code](TwoTac(CALL, dest, id))) :
         (exp, acc) =>
           exp match
-          case a: ASrc =>
+          case ASrc(a) =>
             OneTac(PUSH, a) :: acc
           case _ =>
             acc
       .reverse
 
   private def evalExpr(dest: Variable, expr: ExpressionRoot): List[Code] = expr match
-    case Multiplicative(op, l: ASrc, r: ASrc) => ThreeTac(op, dest, l, r) :: Nil
-    case Additive(op, l: ASrc, r: ASrc)       => ThreeTac(op, dest, l, r) :: Nil
-    case Relational(op, l: ASrc, r: ASrc)     => ThreeTac(op, dest, l, r) :: Nil
-    case Equality(op, l: ASrc, r: ASrc)       => ThreeTac(op, dest, l, r) :: Nil
-    case Unary(op, v: ASrc)                   => TwoTac(op, dest, v)      :: Nil
-    case b: ASrc                              => TwoTac(ASSIGN, dest, b)  :: Nil
+    case Multiplicative(op, ASrc(l), ASrc(r)) => ThreeTac(op, dest, l, r) :: Nil
+    case Additive(op, ASrc(l), ASrc(r))       => ThreeTac(op, dest, l, r) :: Nil
+    case Relational(op, ASrc(l), ASrc(r))     => ThreeTac(op, dest, l, r) :: Nil
+    case Equality(op, ASrc(l), ASrc(r))       => ThreeTac(op, dest, l, r) :: Nil
+    case Unary(op, ASrc(v))                   => TwoTac(op, dest, v)      :: Nil
+    case ASrc(b)                              => TwoTac(ASSIGN, dest, b)  :: Nil
     case _                                    => Nil

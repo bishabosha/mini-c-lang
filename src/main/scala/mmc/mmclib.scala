@@ -33,27 +33,23 @@ object mmclib
     opaque type TokenIntOps    <: CAst = Value
     opaque type SingletonOps   <: CAst = Value
 
-    object BinaryNodeOps
-      given :(node: BinaryNodeOps)
-        def a1: CAst = UnaryNode_a1.execute(node)
-        def a2: CAst = BinaryNode_a2.execute(node)
+    given (node: BinaryNodeOps)
+      def a1: CAst = UnaryNode_a1.execute(node)
+      def a2: CAst = BinaryNode_a2.execute(node)
 
-    object UnaryNodeOps
-      given :(node: UnaryNodeOps)
-        def a1: CAst = UnaryNode_a1.execute(node)
+    given (node: UnaryNodeOps)
+      def a1: CAst = UnaryNode_a1.execute(node)
 
-    object TokenIntOps
-      given :(node: TokenIntOps)
-        def value: Int = TokenInt_value.execute(node).asInt
+    given (node: TokenIntOps)
+      def value: Int = TokenInt_value.execute(node).asInt
 
-    object TokenStringOps
-      given :(node: TokenStringOps)
-        def lexeme: String = TokenString_lexeme.execute(node).asString
+    given (node: TokenStringOps)
+      def lexeme: String = TokenString_lexeme.execute(node).asString
 
     def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
     object CAst
-      given :(node: CAst)
+      given (node: CAst)
 
         def ast: AstInfo =
           if node.hasMember("ast") then
@@ -67,7 +63,7 @@ object mmclib
 
       private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
 
-      given :(node: AstInfo)
+      given (node: AstInfo)
         def tpe: String = Ast_tpe.execute(node).asString
         def tag: AstTag = AstTags(Ast_tag.execute(node).asInt)
 
@@ -78,9 +74,16 @@ object mmclib
 
   export opaques._
 
-  // Keep in sync with ast.h `AstTag`
-  enum AstTag
-    case Singleton, UnaryNode, BinaryNode, TokenInt, TokenString
+  enum AstTag derives Eql
+
+    case // Keep in sync with ast.h `AstTag`
+      Singleton,
+      UnaryNode,
+      BinaryNode,
+      TokenInt,
+      TokenString
+
+    def isBinary: Boolean = this `eq` BinaryNode
 
   inline given singleton(given node: SingletonOps): SingletonOps = node
   inline given binary(given node: BinaryNodeOps): BinaryNodeOps = node
@@ -131,11 +134,10 @@ object mmclib
   def setDebug(value: Boolean): Unit =
     set_debug.executeVoid(Boolean.box(value))
 
-  def identPool: Set[Identifier] =
-    val symbTable = get_SymbTable_inst.execute().asHostObject[SymbTable]
-    val symbols   = symbTable.toSet
-    symbTable.clear()
-    symbols
+  def clearIdentPool(): Unit = get_SymbTable_inst.execute().asHostObject[SymbTable].clear()
+
+  def identifiers: Set[Identifier] =
+    get_SymbTable_inst.execute().asHostObject[SymbTable].toSet
 
   def close(): Unit = polyglot.close()
 
