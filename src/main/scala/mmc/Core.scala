@@ -1,6 +1,6 @@
 package mmc
 
-import language.implicitConversions
+import scala.language.implicitConversions
 
 type Parameter  = (Type, Scoped) | Type
 type Variable   = Scoped | Temporary
