@@ -17,19 +17,25 @@ enum ArgList derives Eql
   case LVoid
   case LAny
   case LParam(list: List[Parameter])
+end ArgList
 
 object Constants
+
   opaque type StringLiteral = String
   opaque type IntLiteral    = Int
 
   def IntLiteral(i: Int): IntLiteral = i
   def StringLiteral(s: String): StringLiteral = s
 
-  given (c: IntLiteral)
+  given (c: IntLiteral) extended with
     def value: Int = c
+  end given
 
-  given (s: StringLiteral)
+  given (s: StringLiteral) extended with
     def value: String = s
+  end given
+
+end Constants
 
 enum Type derives Eql
   case Cint, Cvoid, Cfunction, Cstring
@@ -46,26 +52,31 @@ type BinaryOperators = EqualityOperators | RelationalOperators | AdditiveOperato
 enum EqualityOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
   case EQUAL     extends EqualityOperators(_==_, "==")
   case NOT_EQUAL extends EqualityOperators(_!=_, "!=")
+end EqualityOperators
 
 enum RelationalOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
   case LT    extends RelationalOperators(_<_, "<")
   case GT    extends RelationalOperators(_>_, ">")
   case LT_EQ extends RelationalOperators(_<=_, "<=")
   case GT_EQ extends RelationalOperators(_>=_, ">=")
+end RelationalOperators
 
 enum AdditiveOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
   case PLUS  extends AdditiveOperators(_+_, "+")
   case MINUS extends AdditiveOperators(_-_, "-")
+end AdditiveOperators
 
 enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
   case MULTIPLY extends MultiplicativeOperators(_*_, "*")
   case DIVIDE   extends MultiplicativeOperators(_/_, "/")
   case MODULUS  extends MultiplicativeOperators(_%_, "%")
+end MultiplicativeOperators
 
 enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with UnaryOp(op) derives Eql
   case NOT      extends UnaryOperators(_ == 0, "!")
   case POSITIVE extends UnaryOperators(identity, "+")
   case NEGATIVE extends UnaryOperators(_ * -1, "-")
+end UnaryOperators
 
 object Std
   import ArgList._
@@ -107,3 +118,5 @@ object Std
     )
 
   val declarations = Seq(print_int, read_int)
+
+end Std
