@@ -33,23 +33,28 @@ object mmclib
     opaque type TokenIntOps    <: CAst = Value
     opaque type SingletonOps   <: CAst = Value
 
-    given (node: BinaryNodeOps)
+    given (node: BinaryNodeOps) extended with
       def a1: CAst = UnaryNode_a1.execute(node)
       def a2: CAst = BinaryNode_a2.execute(node)
+    end given
 
-    given (node: UnaryNodeOps)
+    given (node: UnaryNodeOps) extended with
       def a1: CAst = UnaryNode_a1.execute(node)
+    end given
 
-    given (node: TokenIntOps)
+    given (node: TokenIntOps) extended with
       def value: Int = TokenInt_value.execute(node).asInt
+    end given
 
-    given (node: TokenStringOps)
+    given (node: TokenStringOps) extended with
       def lexeme: String = TokenString_lexeme.execute(node).asString
+    end given
 
     def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
     object CAst
-      given (node: CAst)
+
+      given (node: CAst) extended with
 
         def ast: AstInfo =
           if node.hasMember("ast") then
@@ -59,14 +64,20 @@ object mmclib
 
         def nonEmpty: Boolean = (node `ne` null) && !node.isNull
 
+      end given
+
+    end CAst
+
     object AstInfo
 
       private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
 
-      given (node: AstInfo)
+      given (node: AstInfo) extended with
         def tpe: String = Ast_tpe.execute(node).asString
         def tag: AstTag = AstTags(Ast_tag.execute(node).asInt)
+      end given
 
+    end AstInfo
 
     val EmptyAst: CAst = null_Ast
 
@@ -85,6 +96,8 @@ object mmclib
 
     def isBinary: Boolean = this `eq` BinaryNode
 
+  end AstTag
+
   inline given singleton(given node: SingletonOps): SingletonOps = node
   inline given binary(given node: BinaryNodeOps): BinaryNodeOps = node
   inline given unary(given node: UnaryNodeOps): UnaryNodeOps = node
@@ -93,13 +106,15 @@ object mmclib
 
   private inline def [Ops, T](node: CAst) castTo(tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
     node.ast.tag match
-      case `tag` if cond(node) => Some(f(given node.asInstanceOf))
-      case _                   => None
+    case `tag` if cond(node) => Some(f(given node.asInstanceOf))
+    case _                   => None
+  end castTo
 
   private inline def [Ops, T](node: CAst) castOp(tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
     node.ast.tag match
-      case `tag` if cond(node) => op(given node.asInstanceOf)
-      case _                   =>
+    case `tag` if cond(node) => op(given node.asInstanceOf)
+    case _                   =>
+  end castOp
 
   inline def [T](node: CAst) asBinaryNode(f: => (given BinaryNodeOps) => T) =
     node.castTo(BinaryNode)(n => !sequenceTpes.contains(n.ast.tpe))(f)
