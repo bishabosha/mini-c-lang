@@ -9,20 +9,20 @@ import MiscOneOperators._
 import TwoControlOperators._
 import OneControlOperators._
 
-object normalToTac extends Stage
+object normalToTac extends Stage:
   type Source  = astToNormal.Goal
   type Context = DataMap
   type Goal    = List[Tac]
 
   type DataMap = Map[Scoped, Global]
 
-  object ASrc
+  object ASrc:
     def unapply(ast: Variable | Constant): Option[ASrc] = ast match
       case Constant(i: IntLiteral) => Some(i)
       case v: Variable             => Some(v)
       case _                       => None
 
-  object DataMap
+  object DataMap:
     val empty: DataMap = Map.empty
 
   def apply(nodes: List[Declarations]): (Context, Goal) =

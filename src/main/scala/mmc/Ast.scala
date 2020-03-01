@@ -2,7 +2,7 @@ package mmc
 
 import Constants._
 
-object Ast
+object Ast:
 
   type Selections             = IfElse
   type Statements             = Block | Declarations | Assignments | Return | Selections

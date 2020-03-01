@@ -12,7 +12,7 @@ import org.graalvm.polyglot._
  * Exports opaque type [[CAst]] which is simply a polyglot value with a type safe api, representing the AST built by
  * the Yacc parser.
  */
-object mmclib
+object mmclib:
   import opaques._
   import AstTag._
   import CAst.given
@@ -22,7 +22,7 @@ object mmclib
   private val source   = Source.newBuilder("llvm", getClass.getResource("/mmclib")).build
   private val mmclib   = polyglot.eval(source)
 
-  private object opaques
+  private object opaques:
 
     opaque type AstInfo = Value
 
@@ -33,28 +33,24 @@ object mmclib
     opaque type TokenIntOps    <: CAst = Value
     opaque type SingletonOps   <: CAst = Value
 
-    given (node: BinaryNodeOps) extended with
+    extension on (node: BinaryNodeOps):
       def a1: CAst = UnaryNode_a1.execute(node)
       def a2: CAst = BinaryNode_a2.execute(node)
-    end given
 
-    given (node: UnaryNodeOps) extended with
+    extension on (node: UnaryNodeOps):
       def a1: CAst = UnaryNode_a1.execute(node)
-    end given
 
-    given (node: TokenIntOps) extended with
+    extension on (node: TokenIntOps):
       def value: Int = TokenInt_value.execute(node).asInt
-    end given
 
-    given (node: TokenStringOps) extended with
+    extension on (node: TokenStringOps):
       def lexeme: String = TokenString_lexeme.execute(node).asString
-    end given
 
     def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
-    object CAst
+    object CAst:
 
-      given (node: CAst) extended with
+      extension on (node: CAst):
 
         def ast: AstInfo =
           if node.hasMember("ast") then
@@ -64,18 +60,15 @@ object mmclib
 
         def nonEmpty: Boolean = (node `ne` null) && !node.isNull
 
-      end given
-
     end CAst
 
-    object AstInfo
+    object AstInfo:
 
       private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
 
-      given (node: AstInfo) extended with
+      extension on (node: AstInfo):
         def tpe: String = Ast_tpe.execute(node).asString
         def tag: AstTag = AstTags(Ast_tag.execute(node).asInt)
-      end given
 
     end AstInfo
 
@@ -85,7 +78,7 @@ object mmclib
 
   export opaques._
 
-  enum AstTag derives Eql
+  enum AstTag derives Eql:
 
     case // Keep in sync with ast.h `AstTag`
       Singleton,

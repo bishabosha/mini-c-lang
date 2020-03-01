@@ -13,13 +13,13 @@ case class FunctionDeclarator(id: Scoped, args: ArgList)
 
 case class Declaration(storage: StorageKind, declType: Type, declarator: Declarator)
 
-enum ArgList derives Eql
+enum ArgList derives Eql:
   case LVoid
   case LAny
   case LParam(list: List[Parameter])
 end ArgList
 
-object Constants
+object Constants:
 
   opaque type StringLiteral = String
   opaque type IntLiteral    = Int
@@ -27,20 +27,18 @@ object Constants
   def IntLiteral(i: Int): IntLiteral = i
   def StringLiteral(s: String): StringLiteral = s
 
-  given (c: IntLiteral) extended with
+  extension on (c: IntLiteral):
     def value: Int = c
-  end given
 
-  given (s: StringLiteral) extended with
+  extension on (s: StringLiteral):
     def value: String = s
-  end given
 
 end Constants
 
-enum Type derives Eql
+enum Type derives Eql:
   case Cint, Cvoid, Cfunction, Cstring
 
-enum StorageKind derives Eql
+enum StorageKind derives Eql:
   case Auto, Extern
 
 trait Operand(val symbol: String)
@@ -49,36 +47,36 @@ trait UnaryOp(val op: Int => Int)
 
 type BinaryOperators = EqualityOperators | RelationalOperators | AdditiveOperators | MultiplicativeOperators
 
-enum EqualityOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
+enum EqualityOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql:
   case EQUAL     extends EqualityOperators(_==_, "==")
   case NOT_EQUAL extends EqualityOperators(_!=_, "!=")
 end EqualityOperators
 
-enum RelationalOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
+enum RelationalOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql:
   case LT    extends RelationalOperators(_<_, "<")
   case GT    extends RelationalOperators(_>_, ">")
   case LT_EQ extends RelationalOperators(_<=_, "<=")
   case GT_EQ extends RelationalOperators(_>=_, ">=")
 end RelationalOperators
 
-enum AdditiveOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
+enum AdditiveOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql:
   case PLUS  extends AdditiveOperators(_+_, "+")
   case MINUS extends AdditiveOperators(_-_, "-")
 end AdditiveOperators
 
-enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql
+enum MultiplicativeOperators(op: (Int, Int) => Int, symbol: String) extends Operand(symbol) with BinaryOp(op) derives Eql:
   case MULTIPLY extends MultiplicativeOperators(_*_, "*")
   case DIVIDE   extends MultiplicativeOperators(_/_, "/")
   case MODULUS  extends MultiplicativeOperators(_%_, "%")
 end MultiplicativeOperators
 
-enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with UnaryOp(op) derives Eql
+enum UnaryOperators(op: Int => Int, symbol: String) extends Operand(symbol) with UnaryOp(op) derives Eql:
   case NOT      extends UnaryOperators(_ == 0, "!")
   case POSITIVE extends UnaryOperators(identity, "+")
   case NEGATIVE extends UnaryOperators(_ * -1, "-")
 end UnaryOperators
 
-object Std
+object Std:
   import ArgList._
   import StorageKind._
   import Type._

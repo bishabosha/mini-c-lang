@@ -22,7 +22,7 @@ import MiscOneOperators._
 import TwoControlOperators._
 import OneControlOperators._
 
-object tacToMips extends Stage
+object tacToMips extends Stage:
   type Source   = normalToTac.Goal
   type Context  = MipsContext
   type Goal     = List[Assembler]
@@ -67,45 +67,47 @@ object tacToMips extends Stage
     case ThreeOperators => PartialFunction[Op,BinaryArgs]
     case TwoOperators   => PartialFunction[Op,UnaryArgs]
 
-  case class MipsContext
-    ( current: Map[Variable, Register],
-      frame: Frame,
-      private val stack: List[ASrc],
-      private val _temporary: Option[Temporaries],
-      private val saved: Set[SavedValues],
-    )
-      def advanceTemporary: MipsContext =
-        val temp = _temporary.map:
+  case class MipsContext(
+    current: Map[Variable, Register],
+    frame: Frame,
+    private val stack: List[ASrc],
+    private val _temporary: Option[Temporaries],
+    private val saved: Set[SavedValues],
+  ):
+    def advanceTemporary: MipsContext =
+      val temp = _temporary.map:
+        t =>
+        if t.ordinal == Temporaries.values.length -1 then
+          throw SemanticError("Too many temporaries!")
+        Temporaries.values.find(_.ordinal == t.ordinal + 1).get
+      .orElse:
+        Some(T0)
+      copy(_temporary = temp)
+
+    def freeTemporary: MipsContext =
+      val temp =
+        _temporary.map:
           t =>
-          if t.ordinal == Temporaries.values.length -1 then
-            throw SemanticError("Too many temporaries!")
-          Temporaries.values.find(_.ordinal == t.ordinal + 1).get
+          Temporaries.values.find(_.ordinal == t.ordinal - 1).get
         .orElse:
-          Some(T0)
-        copy(_temporary = temp)
+          throw SemanticError("No temporary to free!")
+      copy(_temporary = temp)
 
-      def freeTemporary: MipsContext =
-        val temp =
-          _temporary.map:
-            t =>
-            Temporaries.values.find(_.ordinal == t.ordinal - 1).get
-          .orElse:
-            throw SemanticError("No temporary to free!")
-        copy(_temporary = temp)
+    def advanceSaved: (SavedValues, MipsContext) =
+      val savedValues = SavedValues.values.toSet
+      val newSet = savedValues &~ saved
+      if newSet.isEmpty then
+        throw SemanticError("Too many saved variables!")
+      val consumed = newSet.head
+      (consumed, copy(saved = saved + consumed))
 
-      def advanceSaved: (SavedValues, MipsContext) =
-        val savedValues = SavedValues.values.toSet
-        val newSet = savedValues &~ saved
-        if newSet.isEmpty then
-          throw SemanticError("Too many saved variables!")
-        val consumed = newSet.head
-        (consumed, copy(saved = saved + consumed))
+    def temporary: Temporaries = _temporary.getOrElse(T0)
 
-      def temporary: Temporaries = _temporary.getOrElse(T0)
+    def push(asrc: ASrc): MipsContext = copy(stack = asrc :: stack)
 
-      def push(asrc: ASrc): MipsContext = copy(stack = asrc :: stack)
+    def pop: (MipsContext, ASrc) = (copy(stack = stack.tail), stack.head)
 
-      def pop: (MipsContext, ASrc) = (copy(stack = stack.tail), stack.head)
+  end MipsContext
 
   private def nextFrame(frame: Frame): Context =
     MipsContext(Map.empty, frame, Nil, None, Set.empty)

@@ -16,7 +16,7 @@ LLVM_LINK = ${LLVM_HOME}/llvm-link
 TARGET = src/main/resources/mmclib
 
 SCALA_LIB_VERSION = 2.13.0
-DOTTY_VERSION     = 0.20
+DOTTY_VERSION     = 0.22
 DOTTY_MINOR       = 0
 DOTTY_SUFFIX      = RC1
 JAR = target/scala-${DOTTY_VERSION}/mmc_${DOTTY_VERSION}-0.1.0.jar

@@ -7,17 +7,17 @@ import interpretAst._
 
 import scala.util.Random
 
-object interpretAst
+object interpretAst:
 
   def apply(context: astToNormal.Context, nodes: astToNormal.Goal): Unit =
     val cursor = Cursor(context)
     val exitCode = new interpretAst(cursor, nodes).evalProgram
     println(s"exit code: $exitCode")
 
-  case class IdentKey(key: Variable) extends Bindings.Key
+  case class IdentKey(key: Variable) extends Bindings.Key:
     type Value = IntLiteral
 
-class interpretAst private (var cursor: Cursor, nodes: astToNormal.Goal)
+class interpretAst private (var cursor: Cursor, nodes: astToNormal.Goal):
   val random: Random = new Random
   val topLevel: Bindings = cursor.current
 
