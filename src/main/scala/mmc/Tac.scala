@@ -2,7 +2,7 @@ package mmc
 
 import Constants._
 
-object Tac
+object Tac:
   type ThreeOperators = BinaryOperators
   type TwoOperators   = UnaryOperators | MiscTwoOperators
   type OneOperators   = MiscOneOperators
@@ -12,16 +12,16 @@ object Tac
   type Tac            = Func
   type Global         = IntLiteral
 
-  enum OneControlOperators
+  enum OneControlOperators:
     case JUMP
 
-  enum TwoControlOperators
+  enum TwoControlOperators:
     case JUMP_IF_ZERO
 
-  enum MiscTwoOperators
+  enum MiscTwoOperators:
     case ASSIGN, CALL
 
-  enum MiscOneOperators
+  enum MiscOneOperators:
     case RETURN, PUSH
 
   case class OneTac(op: OneOperators, a1: ASrc)

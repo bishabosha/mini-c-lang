@@ -9,7 +9,7 @@ import exception._
 import Constants._
 import Type._
 
-object printTac
+object printTac:
 
   private val endl = System.lineSeparator
 

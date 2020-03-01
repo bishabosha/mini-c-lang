@@ -3,7 +3,7 @@ package mmc
 import Ast._
 import Frame._
 
-object Frame
+object Frame:
   type CapturedDefs = Map[Scoped, Declaration]
   type Defs         = Map[Identifier, Declaration]
   type FrameLens    = (CapturedDefs => CapturedDefs) => Frame => Frame

@@ -2,18 +2,18 @@ package mmc
 
 import Bindings._
 
-object Bindings
+object Bindings:
 
   val empty = Bindings(Map.empty, Nil, Nil)
 
-  trait Key
+  trait Key:
     type Value
 
 case class Bindings(
   data: Map[Key, Key#Value],
   stack: List[Bindings],
-  children: List[Bindings]
-)
+  children: List[Bindings]):
+
   def genGet(id: Key): Option[id.Value] =
     data.get(id).map(_.asInstanceOf[id.Value])
 

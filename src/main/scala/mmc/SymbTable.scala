@@ -2,7 +2,7 @@ package mmc
 
 import scala.collection.mutable
 
-class SymbTable
+class SymbTable:
   private val set = mutable.HashSet.empty[Identifier]
   def put(id: Identifier): Unit = set += id
   def get(id: Identifier): Boolean = set(id)

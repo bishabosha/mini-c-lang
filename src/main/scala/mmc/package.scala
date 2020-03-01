@@ -12,13 +12,13 @@ inline def True[A]: A => Boolean = const(true)
 
 type =?>[I,O] = PartialFunction[I,O]
 
-case object ScopeKey extends Bindings.Key
+case object ScopeKey extends Bindings.Key:
   type Value = Long
 
-case class DeclarationKey(id: Identifier) extends Bindings.Key
+case class DeclarationKey(id: Identifier) extends Bindings.Key:
   type Value = Declaration
 
-case class DefinitionKey(id: Scoped) extends Bindings.Key
+case class DefinitionKey(id: Scoped) extends Bindings.Key:
   type Value = Unit
 
 val zero = IntLiteral(0)

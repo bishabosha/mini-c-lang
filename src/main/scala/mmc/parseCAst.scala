@@ -21,7 +21,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.util.control.NonLocalReturns._
 
-object parseCAst extends Stage
+object parseCAst extends Stage:
   type Source  = CAst
   type Context = Bindings
   type Goal    = List[Declarations]
@@ -32,7 +32,7 @@ object parseCAst extends Stage
 class parseCAst private (
   private val identPool: Set[Identifier],
   private val scopedPool: mutable.AnyRefMap[(Identifier, Long),Scoped]
-)
+):
   private type Parse[T] = PartialFunction[Source, T]
   private type Flatten[T] = PartialFunction[T, List[T]]
   private type FlattenO[T, O] = PartialFunction[T, O]

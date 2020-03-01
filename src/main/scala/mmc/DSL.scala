@@ -2,29 +2,29 @@ package mmc
 
 import mmclib.{_, given}
 
-object DSL
+object DSL:
 
-  object BinaryNode
+  object BinaryNode:
     def unapply(node: CAst) =
       node.asBinaryNode(binary.ast.tpe, binary.a1, binary.a2)
 
-  object UnaryNode
+  object UnaryNode:
     def unapply(node: CAst) =
       node.asUnaryNode(unary.ast.tpe, unary.a1)
 
-  object Singleton
+  object Singleton:
     def unapply(node: CAst) =
       node.asSingleton(singleton.ast.tpe)
 
-  object TokenInt
+  object TokenInt:
     def unapply(node: CAst) =
       node.asTokenInt(tokenInt.ast.tpe, tokenInt.value)
 
-  object TokenString
+  object TokenString:
     def unapply(node: CAst) =
       node.asTokenString(tokenString.ast.tpe, tokenString.lexeme)
 
-  object Sequence
+  object Sequence:
     def unapply(node: CAst) =
       val tpe = node.ast.tpe
       node.asSequence(tpe, sequence(tpe, binary.a1, binary.a2))

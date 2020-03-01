@@ -7,7 +7,7 @@ import Type._
 import ArgList._
 import exception._
 
-object printAst
+object printAst:
 
   private val endl = System.lineSeparator
 

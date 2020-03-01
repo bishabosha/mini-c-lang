@@ -5,7 +5,7 @@ import Constants._
 import exception._
 import PartialFunctionConversions._
 
-object astToNormal extends Stage
+object astToNormal extends Stage:
   type Source  = parseCAst.Goal
   type Context = parseCAst.Context
   type Goal    = parseCAst.Goal

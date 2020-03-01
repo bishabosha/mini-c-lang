@@ -10,7 +10,7 @@ import printTac._
 import exception._
 import Constants._
 
-object printMips
+object printMips:
 
   private val endl = System.lineSeparator
 
