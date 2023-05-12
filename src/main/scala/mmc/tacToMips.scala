@@ -190,7 +190,7 @@ object tacToMips extends Stage:
   private def evalASrcL(context: Context, dest: ASrc): (Context, Register, List[Assembler]) = dest match
     case c: IntLiteral =>
       val t = assignTemporary(context, new Temporary)
-      t ++ List(Li(t._2,c)) *: ()
+      t ++ List(Li(t._2,c)) *: EmptyTuple
 
     case v: Variable => evalVariableSrc(context, v)
 
@@ -210,7 +210,7 @@ object tacToMips extends Stage:
     getDest(context, variable) match
       case Some(r: Register)  => (context, r, Nil)
       case Some(a: Addresses) => ifAddress(context, a)
-      case None               => ifNone(context, variable) ++ Nil *: ()
+      case None               => ifNone(context, variable) ++ Nil *: EmptyTuple
 
   private def evalAddressSrc(context: Context, a: Addresses): (Context, Register, List[Assembler]) =
     val (c, reg: Register) = assignTemporary(context, new Temporary)

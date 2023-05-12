@@ -14,6 +14,8 @@ object printMips:
 
   private val endl = System.lineSeparator
 
+  extension (p: Product) def prefixStr = p.productPrefix.toLowerCase
+
   def apply(nodes: List[Assembler]): Unit =
     var symbCount = 0L
     val symbols = new scala.collection.mutable.AnyRefMap[Scoped,Long]()
@@ -99,5 +101,3 @@ object printMips:
 
     def printRegister[E <: Register](t: E)(code: Char) =
       "$" + code + t.ordinal
-
-    def (p: Product) prefixStr = p.productPrefix.toLowerCase

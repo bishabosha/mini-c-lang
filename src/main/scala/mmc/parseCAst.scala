@@ -19,7 +19,8 @@ import parseCAst._
 
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.util.control.NonLocalReturns._
+
+import scala.util.boundary, boundary.break
 
 object parseCAst extends Stage:
   type Source  = CAst
@@ -351,13 +352,13 @@ class parseCAst private (
     result
 
   private def declareParamsInScope(args: Parameter*): Unit =
-    for (t -> s) <- args do
+    for case (t -> s) <- args do
       declareInScope(s, Auto, t, s, Some(Frame.paramsLens))
 
   private def declareInScope(scoped: Scoped, storage: StorageKind, types: Type, declarator: Declarator,
     frameLens: Option[FrameLens])
   : Option[Declaration] =
-    returning:
+    boundary:
       for
         Declaration(s, t, existing) <- context.genGet(DeclarationKey(scoped.id))
       do
@@ -371,7 +372,7 @@ class parseCAst private (
           case _: FunctionDeclarator => declarator match
             case f: FunctionDeclarator =>
               if existing == f && s == storage && t == types then
-                throwReturn(Option.empty)
+                break(Option.empty)
               else
                 throw new SemanticError(
                   s"Redefinition of function '${scoped.id}' with "+

@@ -62,7 +62,7 @@ object DSL:
         break = true
     if reverse then list.reverse else list
 
-  def (node: CAst) show: String = printAst0(node, 0, StringBuilder()).toString
+  extension (node: CAst) def show: String = printAst0(node, 0, StringBuilder()).toString
 
   private def printAst0(node: CAst, level: Int, builder: StringBuilder): StringBuilder =
     if node.nonEmpty then

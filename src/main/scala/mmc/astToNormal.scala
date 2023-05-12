@@ -123,11 +123,11 @@ object astToNormal extends Stage:
 
   private val assignmentsWithEffects: Statements =?> Stack =
     case Assignment(d, v) => assignment(d, v)
-    case Equality(op, l, r) => binary(Equality, op, l, r)
-    case Relational(op, l, r) => binary(Relational, op, l, r)
-    case Additive(op, l, r) => binary(Additive, op, l, r)
-    case Multiplicative(op, l, r) => binary(Multiplicative, op, l, r)
-    case Unary(op, v) => unary(Unary, op, v)
+    case Equality(op, l, r) => binary(Equality.apply, op, l, r)
+    case Relational(op, l, r) => binary(Relational.apply, op, l, r)
+    case Additive(op, l, r) => binary(Additive.apply, op, l, r)
+    case Multiplicative(op, l, r) => binary(Multiplicative.apply, op, l, r)
+    case Unary(op, v) => unary(Unary.apply, op, v)
     case Application(p, e) => application(p, e)
     case LazyExpressions(e) => expressions(e)
 
@@ -157,7 +157,7 @@ object astToNormal extends Stage:
     foldArguments(List(v))(mapAssignment(dest))
 
   private def mapAssignment(dest: Variable)(args: Expressions, stack: Stack): Stack = args -> stack match
-    case (Assignment(_: Temporary, t) :: _) -> (_ :: rest: Stack) => Assignment(dest, t) :: rest
+    case (Assignment(_: Temporary, t) :: _) -> (_ :: rest) => Assignment(dest, t) :: rest
     case (a :: _) -> _                                            => Assignment(dest, a) :: stack
     case _                                                        => stack
 

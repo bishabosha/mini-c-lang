@@ -2,7 +2,7 @@ package mmc
 
 import Ast._
 
-object normalToInterpreter extends Stage
+object normalToInterpreter extends Stage:
   type Source  = astToNormal.Goal
   type Context = astToNormal.Context
   type Goal    = astToNormal.Goal

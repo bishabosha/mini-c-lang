@@ -29,7 +29,7 @@ def replaceHead[A](list: List[A])(f: A => A): List[A] =
 def mainDefined[A](topLevel: Bindings)(f: Bindings => A): A =
   topLevel.genGet(Std.mainIdentifierKey) match
     case Some(Std.`mainFunc`) =>
-      if topLevel.genGet(Std.mainDefinitionKey) isDefined then
+      if topLevel.genGet(Std.mainDefinitionKey).isDefined then
         f(topLevel)
       else
         throw SemanticError(

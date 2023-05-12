@@ -1,5 +1,6 @@
 package mmc
 
+import scala.annotation.targetName
 import scala.annotation.switch
 import scala.collection.mutable
 
@@ -33,24 +34,25 @@ object mmclib:
     opaque type TokenIntOps    <: CAst = Value
     opaque type SingletonOps   <: CAst = Value
 
-    extension on (node: BinaryNodeOps):
+    extension (node: BinaryNodeOps)
       def a1: CAst = UnaryNode_a1.execute(node)
       def a2: CAst = BinaryNode_a2.execute(node)
 
-    extension on (node: UnaryNodeOps):
+    extension (node: UnaryNodeOps)
+      @targetName("unaryA1")
       def a1: CAst = UnaryNode_a1.execute(node)
 
-    extension on (node: TokenIntOps):
+    extension (node: TokenIntOps)
       def value: Int = TokenInt_value.execute(node).asInt
 
-    extension on (node: TokenStringOps):
+    extension (node: TokenStringOps)
       def lexeme: String = TokenString_lexeme.execute(node).asString
 
     def parse(): Option[CAst] = Option(get_ast.execute()).filter(!_.isNull)
 
     object CAst:
 
-      extension on (node: CAst):
+      extension (node: CAst)
 
         def ast: AstInfo =
           if node.hasMember("ast") then
@@ -66,7 +68,7 @@ object mmclib:
 
       private val AstTags = AstTag.values.sortWith(_.ordinal < _.ordinal)
 
-      extension on (node: AstInfo):
+      extension (node: AstInfo)
         def tpe: String = Ast_tpe.execute(node).asString
         def tag: AstTag = AstTags(Ast_tag.execute(node).asInt)
 
@@ -78,7 +80,7 @@ object mmclib:
 
   export opaques._
 
-  enum AstTag derives Eql:
+  enum AstTag derives CanEqual:
 
     case // Keep in sync with ast.h `AstTag`
       Singleton,
@@ -91,48 +93,50 @@ object mmclib:
 
   end AstTag
 
-  inline given singleton(given node: SingletonOps): SingletonOps = node
-  inline given binary(given node: BinaryNodeOps): BinaryNodeOps = node
-  inline given unary(given node: UnaryNodeOps): UnaryNodeOps = node
-  inline given tokenString(given node: TokenStringOps): TokenStringOps = node
-  inline given tokenInt(given node: TokenIntOps): TokenIntOps = node
+  inline given singleton(using node: SingletonOps): SingletonOps = node
+  inline given binary(using node: BinaryNodeOps): BinaryNodeOps = node
+  inline given unary(using node: UnaryNodeOps): UnaryNodeOps = node
+  inline given tokenString(using node: TokenStringOps): TokenStringOps = node
+  inline given tokenInt(using node: TokenIntOps): TokenIntOps = node
 
-  private inline def [Ops, T](node: CAst) castTo(tag: AstTag)(cond: => CAst => Boolean)(f: => (given Ops) => T): Option[T] =
-    node.ast.tag match
-    case `tag` if cond(node) => Some(f(given node.asInstanceOf))
-    case _                   => None
-  end castTo
+  extension [Ops, T](node: CAst)
+    private inline def castTo(tag: AstTag)(cond: => CAst => Boolean)(f: => Ops ?=> T): Option[T] =
+      node.ast.tag match
+      case `tag` if cond(node) => Some(f(using node.asInstanceOf))
+      case _                   => None
+    end castTo
 
-  private inline def [Ops, T](node: CAst) castOp(tag: AstTag)(cond: => CAst => Boolean)(op: => (given Ops) => Unit): Unit =
-    node.ast.tag match
-    case `tag` if cond(node) => op(given node.asInstanceOf)
-    case _                   =>
-  end castOp
+  extension [Ops, T](node: CAst)
+    private inline def castOp(tag: AstTag)(cond: => CAst => Boolean)(op: => Ops ?=> Unit): Unit =
+      node.ast.tag match
+      case `tag` if cond(node) => op(using node.asInstanceOf)
+      case _                   =>
+    end castOp
 
-  inline def [T](node: CAst) asBinaryNode(f: => (given BinaryNodeOps) => T) =
+  extension [T](node: CAst) inline def asBinaryNode(f: => BinaryNodeOps ?=> T) =
     node.castTo(BinaryNode)(n => !sequenceTpes.contains(n.ast.tpe))(f)
 
-  inline def [T](node: CAst) asSequence(f: => (given BinaryNodeOps) => T) =
+  extension [T](node: CAst) inline def asSequence(f: => BinaryNodeOps ?=> T) =
     node.castTo(BinaryNode)(n => sequenceTpes.contains(n.ast.tpe))(f)
 
-  inline def [T](node: CAst) asUnaryNode(f: => (given UnaryNodeOps) => T)     = node.castTo(UnaryNode)(True)(f)
-  inline def [T](node: CAst) asTokenInt(f: => (given TokenIntOps) => T)       = node.castTo(TokenInt)(True)(f)
-  inline def [T](node: CAst) asTokenString(f: => (given TokenStringOps) => T) = node.castTo(TokenString)(True)(f)
-  inline def [T](node: CAst) asSingleton(f: => (given SingletonOps) => T)     = node.castTo(Singleton)(True)(f)
-  inline def (node: CAst) binaryOp(op: => (given BinaryNodeOps) => Unit)      = node.castOp(BinaryNode)(True)(op)
+  extension [T](node: CAst) inline def asUnaryNode(f: => UnaryNodeOps ?=> T)     = node.castTo(UnaryNode)(True)(f)
+  extension [T](node: CAst) inline def asTokenInt(f: => TokenIntOps ?=> T)       = node.castTo(TokenInt)(True)(f)
+  extension [T](node: CAst) inline def asTokenString(f: => TokenStringOps ?=> T) = node.castTo(TokenString)(True)(f)
+  extension [T](node: CAst) inline def asSingleton(f: => SingletonOps ?=> T)     = node.castTo(Singleton)(True)(f)
+  extension (node: CAst) inline def binaryOp(op: => BinaryNodeOps ?=> Unit)      = node.castOp(BinaryNode)(True)(op)
 
-  inline def [T](node: CAst) cata(
-    unaop: => (given UnaryNodeOps) => T,
-    binop: => (given BinaryNodeOps) => T,
-    tokst: => (given TokenStringOps) => T,
-    tokin: => (given TokenIntOps) => T,
-    singl: => (given SingletonOps) => T
+  extension [T](node: CAst) inline def cata(
+    unaop: => UnaryNodeOps ?=> T,
+    binop: => BinaryNodeOps ?=> T,
+    tokst: => TokenStringOps ?=> T,
+    tokin: => TokenIntOps ?=> T,
+    singl: => SingletonOps ?=> T
   ): T = node.ast.tag match
-    case UnaryNode   => unaop(given node.asInstanceOf)
-    case BinaryNode  => binop(given node.asInstanceOf)
-    case TokenString => tokst(given node.asInstanceOf)
-    case TokenInt    => tokin(given node.asInstanceOf)
-    case Singleton   => singl(given node.asInstanceOf)
+    case UnaryNode   => unaop(using node.asInstanceOf)
+    case BinaryNode  => binop(using node.asInstanceOf)
+    case TokenString => tokst(using node.asInstanceOf)
+    case TokenInt    => tokin(using node.asInstanceOf)
+    case Singleton   => singl(using node.asInstanceOf)
 
   private val sequenceTpes = Set("E", ";", ",", "~")
 
